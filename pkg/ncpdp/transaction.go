@@ -38,7 +38,7 @@ func NewTransactionResponse(rawData string) NcpdpTransaction[ResponseHeader] {
 // Rebuid the complete NCPDP raw value
 func (tran *NcpdpTransaction[V]) BuildNcpdp() error {
 	if tran == nil {
-		return nil
+		return fmt.Errorf("transaction is null")
 	}
 
 	err := tran.BuildNcpdpHeader()
@@ -255,6 +255,10 @@ func (tran *NcpdpTransaction[V]) InsertField(recordIndex int, spec *NcpdpSegment
 
 // Insert field value into raw data
 func (tran *NcpdpTransaction[V]) insertField(fieldId string, fieldValue interface{}, settings *FieldSettings, insertAt int) {
+	if tran == nil {
+		return
+	}
+
 	rawFieldVal := fmt.Sprintf("%v%v%v",
 		FIELD,
 		fieldId,

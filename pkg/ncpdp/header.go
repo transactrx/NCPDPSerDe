@@ -53,6 +53,10 @@ type fieldLayout struct {
 
 // Build header
 func (h *NcpdpHeader[V]) buildNcpdpHeader() error {
+	if h == nil {
+		return fmt.Errorf("header is null")
+	}
+
 	headerType := reflect.TypeOf(h.Value)
 	objectRef := reflect.ValueOf(h.Value)
 
@@ -98,7 +102,11 @@ func (h *NcpdpHeader[V]) buildNcpdpHeader() error {
 
 // Parse NCPDP header.
 func (h *NcpdpHeader[V]) ParseNcpdpHeader() error {
-	if h.RawValue == Empty {
+	if h == nil {
+		return fmt.Errorf("header is null")
+	}
+
+	if strings.TrimSpace(h.RawValue) == Empty {
 		return fmt.Errorf("NCPDP data is empty")
 	}
 
