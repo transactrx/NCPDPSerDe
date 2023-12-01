@@ -14,6 +14,11 @@ const (
 	ID_LENGTH = 2
 )
 
+// NCPDP Versions
+const (
+	D0 = "D0"
+)
+
 // Response Status Codes
 const (
 	ACCEPTED_STATUS           = "A"

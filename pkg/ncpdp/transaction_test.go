@@ -109,6 +109,54 @@ func TestParsingResponseBody(t *testing.T) {
 	}
 }
 
+func TestBuildingNewRequest(t *testing.T) {
+	request := NewTransactionRequest("")
+
+	// Populate header
+	request.Header.Value.Bin = "880151"
+	request.Header.Value.Version = D0
+	request.Header.Value.TransactionCode = REVERSAL
+	request.Header.Value.Pcn = "TEST"
+	request.Header.Value.RecordCount = 1
+	request.Header.Value.ServiceProviderIdQualifier = "01"
+	request.Header.Value.ServiceProviderId = "1234567893"
+	request.Header.Value.DateOfService = "20231201"
+	request.Header.Value.SoftwareVendorCertificationId = "CERTID"
+
+	// Add shared segments
+	insuranceSegment := NcpdpSegment{Id: INSURANCE_SEGMENT_ID}
+	insuranceSegment.AppendField(CARDHOLDER_ID_FIELD_ID, "card_id")
+	insuranceSegment.AppendField(GROUP_CODE_FIELD_ID, "group_code")
+
+	request.Segments = append(request.Segments, insuranceSegment)
+
+	// Add groups/records
+	claimRecord := NcpdpRecord{}
+	claimSegment := NcpdpSegment{Id: CLAIM_SEGMENT_ID}
+	claimSegment.AppendField(PRESCRIPTION_SERVICE_REFERENCE_NO_QUALIFIER_FIELD_ID, "01")
+	claimSegment.AppendField(PRESCRIPTION_SERVICE_REFERENCE_NO_FIELD_ID, "rx_number")
+	claimSegment.AppendField(PRODUCT_SERVICE_ID_QUALIFIER_FIELD_ID, "03")
+	claimSegment.AppendField(PRODUCT_SERVICE_ID_FIELD_ID, "drug_ndc")
+
+	claimRecord.Segments = append(claimRecord.Segments, claimSegment)
+
+	request.Records = append(request.Records, claimRecord)
+
+	err := request.BuildNcpdp()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if request.RawValue == "" {
+		t.Errorf("empty RawValue")
+	}
+
+	if len(request.RawValue) <= 56 {
+		t.Errorf("RawValue length mismatch. Wanted at least: %q   Got: %q", 56, len(request.RawValue))
+	}
+}
+
 func validateBody[V RequestHeader | ResponseHeader](t *testing.T, test ncpdpBodyValueTest) {
 	tran := NcpdpTransaction[V]{
 		RawValue: test.claim,
