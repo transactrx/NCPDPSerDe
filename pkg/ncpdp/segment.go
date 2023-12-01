@@ -2,7 +2,6 @@ package ncpdp
 
 import (
 	"slices"
-
 )
 
 type NcpdpSegment struct {
