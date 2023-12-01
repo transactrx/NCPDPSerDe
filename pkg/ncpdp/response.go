@@ -5,6 +5,10 @@ import (
 )
 
 func (tran *NcpdpTransaction[ResponseHeader]) Status() string {
+	if tran == nil {
+		return Empty
+	}
+
 	seg := tran.Records[0].FindSegment(RESPONSE_STATUS_SEGMENT_ID)
 	if seg == nil {
 		return Empty
@@ -19,19 +23,35 @@ func (tran *NcpdpTransaction[ResponseHeader]) Status() string {
 }
 
 func (tran *NcpdpTransaction[ResponseHeader]) IsStatusOf(status string) bool {
+	if tran == nil {
+		return false
+	}
+
 	return tran.Status() == status
 }
 
 func (tran *NcpdpTransaction[ResponseHeader]) IsPaid() bool {
+	if tran == nil {
+		return false
+	}
+
 	return tran.IsStatusOf(PAID_STATUS) || tran.IsStatusOf(DUPLICATE_PAID_STATUS)
 }
 
 func (tran *NcpdpTransaction[ResponseHeader]) IsRejected() bool {
+	if tran == nil {
+		return false
+	}
+
 	return tran.IsStatusOf(REJECTED_STATUS)
 }
 
 func (tran *NcpdpTransaction[ResponseHeader]) GetRejectCodes() []string {
 	codes := []string{}
+
+	if tran == nil {
+		return codes
+	}
 
 	for _, record := range tran.Records {
 		seg := record.FindSegment(RESPONSE_STATUS_SEGMENT_ID)
@@ -49,6 +69,10 @@ func (tran *NcpdpTransaction[ResponseHeader]) GetRejectCodes() []string {
 
 func (tran *NcpdpTransaction[ResponseHeader]) GetAdditionalMessages() map[string]string {
 	messages := make(map[string]string)
+
+	if tran == nil {
+		return messages
+	}
 
 	for _, record := range tran.Records {
 		seg := record.FindSegment(RESPONSE_STATUS_SEGMENT_ID)

@@ -22,6 +22,10 @@ func NewTransmissionList() *Transmissions {
 
 // Log transmission event
 func (td *TransmissionData) LogEvent(logger *log.Logger, format, reason string) {
+	if td == nil {
+		return
+	}
+
 	logger.Printf(
 		format,
 		td.TransmissionId,

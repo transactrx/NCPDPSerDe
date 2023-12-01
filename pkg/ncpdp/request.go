@@ -10,6 +10,10 @@ import (
 
 // Find group code in claim request
 func (req *NcpdpTransaction[V]) GetGroupCode() string {
+	if req == nil {
+		return Empty
+	}
+
 	groupCode := Empty
 
 	groupField := req.FindFirstField(INSURANCE_SEGMENT_ID, GROUP_CODE_FIELD_ID, -1)
@@ -22,6 +26,10 @@ func (req *NcpdpTransaction[V]) GetGroupCode() string {
 
 // Generate reversal transmission.
 func (req *NcpdpTransaction[V]) GenerateReversal(requiredFields []string) (*NcpdpTransaction[RequestHeader], error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is null")
+	}
+
 	// Copy the raw data from the original request
 	reversal := NewTransactionRequest(req.RawValue)
 

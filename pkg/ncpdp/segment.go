@@ -36,6 +36,10 @@ func (seg *NcpdpSegment) FindFirstField(id string) *NcpdpField {
 func (seg *NcpdpSegment) FindAllFields(id string) []NcpdpField {
 	fields := []NcpdpField{}
 
+	if seg == nil || len(seg.Fields) == 0 {
+		return fields
+	}
+
 	for _, field := range seg.Fields {
 		if field.Id == id {
 			fields = append(fields, field)
@@ -47,7 +51,7 @@ func (seg *NcpdpSegment) FindAllFields(id string) []NcpdpField {
 
 // Append field.
 func (seg *NcpdpSegment) AppendField(id, value string) {
-	if id == Empty || value == Empty {
+	if seg == nil || id == Empty || value == Empty {
 		return
 	}
 
@@ -56,7 +60,7 @@ func (seg *NcpdpSegment) AppendField(id, value string) {
 
 // Append field copy.
 func (seg *NcpdpSegment) AppendFieldCopy(field *NcpdpField) {
-	if field == nil {
+	if seg == nil || field == nil {
 		return
 	}
 
