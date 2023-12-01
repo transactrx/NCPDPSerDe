@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
 )
 
 type ncpdpBodyValueTest struct {

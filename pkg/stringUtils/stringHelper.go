@@ -79,11 +79,3 @@ func TrimAll(str string, trimChars []byte) string {
 	str = strings.TrimLeftFunc(str, trimFunc)
 	return strings.TrimRightFunc(str, trimFunc)
 }
-
-func ValueOrDefault(str *string, defaultVal string) string {
-	if str == nil {
-		return defaultVal
-	}
-
-	return *str
-}
