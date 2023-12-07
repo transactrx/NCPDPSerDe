@@ -43,6 +43,20 @@ func (field *NcpdpField) GetInt() *int {
 	return &i
 }
 
+// Get value as integer or return default value
+func (field *NcpdpField) GetIntOrDefault(defaultValue int) int {
+	if field == nil || field.Value == Empty {
+		return defaultValue
+	}
+
+	i, err := strconv.Atoi(field.Value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return i
+}
+
 // Get value as float
 func (field *NcpdpField) GetFloat(fs *FieldSettings) (*float64, error) {
 	if field == nil {

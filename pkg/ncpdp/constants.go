@@ -2,6 +2,7 @@ package ncpdp
 
 const (
 	Empty = ""
+	Pipe  = "|"
 )
 
 // Separators
