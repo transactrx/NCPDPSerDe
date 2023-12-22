@@ -79,3 +79,14 @@ func TrimAll(str string, trimChars []byte) string {
 	str = strings.TrimLeftFunc(str, trimFunc)
 	return strings.TrimRightFunc(str, trimFunc)
 }
+
+func SplitBySeparator(data string, sep byte) []string {
+	sepIndex := IndexOfAny(data, 0, []byte{sep})
+
+	// None present
+	if sepIndex < 0 {
+		return []string{}
+	}
+
+	return strings.Split(data[sepIndex+1:], string(sep))
+}

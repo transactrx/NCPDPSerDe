@@ -71,7 +71,7 @@ func (fs FieldSettings) parseFloatWithImpliedDecimals(value string) (*float64, e
 }
 
 // Unsign potentially overpunched value as float with implied decimals
-func (fs FieldSettings) unsign(value string) (*float64, error) {
+func (fs FieldSettings) Unsign(value string) (*float64, error) {
 	rawValue := removeOverpunch(value)
 	fltValue, err := fs.parseFloatWithImpliedDecimals(rawValue)
 	if err != nil {

@@ -4,6 +4,11 @@ import (
 	"slices"
 )
 
+type SegmentId struct {
+	Raw string  `field:"code=rawsegment"`
+	Id  *string `field:"code=AM"`
+}
+
 type NcpdpSegment struct {
 	Id         string
 	RawValue   string
