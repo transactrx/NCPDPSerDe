@@ -3,7 +3,7 @@
 ## Overview
 Parse and build NCPDP claims.
 
-### Parse Examples
+### Parse Examples (Generic Parser)
 Request:
 ```
 requestTran := ncpdp.NewTransactionRequest(rawClaimString)
@@ -16,7 +16,7 @@ responseTran := ncpdp.NewTransactionResponse(rawClaimString)
 err := responseTran.ParseNcpdp()
 ```
 
-### Build Examples
+### Build Examples (Generic Builder)
 Update a Request Header value:
 ```
 requestTran.Header.Value.Bin = "123456"
