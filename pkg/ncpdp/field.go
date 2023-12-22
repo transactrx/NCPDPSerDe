@@ -67,5 +67,5 @@ func (field *NcpdpField) GetFloat(fs *FieldSettings) (*float64, error) {
 		fs = &FieldSettings{}
 	}
 
-	return fs.unsign(field.Value)
+	return fs.Unsign(field.Value)
 }
