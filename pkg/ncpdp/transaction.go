@@ -124,7 +124,7 @@ func (tran *NcpdpTransaction[V]) BuildNcpdpHeader() error {
 
 	oldHeader := tran.Header.RawValue
 
-	err := tran.Header.buildNcpdpHeader()
+	err := tran.Header.BuildNcpdpHeader()
 	if err != nil {
 		return err
 	}

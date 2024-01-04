@@ -52,7 +52,7 @@ type fieldLayout struct {
 }
 
 // Build header
-func (h *NcpdpHeader[V]) buildNcpdpHeader() error {
+func (h *NcpdpHeader[V]) BuildNcpdpHeader() error {
 	if h == nil {
 		return fmt.Errorf("header is null")
 	}

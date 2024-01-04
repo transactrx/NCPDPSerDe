@@ -162,7 +162,7 @@ func TestBuildingRequestHeader(t *testing.T) {
 			Value: test.header,
 		}
 
-		err := header.buildNcpdpHeader()
+		err := header.BuildNcpdpHeader()
 		if err != nil {
 			t.Error(err)
 			break
@@ -180,7 +180,7 @@ func TestBuildingResponseHeader(t *testing.T) {
 			Value: test.header,
 		}
 
-		err := header.buildNcpdpHeader()
+		err := header.BuildNcpdpHeader()
 		if err != nil {
 			t.Error(err)
 			break

@@ -1,6 +1,8 @@
-package claimparser
+package claimdeserializer
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp/request"
@@ -14,6 +16,11 @@ const REQUEST_E1 = "880151D0E1          1011730433129     20210531          AM
 const REQUEST_S1 = "880151D0S1TEST      1011234567893     20231214          AM04C2TESTC1TESTHEALTHC61AM01CX99CYTESTC420231109C51CATESTCBPWLCM41 GREEN STREETCNTESTCOMACP01844CQ34787077374X01AM07EM2D26007766D300D80DF00DJ0DT0DI12E200U701AM11D90000000{DQ0000000{DU0000000{DN00AMXX&GWX&ID&LN&N1538201264&U        &V        &WM#AM#E     #KBC3234666#M        #N02!F          !H  "
 const REQUEST_S2 = "880151D0S29999      1011234567893     20231212          AM04C2TESTCDTESTC1COSC61G2YAM014X03AM07EM2D29152724D300D80DF00DJ0DT0E200U705AMXX&G+C&IV&LY&N1558764159&U        &V        &W3#A3#E     #KFP4868153#M        #N04!F          !H  "
 const REQUEST_P1 = "880151D0P1          1010424919        20231212          AM04C2TESTCCTESTCDTESTC1RX8909C301C60G2YAM01CX01CY431042504C419530421C52CATESTCBTESTCM524 TEST RDCNHOT SPRINGSCOSCCP819018213CQ8007012333C7012C14X03AM07EM1D29127715E103D765862017001E70000007000D304D57D61D80DE20231115DF99DJ3DT328EAU705AM03EZ12DBBB6746804DRBHARANYPM50162533342E12DLBB67468044EBHARANY2JNEERAJ2K180 TEST PARK PL2MGREER2NSC2P719018067AM11D96DDC55ADQ0000000{DU61EDN01AMXX&BTEST&CA&DG&FEC880&GMG&H00&JEC880TPNR&K004440&LN&MN&N1558764159&U31&V615&WC&XN&YN5XXXO&Z20241211#AC#BE#CBB6746804#E00007#FE-3199#G65862017001#H3077fdb2e0344f78b2b05e94ac9b7021#I5430707#KFP4868153#L1497751390#M64#N01#OY#PN#Q431042504#WATEN8C2F#XWEISS#YKAREN#ZKW!F7000!MAR!P610 TEST ROAD!QHOT SPRINGS!RSC!S819018213"
+
+const REQUEST_B2_AM96 = "880151D0B2TESTTEST1 1011234567893     20231219          AM04C2TESTC1TESTC61AM014X04AM07EM1D21159262E103D759746017110E70000028000D301D528D61D80DE20231110DF05DJ328EAU705AM96AA1AB1BAD1DAA2AB2BAC2CAD2DAE33AE34"
+const REQUEST_B2_AM97 = "880151D0B2TESTTEST1 1011234567893     20231219          AM04C2TESTC1TESTC61AM014X04AM07EM1D21159262E103D759746017110E70000028000D301D528D61D80DE20231110DF05DJ328EAU705AM97AA1AB1BAD1DAA2AB2BAC2CAD2DAE33AM99A11A2BBB3c45S41S42S4559932AMXX&BTEST&CB&FEA590&GrC&H00&IV&JEA590SSLG&K083417&LY&MN&N1679198717&U1481&V649&W3&XN&YOVNU0&Z20241218#A3#BE#CFE4702127#E00028#F054101#G59746017110#KFS7324558#L1417228453#M1684#N -#OY#PN#WPRED5C81!F28000!MCT!P201 TEST ROAD!QCITY"
+const REQUEST_B2_AM98 = "880151D0B2TESTTEST1 1011234567893     20231219          AM04C2TESTC1TESTC61AM014X04AM98A11A2BBB3c45S41S42S4559932AM07EM1D21159262E103D759746017110E70000028000D301D528D61D80DE20231110DF05DJ328EAU705AM99A11A2BBB3c45S41S42S4559932AMXX&BTEST&CB&FEA590&GrC&H00&IV&JEA590SSLG&K083417&LY&MN&N1679198717&U1481&V649&W3&XN&YOVNU0&Z20241218#A3#BE#CFE4702127#E00028#F054101#G59746017110#KFS7324558#L1417228453#M1684#N -#OY#PN#WPRED5C81!F28000!MCT!P201 TEST ROAD!QCITY"
+const REQUEST_B2_AM99 = "880151D0B2TESTTEST1 1011234567893     20231219          AM04C2TESTC1TESTC61AM014X04AM07EM1D21159262E103D759746017110E70000028000D301D528D61D80DE20231110DF05DJ328EAU705AM99A11A2BBB3c45S41S42S4559932AMXX&BTEST&CB&FEA590&GrC&H00&IV&JEA590SSLG&K083417&LY&MN&N1679198717&U1481&V649&W3&XN&YOVNU0&Z20241218#A3#BE#CFE4702127#E00028#F054101#G59746017110#KFS7324558#L1417228453#M1684#N -#OY#PN#WPRED5C81!F28000!MCT!P201 TEST ROAD!QCITY!ZUDEF"
 
 const RESPONSE_B1 = "D0B11A011234567893     20210118AM20F4QS/1 POWERLINE D.0 TESTING TRANSMISSION LEVEL MESSAGE TEXT GOES HERE.  THE MESSAGE CAN BE UP TO 200 BYTES LONG AND SHOULD CONTAIN INFORMATION ABOUT THE TRANSMISSION OF THE CLAIM, NOT JUST ABOUT THE RXAM21ANPF31234567891234567895F36F0026F0046F012UF2UH01FQRX LEVEL MESSAGE TEXT FIRST FQ FIELDUH02FQRX LEVEL MESSAGE TEXT SECOND FQ FIELD7F038F8008457558AM22EM1D299999999F1AP03AR17236056901AS52EAUPREF PROD DESCRIPTIONAM23F5100{F6557{F7100{AV1J21J301J4150{F9707{FM1FN20{FI80{MW20{EQ20{"
 const RESPONSE_B2 = "D0B21A011679198717     20231219AM21ANAAM22EM1D27159262*AD0"
@@ -94,10 +101,17 @@ var eligibilityResponseTests = []parseTest{
 	{rawData: RESPONSE_E1},
 }
 
+var extraSegmentsRequestTests = []parseTest{
+	{rawData: REQUEST_B2_AM96},
+	{rawData: REQUEST_B2_AM97},
+	{rawData: REQUEST_B2_AM98},
+	{rawData: REQUEST_B2_AM99},
+}
+
 func Test_CanParseDynamic(t *testing.T) {
 	for _, test := range dynamicTests {
 
-		i, err := ParseDynamic(test.rawData)
+		i, err := Deserialize(test.rawData)
 
 		if err != nil {
 			t.Error(err)
@@ -167,7 +181,7 @@ func Test_CanParseDynamic(t *testing.T) {
 func Test_CanParseDynamicRequest(t *testing.T) {
 	for _, test := range requestTests {
 
-		i, err := ParseRequestDynamic(test.rawData)
+		i, err := DeserializeRequest(test.rawData)
 
 		if err != nil {
 			t.Error(err)
@@ -213,7 +227,7 @@ func Test_CanParseDynamicRequest(t *testing.T) {
 func Test_CanParseDynamicResponse(t *testing.T) {
 	for _, test := range responseTests {
 
-		i, err := ParseResponseDynamic(test.rawData)
+		i, err := DeserializeResponse(test.rawData)
 
 		if err != nil {
 			t.Error(err)
@@ -261,7 +275,7 @@ func Test_CanParseBillingRequest(t *testing.T) {
 
 		obj := request.Billing{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -278,7 +292,7 @@ func Test_CanParseReversalRequest(t *testing.T) {
 
 		obj := request.Reversal{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -295,7 +309,7 @@ func Test_CanParseRebillRequest(t *testing.T) {
 
 		obj := request.Rebill{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -312,7 +326,7 @@ func Test_CanParseServiceBillingRequest(t *testing.T) {
 
 		obj := request.ServiceBilling{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -329,7 +343,7 @@ func Test_CanParseServiceReversalRequest(t *testing.T) {
 
 		obj := request.ServiceReversal{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -346,7 +360,7 @@ func Test_CanParsePriorAuthRequest(t *testing.T) {
 
 		obj := request.PriorAuthorization{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -363,7 +377,7 @@ func Test_CanParseEligibilityRequest(t *testing.T) {
 
 		obj := request.Eligibility{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -380,7 +394,7 @@ func Test_CanParseBillingResponse(t *testing.T) {
 
 		obj := response.Billing{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -397,7 +411,7 @@ func Test_CanParseRebillResponse(t *testing.T) {
 
 		obj := response.Rebill{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -414,7 +428,7 @@ func Test_CanParseReversalResponse(t *testing.T) {
 
 		obj := response.Reversal{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -431,7 +445,7 @@ func Test_CanParseServiceReversalResponse(t *testing.T) {
 
 		obj := response.ServiceReversal{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -448,7 +462,7 @@ func Test_CanParseEligibilityResponse(t *testing.T) {
 
 		obj := response.Eligibility{}
 
-		err := ParseRawClaim(test.rawData, &obj)
+		err := DeserializeType(test.rawData, &obj)
 		if err != nil {
 			t.Error(err)
 			break
@@ -457,5 +471,33 @@ func Test_CanParseEligibilityResponse(t *testing.T) {
 		if obj.Patient.FirstName == nil || *obj.Patient.FirstName != "TEST" {
 			t.Errorf("Patient name  mismatch. Wanted: TEST   Got: %v", obj.Patient.FirstName)
 		}
+	}
+}
+
+func Test_CanParseUndefinedReversalSegments(t *testing.T) {
+	for _, test := range extraSegmentsRequestTests {
+
+		obj := request.Reversal{}
+
+		err := DeserializeType(test.rawData, &obj)
+		if err != nil {
+			t.Error(err)
+			break
+		}
+
+		if len(obj.Claims) != 1 {
+			t.Errorf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
+		}
+
+		if len(obj.Claims[0].DynamicSegments) == 0 {
+			t.Errorf("Group DynamicSegments count mismatch. Wanted: >0   Got: %v", len(obj.Claims[0].DynamicSegments))
+		}
+
+		bytes, err := json.Marshal(obj)
+		if err != nil {
+			t.Errorf("Json error: %q", err)
+		}
+
+		fmt.Print(string(bytes))
 	}
 }
