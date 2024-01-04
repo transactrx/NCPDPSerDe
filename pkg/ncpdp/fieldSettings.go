@@ -46,7 +46,7 @@ var signedNegative = map[string]string{
 	"R": "9",
 }
 
-func (fs FieldSettings) toImpliedDecimalString(value interface{}) string {
+func (fs FieldSettings) ToImpliedDecimalString(value interface{}) string {
 	pattern := "%." + fmt.Sprint(fs.DecimalPlaces) + "f"
 	return strings.Replace(fmt.Sprintf(pattern, value), ".", Empty, 1)
 }
@@ -82,8 +82,8 @@ func (fs FieldSettings) Unsign(value string) (*float64, error) {
 }
 
 // Apply overpunch to value with implied decimal places.
-func (fs FieldSettings) sign(value interface{}) string {
-	return applyOverpunch(fs.toImpliedDecimalString(value))
+func (fs FieldSettings) Sign(value interface{}) string {
+	return applyOverpunch(fs.ToImpliedDecimalString(value))
 }
 
 // Apply overpunch to value.
@@ -144,10 +144,10 @@ func (fs FieldSettings) convertFieldValueToString(fieldValue interface{}) string
 	switch t := fieldValue.(type) {
 	case float64:
 		if fs.Overpunch {
-			return fs.sign(t)
+			return fs.Sign(t)
 		}
 
-		return fs.toImpliedDecimalString(t)
+		return fs.ToImpliedDecimalString(t)
 	}
 
 	return fmt.Sprint(fieldValue)

@@ -13,3 +13,13 @@ func IndexOfStartsWith(lookfor string, lookin []string) int {
 
 	return slices.IndexFunc(lookin, startsWithFunc)
 }
+
+func CountOccurencesWithPrefix(data []string, prefix string) int {
+	count := 0
+	for _, item := range data {
+		if strings.HasPrefix(item, prefix) {
+			count++
+		}
+	}
+	return count
+}

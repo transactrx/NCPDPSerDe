@@ -43,8 +43,12 @@ func Substring(str string, fromIndex, length int) string {
 		return ""
 	}
 
-	if length <= 0 {
+	if length < 0 {
 		return str[fromIndex:]
+	}
+
+	if length == 0 {
+		return ""
 	}
 
 	endIndex := fromIndex + length

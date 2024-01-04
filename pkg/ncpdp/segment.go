@@ -5,8 +5,8 @@ import (
 )
 
 type SegmentId struct {
-	Raw string  `field:"code=rawsegment"`
-	Id  *string `field:"code=AM"`
+	Raw *string `field:"code=rawsegment"`
+	Id  *string `field:"code=AM,order=1"`
 }
 
 type NcpdpSegment struct {
