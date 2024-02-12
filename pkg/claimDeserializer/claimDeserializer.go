@@ -58,6 +58,7 @@ func DeserializeRequest(rawClaimString string) (interface{}, error) {
 
 	// Determine transaction type by tran code
 	rawClaimString = strings.TrimSpace(rawClaimString)
+	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
 
 	if len(rawClaimString) < 10 {
 		return nil, fmt.Errorf("unable to determine transaction type")
@@ -85,6 +86,7 @@ func DeserializeResponse(rawClaimString string) (interface{}, error) {
 
 	// Determine transaction type by tran code
 	rawClaimString = strings.TrimSpace(rawClaimString)
+	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
 
 	if len(rawClaimString) < 4 {
 		return nil, fmt.Errorf("unable to determine transaction type")
@@ -125,7 +127,7 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 		return nil, fmt.Errorf("NCPDP data is serde.Empty")
 	}
 
-	rawClaimString = strings.TrimSpace(strings.TrimSuffix(rawClaimString, string(ncpdp.ETX)))
+	rawClaimString = strings.TrimSpace(strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), ""))
 
 	firstSeparatorIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.FIELD, ncpdp.SEGMENT, ncpdp.GROUP})
 	if firstSeparatorIndex == -1 {
