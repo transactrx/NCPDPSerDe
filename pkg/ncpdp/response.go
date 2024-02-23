@@ -2,6 +2,7 @@ package ncpdp
 
 import (
 	"fmt"
+	"strings"
 )
 
 func (tran *NcpdpTransaction[ResponseHeader]) Status() string {
@@ -59,7 +60,7 @@ func (tran *NcpdpTransaction[ResponseHeader]) GetRejectCodes() []string {
 		if seg != nil {
 			segFields := seg.FindAllFields(REJECT_CODE_FIELD_ID)
 			for _, field := range segFields {
-				codes = append(codes, field.Value)
+				codes = append(codes, strings.TrimSpace(field.Value))
 			}
 		}
 	}
