@@ -9,7 +9,7 @@ import (
 	stringutils "github.com/transactrx/NCPDPSerDe/pkg/stringUtils"
 )
 
-type NcpdpTransaction[V RequestHeader | ResponseHeader] struct {
+type NcpdpTransaction[V RequestHeader | ResponseHeader | FinancialRequestHeader | FinancialResponseHeader] struct {
 	Header   NcpdpHeader[V]
 	RawValue string
 	Segments []NcpdpSegment
