@@ -12,7 +12,7 @@ import (
 
 const layoutTag = "layout"
 
-type NcpdpHeader[V RequestHeader | ResponseHeader] struct {
+type NcpdpHeader[V RequestHeader | ResponseHeader | FinancialRequestHeader | FinancialResponseHeader] struct {
 	RawValue string
 	Size     int
 	Value    V
@@ -38,6 +38,26 @@ type ResponseHeader struct {
 	ServiceProviderIdQualifier string `layout:"start=6,length=2,order=5"`
 	ServiceProviderId          string `layout:"start=8,length=15,order=6"`
 	DateOfService              string `layout:"start=23,length=8,order=7"`
+}
+
+type FinancialRequestHeader struct {
+	Bin                           string `layout:"start=0,length=6,order=1"`
+	Version                       string `layout:"start=6,length=2,order=2"`
+	TransactionCode               string `layout:"start=8,length=2,order=3"`
+	Pcn                           string `layout:"start=10,length=10,order=4"`
+	RecordCount                   int    `layout:"start=20,length=1,order=5"`
+	AccumulatorYear               string `layout:"start=21,length=4,order=6"`
+	TransactionId                 string `layout:"start=25,length=21,order=7"`
+	SoftwareVendorCertificationId string `layout:"start=46,length=10,order=8"`
+}
+
+type FinancialResponseHeader struct {
+	Version         string `layout:"start=0,length=2,order=1"`
+	TransactionCode string `layout:"start=2,length=2,order=2"`
+	RecordCount     int    `layout:"start=4,length=1,order=3"`
+	Status          string `layout:"start=5,length=1,order=4"`
+	AccumulatorYear string `layout:"start=6,length=4,order=5"`
+	TransactionId   string `layout:"start=10,length=21,order=6"`
 }
 
 type Layout struct {
