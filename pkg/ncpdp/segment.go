@@ -73,3 +73,21 @@ func (seg *NcpdpSegment) AppendFieldCopy(field *NcpdpField) {
 
 	seg.Fields = append(seg.Fields, *NewField(field.Id, field.Value))
 }
+
+// Insert field.
+func (seg *NcpdpSegment) InsertField(id, value string, index int) {
+	if seg == nil || id == Empty || value == Empty {
+		return
+	}
+
+	seg.Fields = slices.Insert(seg.Fields, index, *NewField(id, value))
+}
+
+// Delete field.
+func (seg *NcpdpSegment) DeleteField(id, value string, index int) {
+	if seg == nil || id == Empty || value == Empty {
+		return
+	}
+
+	seg.Fields = slices.Delete(seg.Fields, index, 1)
+}
