@@ -54,6 +54,21 @@ func (seg *NcpdpSegment) FindAllFields(id string) []NcpdpField {
 	return fields
 }
 
+// Find first index for the specified ID, -1 when not found
+func (seg *NcpdpSegment) FindFirstIndex(id string) int {
+	if seg == nil || len(seg.Fields) == 0 {
+		return -1
+	}
+
+	// Define a function that reutrns true when the field ID matches
+	equalFunc := func(f NcpdpField) bool {
+		return f.Id == id
+	}
+
+	// Get the index of the matching segment
+	return slices.IndexFunc(seg.Fields, equalFunc)
+}
+
 // Append field.
 func (seg *NcpdpSegment) AppendField(id, value string) {
 	if seg == nil || id == Empty || value == Empty {
