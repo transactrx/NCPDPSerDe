@@ -109,5 +109,5 @@ func (seg *NcpdpSegment) DeleteField(id string) {
 		return
 	}
 
-	seg.Fields = slices.Delete(seg.Fields, index, 1)
+	seg.Fields = append(seg.Fields[:index], seg.Fields[index+1:]...)
 }
