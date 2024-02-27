@@ -104,10 +104,10 @@ func (seg *NcpdpSegment) DeleteField(id string) {
 		return
 	}
 
-	for i := 0; i < len(seg.Fields); i++ {
-		if seg.Fields[i].Id == id {
-			seg.Fields = slices.Delete(seg.Fields, i, 1)
-			return
-		}
+	index := seg.FindFirstIndex(id)
+	if index < 0 {
+		return
 	}
+
+	seg.Fields = slices.Delete(seg.Fields, index, 1)
 }
