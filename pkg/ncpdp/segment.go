@@ -84,10 +84,15 @@ func (seg *NcpdpSegment) InsertField(id, value string, index int) {
 }
 
 // Delete field.
-func (seg *NcpdpSegment) DeleteField(id, value string, index int) {
-	if seg == nil || id == Empty || value == Empty {
+func (seg *NcpdpSegment) DeleteField(id string) {
+	if seg == nil || id == Empty {
 		return
 	}
 
-	seg.Fields = slices.Delete(seg.Fields, index, 1)
+	for i := 0; i < len(seg.Fields); i++ {
+		if seg.Fields[i].Id == id {
+			seg.Fields = slices.Delete(seg.Fields, i, 1)
+			return
+		}
+	}
 }
