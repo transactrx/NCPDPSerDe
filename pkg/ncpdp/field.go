@@ -3,6 +3,7 @@ package ncpdp
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type NcpdpField struct {
@@ -26,7 +27,7 @@ func (field *NcpdpField) GetString() string {
 		return Empty
 	}
 
-	return field.Value
+	return strings.TrimSpace(field.Value)
 }
 
 // Get value as integer
