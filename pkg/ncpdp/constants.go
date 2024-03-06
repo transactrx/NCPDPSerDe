@@ -38,9 +38,10 @@ const (
 
 // Response Segment IDs
 const (
-	RESPONSE_MESSAGE_SEGMENT_ID = "AM20"
-	RESPONSE_STATUS_SEGMENT_ID  = "AM21"
-	RESPONSE_PRICING_SEGMENT_ID = "AM23"
+	RESPONSE_MESSAGE_SEGMENT_ID   = "AM20"
+	RESPONSE_STATUS_SEGMENT_ID    = "AM21"
+	RESPONSE_PRICING_SEGMENT_ID   = "AM23"
+	RESPONSE_INSURANCE_SEGMENT_ID = "AM25"
 )
 
 // Field IDs
@@ -48,6 +49,7 @@ const (
 	SEGMENT_FIELD_ID = "AM"
 
 	MEDIGAP_ID_FIELD_ID                                  = "2A"
+	NETWORK_REIMBURSEMENT_FIELD_ID                       = "2F"
 	PATIENT_RESIDENCE_FIELD_ID                           = "4X"
 	STATUS_FIELD_ID                                      = "AN"
 	FLAT_SALES_TAX_AMOUNT_PAID_FIELD_ID                  = "AW"
