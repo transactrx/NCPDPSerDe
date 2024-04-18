@@ -400,3 +400,26 @@ func parseSegment(rawData string, startIndex int) *NcpdpSegment {
 
 	return &segment
 }
+
+// Scan raw data for field values.
+func (tran *NcpdpTransaction[V]) ScanRawDataForFieldValues(fieldCode string) []string {
+	valueList := []string{}
+
+	rawFieldCode := fmt.Sprintf("%c%v", FIELD, fieldCode)
+
+	indexes := stringutils.IndexOfAll(tran.RawValue, rawFieldCode)
+
+	for i := 0; i < len(indexes); i++ {
+		startIndex := indexes[i] + 3
+		strValue := stringutils.Substring(tran.RawValue, startIndex, -1)
+		endIndex := stringutils.IndexOfAny(strValue, 0, []byte{FIELD, SEGMENT, GROUP, ETX})
+
+		if endIndex > 0 {
+			strValue = stringutils.Substring(strValue, 0, endIndex)
+		}
+
+		valueList = append(valueList, strValue)
+	}
+
+	return valueList
+}

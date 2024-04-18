@@ -17,6 +17,35 @@ func SplitFirst(str string, fromIndex int, searchFor []byte) string {
 	return Substring(str, fromIndex, -1)
 }
 
+// Find all indexes for a given substring.
+func IndexOfAll(str, searchTerm string) []int {
+	indexes := []int{}
+
+	index := strings.Index(str, searchTerm)
+
+	for {
+		if index < 0 {
+			break
+		}
+
+		indexes = append(indexes, index)
+		index = IndexAt(str, searchTerm, index+1)
+	}
+
+	return indexes
+}
+
+// Find first index of substring starting at the specified index.
+// Returns -1 when not found.
+func IndexAt(str, searchTerm string, startIndex int) int {
+	index := strings.Index(str[startIndex:], searchTerm)
+	if index > -1 {
+		index += startIndex
+	}
+
+	return index
+}
+
 // Find first index of any of the specified characters.
 // Returns -1 when not found.
 func IndexOfAny(str string, fromIndex int, searchFor []byte) int {
