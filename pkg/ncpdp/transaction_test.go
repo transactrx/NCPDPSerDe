@@ -231,3 +231,65 @@ func validateSegment(t *testing.T, seg NcpdpSegment, recordIndex int, fields []f
 		}
 	}
 }
+
+func TestScanRawDataForFieldValues_Request(t *testing.T) {
+	tran := NcpdpTransaction[RequestHeader]{
+		RawValue: REQUEST_B1,
+		Created:  time.Now().UTC(),
+	}
+	err := tran.ParseNcpdp()
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	valuesE7 := tran.ScanRawDataForFieldValues("E7")
+
+	if len(valuesE7) != 1 {
+		t.Errorf("Field count mismatch. FieldId: E7   Wanted: 1   Got: %v", len(valuesE7))
+	} else {
+		if valuesE7[0] != "0000001000" {
+			t.Errorf("Field value mismatch. FieldId: E7   Wanted: 0000001000   Got: %v", valuesE7[0])
+		}
+	}
+}
+
+func TestScanRawDataForFieldValues_Response(t *testing.T) {
+	tran := NcpdpTransaction[ResponseHeader]{
+		RawValue: RESPONSE_REJECTED,
+		Created:  time.Now().UTC(),
+	}
+	err := tran.ParseNcpdp()
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	valuesFB := tran.ScanRawDataForFieldValues("FB")
+
+	if len(valuesFB) != 5 {
+		t.Errorf("Field count mismatch. FieldId: FB   Wanted: 5   Got: %v", len(valuesFB))
+	} else {
+		if valuesFB[0] != "7X" {
+			t.Errorf("Field value mismatch. FieldId: FB   Wanted: 7X   Got: %v", valuesFB[0])
+		}
+
+		if valuesFB[1] != "06" {
+			t.Errorf("Field value mismatch. FieldId: FB   Wanted: 06   Got: %v", valuesFB[1])
+		}
+
+		if valuesFB[2] != "07" {
+			t.Errorf("Field value mismatch. FieldId: FB   Wanted: 07   Got: %v", valuesFB[2])
+		}
+
+		if valuesFB[3] != "ZZ" {
+			t.Errorf("Field value mismatch. FieldId: FB   Wanted: ZZ   Got: %v", valuesFB[3])
+		}
+
+		if valuesFB[4] != "372" {
+			t.Errorf("Field value mismatch. FieldId: FB   Wanted: 372   Got: %v", valuesFB[4])
+		}
+	}
+}
