@@ -2,6 +2,7 @@ package responsesegment
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
@@ -55,14 +56,19 @@ type HelpDeskPhoneNumber struct {
 // data size and using continuation characters where required.
 // Returns error when unable to append message.
 func (segment *Status) AppendMessage(verbiage string) error {
-	if segment == nil {
+	if segment == nil || len(verbiage) == 0 {
 		return nil
 	}
 
+	// Uppercase it
+	verbiage = strings.ToUpper(verbiage)
+
+	// Check message count
 	if len(segment.AdditionalMessages) >= MaxMessageCount {
 		return fmt.Errorf("maximum message count exceeded")
 	}
 
+	// Break into chunks by max field length
 	chunks := stringutils.Chunk(verbiage, MaxMessageLength)
 
 	if len(chunks)+len(segment.AdditionalMessages) >= MaxMessageCount {
