@@ -1,7 +1,11 @@
 package ncpdp
 
 import (
+	"fmt"
 	"slices"
+	"strings"
+
+	reflectionutils "github.com/transactrx/NCPDPSerDe/pkg/reflectionUtils"
 )
 
 type SegmentId struct {
@@ -14,6 +18,27 @@ type NcpdpSegment struct {
 	RawValue   string
 	Fields     []NcpdpField
 	StartIndex int
+}
+
+// Create new SegmentId structure.
+func NewSegmentId(segmentCode string) (*SegmentId, error) {
+	if strings.HasPrefix(segmentCode, SEGMENT_FIELD_ID) {
+		if len(segmentCode) != 4 {
+			return nil, fmt.Errorf("invalid segment code")
+		}
+		segmentCode = segmentCode[2:]
+	}
+
+	if len(segmentCode) != 2 {
+		return nil, fmt.Errorf("invalid segment code")
+	}
+
+	segId := SegmentId{
+		Raw: reflectionutils.ToPointer(fmt.Sprintf("%v%v", SEGMENT_FIELD_ID, segmentCode)),
+		Id:  reflectionutils.ToPointer(segmentCode),
+	}
+
+	return &segId, nil
 }
 
 // Find field for the specified ID.
