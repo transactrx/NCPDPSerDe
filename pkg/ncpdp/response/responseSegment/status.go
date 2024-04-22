@@ -1,8 +1,18 @@
 package responsesegment
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
+	reflectionutils "github.com/transactrx/NCPDPSerDe/pkg/reflectionUtils"
+	stringutils "github.com/transactrx/NCPDPSerDe/pkg/stringUtils"
+)
+
+const (
+	MaxMessageCount  = 25
+	MaxMessageLength = 40
 )
 
 type Status struct {
@@ -40,4 +50,41 @@ type AdditionalMessage struct {
 type HelpDeskPhoneNumber struct {
 	Qualifier *string `field:"code=7F,order=13"`
 	Number    *string `field:"code=8F,order=14"`
+}
+
+// Append message to additional messages array, chunking message into the appropriate
+// data size and using continuation characters where required.
+// Returns error when unable to append message.
+func (segment *Status) AppendMessage(verbiage string) error {
+	if segment == nil {
+		return nil
+	}
+
+	if len(segment.AdditionalMessages) >= MaxMessageCount {
+		return fmt.Errorf("maximum message count exceeded")
+	}
+
+	chunks := stringutils.Chunk(verbiage, MaxMessageLength)
+
+	if len(chunks)+len(segment.AdditionalMessages) >= MaxMessageCount {
+		return fmt.Errorf("maximum message count exceeded")
+	}
+
+	for i := 0; i < len(chunks); i++ {
+		msgText := chunks[i]
+
+		addtlMessage := AdditionalMessage{
+			Qualifier: reflectionutils.ToPointer(strconv.Itoa(len(segment.AdditionalMessages) + 1)),
+			Message:   reflectionutils.ToPointer(msgText),
+		}
+
+		if i < len(chunks)-1 {
+			addtlMessage.Continuation = reflectionutils.ToPointer("+")
+		}
+
+		segment.AdditionalMessages = append(segment.AdditionalMessages, addtlMessage)
+		segment.AdditionalMessageCount = reflectionutils.ToPointer(len(segment.AdditionalMessages))
+	}
+
+	return nil
 }
