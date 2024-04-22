@@ -2,7 +2,6 @@ package responsesegment
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
@@ -74,7 +73,7 @@ func (segment *Status) AppendMessage(verbiage string) error {
 		msgText := chunks[i]
 
 		addtlMessage := AdditionalMessage{
-			Qualifier: reflectionutils.ToPointer(strconv.Itoa(len(segment.AdditionalMessages) + 1)),
+			Qualifier: reflectionutils.ToPointer(fmt.Sprintf("%02d", len(segment.AdditionalMessages)+1)),
 			Message:   reflectionutils.ToPointer(msgText),
 		}
 
