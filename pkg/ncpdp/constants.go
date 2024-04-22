@@ -66,6 +66,8 @@ const (
 	PRODUCT_SERVICE_ID_QUALIFIER_FIELD_ID                = "E1"
 	QUANTITY_DISPENSED_FIELD_ID                          = "E7"
 	PRESCRIPTION_SERVICE_REFERENCE_NO_QUALIFIER_FIELD_ID = "EM"
+	INTERMEDIARY_AUTH_CODE_QUALIFIER_FIELD_ID            = "EW"
+	INTERMEDIARY_AUTH_CODE_FIELD_ID                      = "EX"
 	AUTHORIZATION_NUMBER_FIELD_ID                        = "F3"
 	MESSAGE_FIELD_ID                                     = "F4"
 	PATIENT_PAY_AMOUNT_FIELD_ID                          = "F5"
