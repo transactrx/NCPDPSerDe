@@ -33,6 +33,7 @@ const (
 const (
 	PATIENT_SEGMENT_ID   = "AM01"
 	INSURANCE_SEGMENT_ID = "AM04"
+	COB_SEGMENT_ID       = "AM05"
 	CLAIM_SEGMENT_ID     = "AM07"
 )
 
