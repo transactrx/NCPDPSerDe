@@ -13,6 +13,7 @@ type TransmissionData struct {
 	FinalResponse    bool
 	RouteCode        string
 	RoutingAddress   string
+	TestClaim        bool
 	Request          *NcpdpTransaction[RequestHeader]
 	Response         *NcpdpTransaction[ResponseHeader]
 }
