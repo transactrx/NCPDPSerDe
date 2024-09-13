@@ -110,6 +110,10 @@ func DeserializeResponse(rawClaimString string) (interface{}, error) {
 // Parse raw claim.
 // Good if you already know the type.
 func DeserializeType[V any](rawClaimString string, claim *V) error {
+	if claim == nil {
+		return fmt.Errorf("'claim' parameter is nil")
+	}
+
 	claimType := reflect.TypeOf(claim)
 	claimObjectRef := reflect.ValueOf(claim)
 
@@ -124,7 +128,7 @@ func DeserializeType[V any](rawClaimString string, claim *V) error {
 // Parse raw data.
 func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRef reflect.Value) (interface{}, error) {
 	if strings.TrimSpace(rawClaimString) == serde.Empty {
-		return nil, fmt.Errorf("NCPDP data is serde.Empty")
+		return nil, fmt.Errorf("NCPDP data is empty")
 	}
 
 	rawClaimString = strings.TrimSpace(strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), ""))
