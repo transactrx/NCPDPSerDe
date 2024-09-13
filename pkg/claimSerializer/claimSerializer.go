@@ -17,6 +17,10 @@ import (
 
 // Serialize claim
 func Serialize[V any](claim *V) (string, error) {
+	if claim == nil {
+		return serde.Empty, fmt.Errorf("'claim' parameter is nil")
+	}
+
 	claimType := reflect.TypeOf(claim)
 	claimObjectRef := reflect.ValueOf(claim)
 
