@@ -7,18 +7,19 @@ import (
 )
 
 type TransmissionData struct {
-	TransmissionId    string
-	PreEditId         string
-	TransmissionType  string
-	TransmissionState string
-	FinalResponse     bool
-	RouteCode         string
-	RoutingAddress    string
-	AppCode           string
-	AppMessage        string
-	TestClaim         bool
-	Request           *NcpdpTransaction[RequestHeader]
-	Response          *NcpdpTransaction[ResponseHeader]
+	TransmissionId   string
+	PreEditId        string
+	TransmissionType string
+	FinalResponse    bool
+	RouteCode        string
+	RoutingAddress   string
+	AppCode          string
+	AppMessage       string
+	TestClaim        bool
+	RequestState     string
+	ResponseState    string
+	Request          *NcpdpTransaction[RequestHeader]
+	Response         *NcpdpTransaction[ResponseHeader]
 }
 
 type Transmissions []TransmissionData
