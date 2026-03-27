@@ -276,6 +276,29 @@ func (tran *NcpdpTransaction[V]) insertField(fieldId string, fieldValue interfac
 	tran.RawValue = newVal
 }
 
+func (tran *NcpdpTransaction[V]) EditField(field *NcpdpField, fieldValue interface{}, settings *FieldSettings) {
+	if tran == nil || field == nil {
+		return
+	}
+
+	if settings == nil {
+		settings = &FieldSettings{}
+	}
+
+	newRawFieldVal := fmt.Sprintf("%c%s%s",
+		FIELD,
+		field.Id,
+		settings.convertFieldValueToString(fieldValue))
+
+	fieldStart := field.StartIndex
+	fieldEnd := field.StartIndex + len(field.RawValue)
+
+	tran.RawValue = fmt.Sprintf("%s%s%s",
+		stringutils.Substring(tran.RawValue, 0, fieldStart),
+		newRawFieldVal,
+		stringutils.Substring(tran.RawValue, fieldEnd, -1))
+}
+
 // Parse NCPDP claim data.
 func (tran *NcpdpTransaction[V]) ParseNcpdp() error {
 	if tran == nil {
