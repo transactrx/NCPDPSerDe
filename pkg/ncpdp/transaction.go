@@ -263,12 +263,12 @@ func (tran *NcpdpTransaction[V]) insertField(fieldId string, fieldValue interfac
 		return
 	}
 
-	rawFieldVal := fmt.Sprintf("%v%v%v",
+	rawFieldVal := fmt.Sprintf("%c%s%s",
 		FIELD,
 		fieldId,
 		settings.convertFieldValueToString(fieldValue))
 
-	newVal := fmt.Sprintf("%v%v%v",
+	newVal := fmt.Sprintf("%s%s%s",
 		stringutils.Substring(tran.RawValue, 0, insertAt),
 		rawFieldVal,
 		stringutils.Substring(tran.RawValue, insertAt, -1))
