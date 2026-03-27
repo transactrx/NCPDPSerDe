@@ -141,6 +141,10 @@ func (tran *NcpdpTransaction[V]) FindSegment(id string) *NcpdpSegment {
 		return nil
 	}
 
+	if !strings.HasPrefix(id, "AM") {
+		id = "AM" + id
+	}
+
 	// Define a function that reutrns true when the segment ID matches
 	equalFunc := func(s NcpdpSegment) bool {
 		return s.Id == id
