@@ -305,6 +305,11 @@ func (tran *NcpdpTransaction[V]) ParseNcpdp() error {
 		return nil
 	}
 
+	// Reset parsed state so repeated calls don't append duplicates
+	tran.Header = NcpdpHeader[V]{}
+	tran.Segments = nil
+	tran.Records = nil
+
 	// Parse header
 	header := NcpdpHeader[V]{
 		RawValue: tran.RawValue,
