@@ -236,3 +236,119 @@ func Test_CanUpdateField(t *testing.T) {
 		}
 	}
 }
+
+// Test_PreservesTrailingWhitespace verifies that trailing whitespace in field values
+// is preserved through the deserialize -> serialize roundtrip.
+func Test_PreservesTrailingWhitespace(t *testing.T) {
+	// Deserialize an existing claim first
+	obj := request.Reversal{}
+	err := claimdeserializer.DeserializeType(REQUEST_B2, &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	// Modify the cardholder ID to have trailing whitespace
+	cardholderWithSpaces := "TEST    " // TEST with 4 trailing spaces
+	obj.Insurance.Cardholder.Id = &cardholderWithSpaces
+
+	// Serialize the claim
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	// Deserialize again to verify whitespace is preserved
+	obj2 := request.Reversal{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	// Verify the cardholder ID has trailing whitespace preserved
+	if obj2.Insurance.Cardholder.Id == nil {
+		t.Fatal("Cardholder ID is nil after roundtrip")
+	}
+	cardholderID := *obj2.Insurance.Cardholder.Id
+	if cardholderID != cardholderWithSpaces {
+		t.Errorf("Cardholder ID whitespace not preserved through roundtrip.\nWanted: %q (len=%d)\nGot:    %q (len=%d)",
+			cardholderWithSpaces, len(cardholderWithSpaces), cardholderID, len(cardholderID))
+	}
+
+	// Also verify the serialized string contains the field with trailing whitespace
+	expectedFieldValue := string(ncpdp.FIELD) + "C2TEST    "
+	if !strings.Contains(serialized, expectedFieldValue) {
+		// Find the C2 field in the serialized output for debugging
+		c2Index := strings.Index(serialized, string(ncpdp.FIELD)+"C2")
+		if c2Index >= 0 {
+			endIndex := strings.Index(serialized[c2Index+1:], string(ncpdp.FIELD))
+			if endIndex < 0 {
+				endIndex = len(serialized) - c2Index - 1
+			}
+			actualField := serialized[c2Index : c2Index+1+endIndex]
+			t.Errorf("Cardholder ID whitespace not preserved in serialized output.\nWanted field to contain: %q\nGot field: %q",
+				expectedFieldValue, actualField)
+		} else {
+			t.Error("C2 field not found in serialized output")
+		}
+	}
+}
+
+// Test_PreservesTrailingWhitespaceFromRawInput verifies that trailing whitespace
+// in the original raw claim is preserved through deserialization.
+func Test_PreservesTrailingWhitespaceFromRawInput(t *testing.T) {
+	// Use an existing claim that has a known field, deserialize it,
+	// then use reflection to check the raw deserialized value contains whitespace
+
+	// First, create a modified version of REQUEST_B2 with trailing whitespace in the group ID (C1)
+	// The C1 field is the GroupId in the Insurance segment
+	rawClaimWithWhitespace := strings.Replace(
+		REQUEST_B2,
+		string(ncpdp.FIELD)+"C1TEST"+string(ncpdp.FIELD),
+		string(ncpdp.FIELD)+"C1TEST    "+string(ncpdp.FIELD), // Add trailing spaces to GroupId
+		1,
+	)
+
+	// Deserialize the modified claim
+	obj := request.Reversal{}
+	err := claimdeserializer.DeserializeType(rawClaimWithWhitespace, &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	// Verify the GroupId has trailing whitespace preserved
+	groupId := obj.Insurance.GroupId
+	if groupId == nil {
+		t.Fatal("GroupId is nil")
+	}
+	expectedGroupId := "TEST    " // with trailing spaces
+	if *groupId != expectedGroupId {
+		t.Errorf("GroupId whitespace not preserved during deserialization.\nWanted: %q (len=%d)\nGot:    %q (len=%d)",
+			expectedGroupId, len(expectedGroupId), *groupId, len(*groupId))
+	}
+
+	// Serialize and verify whitespace is preserved in output
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	expectedFieldValue := string(ncpdp.FIELD) + "C1TEST    "
+	if !strings.Contains(serialized, expectedFieldValue) {
+		fieldMarker := string(ncpdp.FIELD) + "C1"
+		fieldIndex := strings.Index(serialized, fieldMarker)
+		if fieldIndex >= 0 {
+			endIndex := strings.Index(serialized[fieldIndex+1:], string(ncpdp.FIELD))
+			if endIndex < 0 {
+				endIndex = strings.Index(serialized[fieldIndex+1:], string(ncpdp.SEGMENT))
+			}
+			if endIndex < 0 {
+				endIndex = len(serialized) - fieldIndex - 1
+			}
+			actualField := serialized[fieldIndex : fieldIndex+1+endIndex]
+			t.Errorf("GroupId whitespace not preserved in serialized output.\nWanted field to contain: %q\nGot field: %q",
+				expectedFieldValue, actualField)
+		} else {
+			t.Error("C1 field not found in serialized output")
+		}
+	}
+}

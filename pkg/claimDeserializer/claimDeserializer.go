@@ -267,7 +267,7 @@ func appendDynamicFields(structType reflect.Type, structVal reflect.Value, dyFie
 		initializeStruct(typ, field)
 
 		// Set field value
-		setStructFieldByCodeTag(typ, field, dyCode, reflect.ValueOf(strings.TrimSpace(dyValue)), startOrder, 0, true)
+		setStructFieldByCodeTag(typ, field, dyCode, reflect.ValueOf(dyValue), startOrder, 0, true)
 
 		//Create item to append to slice
 		ds := dynamic.DynamicStruct{DynamicType: typ}
@@ -377,7 +377,7 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 
 			fieldCodeCount := fieldCountMap[fieldCode]
 
-			setCount := setStructFieldByCodeTag(elementType, segment, fieldCode, reflect.ValueOf(strings.TrimSpace(fieldValue)), fieldIndex+1, fieldCodeCount, isDynamicSegment)
+			setCount := setStructFieldByCodeTag(elementType, segment, fieldCode, reflect.ValueOf(fieldValue), fieldIndex+1, fieldCodeCount, isDynamicSegment)
 			if setCount == 0 {
 				dyFieldCodes = append(dyFieldCodes, fieldCode)
 				dyFieldValues = append(dyFieldValues, fieldValue)
