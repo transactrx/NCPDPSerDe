@@ -1,0 +1,61 @@
+{
+  "Header": {
+    "Value": {
+      "Version": "D0",
+      "TransactionCode": "B1",
+      "RecordCount": 1,
+      "Status": "A",
+      "ServiceProviderIdQualifier": "01",
+      "ServiceProviderId": "1234567890",
+      "DateOfService": "20240115"
+    }
+  },
+  "Message": {
+    "SegmentId": { "Id": "20" },
+    "Message": "PRESCRIPTION CLAIM APPROVED"
+  },
+  "Insurance": {
+    "SegmentId": { "Id": "25" },
+    "GroupId": "GRP001",
+    "PlanId": "PLAN001",
+    "CardholderId": "12345678901"
+  },
+  "Patient": {
+    "SegmentId": { "Id": "29" },
+    "FirstName": "JOHN",
+    "LastName": "DOE",
+    "BirthDate": "1980-05-15"
+  },
+  "Claims": [
+    {
+      "Status": {
+        "SegmentId": { "Id": "21" },
+        "ResponseStatusCode": "P",
+        "AuthorizationNumber": "AUTH123456789",
+        "RejectCodeCount": 0,
+        "RejectCodes": [],
+        "TransactionReferenceNumber": "TRN123456789"
+      },
+      "Claim": {
+        "SegmentId": { "Id": "22" },
+        "PrescriptionServiceReference": {
+          "Qualifier": "1",
+          "Number": "1234567890"
+        }
+      },
+      "Pricing": {
+        "SegmentId": { "Id": "23" },
+        "PatientPayAmount": 10.00,
+        "IngredientCostPaid": 90.00,
+        "DispensingFeePaid": 2.50,
+        "TotalAmountPaid": 92.50,
+        "BasisOfReimbursementDetermination": 1,
+        "CopayAmount": 10.00,
+        "BasisOfCalculation": {
+          "DispensingFee": "01",
+          "Copay": "01"
+        }
+      }
+    }
+  ]
+}

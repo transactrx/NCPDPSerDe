@@ -1,0 +1,207 @@
+# NCPDP D.0 JSON Schemas
+
+This directory contains JSON Schema definitions for NCPDP Telecommunication Standard Version D.0 transactions. These schemas can be used by external users to:
+
+1. Understand the data structure of NCPDP transactions
+2. Validate JSON payloads before serialization
+3. Generate client code in various languages
+4. Document API contracts
+
+## Directory Structure
+
+```
+schemas/
+├── ncpdp-schemas.json          # Shared type definitions ($defs)
+├── request/                     # Request transaction schemas
+│   ├── billing.json            # B1 - Billing Request
+│   ├── reversal.json           # B2 - Reversal Request
+│   ├── rebill.json             # B3 - Rebill Request
+│   ├── eligibility.json        # E1 - Eligibility Request
+│   ├── information.json        # N1 - Information Reporting
+│   ├── priorAuthorization.json # P1 - Prior Authorization
+│   ├── predeterminationOfBenefits.json # D1 - Predetermination
+│   ├── serviceBilling.json     # S1 - Service Billing
+│   └── controlledSubstanceReporting.json # C1 - Controlled Substance
+├── response/                    # Response transaction schemas
+│   ├── billing.json            # B1 - Billing Response
+│   ├── reversal.json           # B2 - Reversal Response
+│   ├── rebill.json             # B3 - Rebill Response
+│   ├── eligibility.json        # E1 - Eligibility Response
+│   ├── information.json        # N1 - Information Reporting Response
+│   ├── priorAuthorization.json # P1 - Prior Authorization Response
+│   ├── predeterminationOfBenefits.json # D1 - Predetermination Response
+│   ├── serviceBilling.json     # S1 - Service Billing Response
+│   └── controlledSubstanceReporting.json # C1 - Controlled Substance Response
+└── examples/                    # Example JSON payloads
+    ├── billing-request-example.json
+    └── billing-response-example.json
+```
+
+## Transaction Codes
+
+| Code | Transaction Type |
+|------|------------------|
+| B1   | Billing (New Rx) |
+| B2   | Reversal |
+| B3   | Rebill |
+| E1   | Eligibility Verification |
+| N1   | Information Reporting |
+| N2   | Information Reporting Rebill |
+| N3   | Information Reporting Reversal |
+| P1   | Prior Authorization Request & Billing |
+| P2   | Prior Authorization Reversal |
+| P3   | Prior Authorization Inquiry |
+| P4   | Prior Authorization Request Only |
+| D1   | Predetermination of Benefits |
+| S1   | Service Billing |
+| S2   | Service Rebill |
+| S3   | Service Reversal |
+| C1   | Controlled Substance Reporting |
+| C2   | Controlled Substance Reporting Rebill |
+| C3   | Controlled Substance Reporting Reversal |
+
+## Key Concepts
+
+### Header
+Every transaction has a Header containing:
+- **Bin**: Bank Identification Number (6 chars)
+- **Version**: Always "D0" for this specification
+- **TransactionCode**: Identifies the transaction type (B1, B2, etc.)
+- **RecordCount**: Number of claims in the transaction (1-4)
+- **ServiceProviderId**: Pharmacy NPI or other identifier
+- **DateOfService**: Date in CCYYMMDD format
+
+### Segments
+Transactions consist of segments identified by codes (AM01, AM04, etc.):
+- **AM01**: Patient Segment
+- **AM02**: Pharmacy Provider Segment
+- **AM03**: Prescriber Segment
+- **AM04**: Insurance Segment
+- **AM05**: Coordination of Benefits Segment
+- **AM06**: Workers Compensation Segment
+- **AM07**: Claim Segment
+- **AM08**: DUR/PPS Segment
+- **AM09**: Coupon Segment
+- **AM10**: Compound Segment
+- **AM11**: Pricing Segment
+- **AM12**: Prior Authorization Segment
+- **AM13**: Clinical Segment
+- **AM14**: Additional Documentation Segment
+- **AM15**: Facility Segment
+- **AM16**: Narrative Segment
+- **AM20**: Message Segment (Response)
+- **AM21**: Response Status Segment
+- **AM22**: Response Claim Segment
+- **AM23**: Response Pricing Segment
+- **AM24**: Response DUR/PPS Segment
+- **AM25**: Response Insurance Segment
+- **AM26**: Response Prior Authorization Segment
+- **AM27**: Response Insurance Additional Information Segment
+- **AM28**: Response Coordination of Benefits Segment
+- **AM29**: Response Patient Segment
+
+### Field Codes
+Each field within a segment has a 2-character code (e.g., C2=Cardholder ID, D2=Rx Number). These codes correspond to NCPDP field identifiers.
+
+### Nullable Fields
+Most fields are nullable (can be omitted or set to null). Only required fields in the schema must be provided.
+
+### DynamicFields
+Each segment includes a `DynamicFields` array for non-standard or vendor-specific fields.
+
+## Usage Examples
+
+### Go
+```go
+import (
+    "encoding/json"
+    request "github.com/transactrx/NCPDPSerDe/pkg/ncpdp/request"
+)
+
+// Create a billing request
+billing := request.Billing{
+    Header: ncpdp.NcpdpHeader[ncpdp.RequestHeader]{
+        Value: ncpdp.RequestHeader{
+            Bin:             "610014",
+            Version:         "D0",
+            TransactionCode: "B1",
+            // ...
+        },
+    },
+    // ...
+}
+
+// Serialize to JSON
+jsonBytes, _ := json.Marshal(billing)
+```
+
+### JavaScript/TypeScript
+```typescript
+// Use JSON Schema to generate types
+// npm install json-schema-to-typescript
+
+interface BillingRequest {
+  Header: {
+    Value: {
+      Bin: string;
+      Version: string;
+      TransactionCode: string;
+      // ...
+    };
+  };
+  Insurance: InsuranceSegment;
+  Patient: PatientSegment;
+  Claims: BillingRecord[];
+}
+```
+
+### Python
+```python
+import json
+
+# Load and validate against schema
+billing_request = {
+    "Header": {
+        "Value": {
+            "Bin": "610014",
+            "Version": "D0",
+            "TransactionCode": "B1",
+            # ...
+        }
+    },
+    # ...
+}
+
+json_str = json.dumps(billing_request)
+```
+
+## Response Status Codes
+
+| Code | Meaning |
+|------|---------|
+| A    | Accepted/Approved |
+| C    | Captured (claim accepted, payment to follow) |
+| D    | DUR Reject (Drug Utilization Review) |
+| P    | Paid |
+| R    | Rejected |
+
+## Common Reject Codes
+
+See NCPDP External Code List (ECL) for complete reject code definitions. Common codes include:
+- 70: Product/Service Not Covered
+- 75: Prior Authorization Required
+- 79: Refill Too Soon
+- 88: DUR Reject
+
+## Date/Time Formats
+
+- Dates: CCYYMMDD (e.g., "20240115")
+- Times: HHmm (e.g., "1430") or HHmmss (e.g., "143025")
+
+## Monetary Amounts
+
+All monetary amounts are represented as numbers with 2 decimal places. Values may be positive or negative (overpunch representation in raw NCPDP format is handled internally).
+
+## Questions?
+
+For questions about NCPDP standards, refer to the official NCPDP Telecommunication Standard Implementation Guide.

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transactrx.com/ncpdp/schemas/response/priorAuthorizationReversal.json",
+  "title": "NCPDP Prior Authorization Reversal Response (P2)",
+  "description": "Prior Authorization Reversal Response Transaction",
+  "type": "object",
+  "properties": {
+    "Header": {
+      "type": "object",
+      "properties": {
+        "RawValue": { "type": "string" },
+        "Size": { "type": "integer" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Version": { "type": "string", "maxLength": 2 },
+            "TransactionCode": { "type": "string", "const": "P2" },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "Status": { "type": "string", "maxLength": 1 },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
+            "ServiceProviderId": { "type": "string", "maxLength": 15 },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" }
+          }
+        }
+      }
+    },
+    "Message": { "$ref": "../ncpdp-schemas.json#/$defs/response.Message" },
+    "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } },
+    "Authorizations": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "Raw": { "type": "string" },
+          "Status": { "$ref": "../ncpdp-schemas.json#/$defs/response.Status" },
+          "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } }
+        }
+      }
+    }
+  },
+  "required": ["Header", "Authorizations"]
+}

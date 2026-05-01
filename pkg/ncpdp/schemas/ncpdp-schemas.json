@@ -1,0 +1,1032 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transactrx.com/ncpdp/schemas/ncpdp-schemas.json",
+  "title": "NCPDP D.0 Transaction Schemas",
+  "description": "JSON Schema definitions for NCPDP D.0 request and response transactions",
+
+  "$defs": {
+    "RequestHeader": {
+      "type": "object",
+      "description": "NCPDP Request Header",
+      "properties": {
+        "RawValue": { "type": "string", "description": "Raw header string" },
+        "Size": { "type": "integer", "description": "Header size in characters" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Bin": { "type": "string", "maxLength": 6, "description": "BIN Number (6 characters)" },
+            "Version": { "type": "string", "maxLength": 2, "description": "Version/Release Number (D0)" },
+            "TransactionCode": { "type": "string", "maxLength": 2, "description": "Transaction Code (B1, B2, B3, E1, N1, N2, P1, P2, P3, P4, S1, S2, S3, C1, C2, C3)" },
+            "Pcn": { "type": "string", "maxLength": 10, "description": "Processor Control Number" },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Transaction Count (1-4)" },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2, "description": "Service Provider ID Qualifier (01=NPI, 05=Medicaid, etc.)" },
+            "ServiceProviderId": { "type": "string", "maxLength": 15, "description": "Service Provider ID" },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$", "description": "Date of Service (CCYYMMDD)" },
+            "SoftwareVendorCertificationId": { "type": "string", "maxLength": 10, "description": "Software Vendor/Certification ID" }
+          },
+          "required": ["Bin", "Version", "TransactionCode", "RecordCount", "ServiceProviderIdQualifier", "ServiceProviderId", "DateOfService"]
+        }
+      }
+    },
+
+    "ResponseHeader": {
+      "type": "object",
+      "description": "NCPDP Response Header",
+      "properties": {
+        "RawValue": { "type": "string", "description": "Raw header string" },
+        "Size": { "type": "integer", "description": "Header size in characters" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Version": { "type": "string", "maxLength": 2, "description": "Version/Release Number (D0)" },
+            "TransactionCode": { "type": "string", "maxLength": 2, "description": "Transaction Code" },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Transaction Count" },
+            "Status": { "type": "string", "maxLength": 1, "description": "Header Response Status (A=Accepted, R=Rejected)" },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2, "description": "Service Provider ID Qualifier" },
+            "ServiceProviderId": { "type": "string", "maxLength": 15, "description": "Service Provider ID" },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$", "description": "Date of Service (CCYYMMDD)" }
+          },
+          "required": ["Version", "TransactionCode", "RecordCount", "Status", "ServiceProviderIdQualifier", "ServiceProviderId", "DateOfService"]
+        }
+      }
+    },
+
+    "SegmentId": {
+      "type": "object",
+      "description": "Segment Identifier",
+      "properties": {
+        "Raw": { "type": ["string", "null"], "description": "Raw segment identifier" },
+        "Id": { "type": ["string", "null"], "maxLength": 2, "description": "Segment code (e.g., 01, 04, 07)" }
+      }
+    },
+
+    "DynamicStruct": {
+      "type": "object",
+      "description": "Dynamic/extension field for non-standard data",
+      "additionalProperties": true
+    },
+
+    "request.Insurance": {
+      "type": "object",
+      "description": "Insurance Segment (AM04) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Cardholder": {
+          "type": "object",
+          "properties": {
+            "Id": { "type": ["string", "null"], "description": "Cardholder ID (C2)" },
+            "FirstName": { "type": ["string", "null"], "description": "Cardholder First Name (CC)" },
+            "LastName": { "type": ["string", "null"], "description": "Cardholder Last Name (CD)" }
+          }
+        },
+        "HomePlan": { "type": ["string", "null"], "description": "Home Plan (CE)" },
+        "PlanId": { "type": ["string", "null"], "description": "Plan ID (FO)" },
+        "EligbilityClarificationCode": { "type": ["string", "null"], "description": "Eligibility Clarification Code (C9)" },
+        "GroupId": { "type": ["string", "null"], "description": "Group ID (C1)" },
+        "PersonCode": { "type": ["string", "null"], "description": "Person Code (C3)" },
+        "PatientRelationshipCode": { "type": ["string", "null"], "description": "Patient Relationship Code (C6)" },
+        "OtherPayer": {
+          "type": "object",
+          "properties": {
+            "Bin": { "type": ["string", "null"], "description": "Other Payer BIN (MG)" },
+            "Pcn": { "type": ["string", "null"], "description": "Other Payer PCN (MH)" },
+            "CardholderId": { "type": ["string", "null"], "description": "Other Payer Cardholder ID (NU)" },
+            "GroupId": { "type": ["string", "null"], "description": "Other Payer Group ID (MJ)" }
+          }
+        },
+        "MedigapId": { "type": ["string", "null"], "description": "Medigap ID (2A)" },
+        "Medicaid": {
+          "type": "object",
+          "properties": {
+            "Indicator": { "type": ["string", "null"], "description": "Medicaid Indicator (2B)" },
+            "Id": { "type": ["string", "null"], "description": "Medicaid ID Number (N5)" },
+            "AgencyNumber": { "type": ["string", "null"], "description": "Medicaid Agency Number (N6)" }
+          }
+        },
+        "ProviderAcceptAssignment": { "type": ["string", "null"], "description": "Provider Accept Assignment Indicator (2D)" },
+        "CmsPartDQualifiedFacility": { "type": ["string", "null"], "description": "CMS Part D Qualified Facility (G2)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Patient": {
+      "type": "object",
+      "description": "Patient Segment (AM01) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "IdQualifier": { "type": ["string", "null"], "description": "Patient ID Qualifier (CX)" },
+        "Id": { "type": ["string", "null"], "description": "Patient ID (CY)" },
+        "BirthDate": { "type": ["string", "null"], "format": "date", "description": "Date of Birth (C4) - YYYYMMDD" },
+        "GenderCode": { "type": ["string", "null"], "description": "Patient Gender Code (C5) - 1=Male, 2=Female" },
+        "FirstName": { "type": ["string", "null"], "description": "Patient First Name (CA)" },
+        "LastName": { "type": ["string", "null"], "description": "Patient Last Name (CB)" },
+        "Address": {
+          "type": "object",
+          "properties": {
+            "Street": { "type": ["string", "null"], "description": "Patient Street Address (CM)" },
+            "City": { "type": ["string", "null"], "description": "Patient City Address (CN)" },
+            "State": { "type": ["string", "null"], "description": "Patient State/Province Address (CO)" },
+            "Zip": { "type": ["string", "null"], "description": "Patient Zip/Postal Zone (CP)" }
+          }
+        },
+        "Phone": { "type": ["string", "null"], "description": "Patient Phone Number (CQ)" },
+        "PlaceOfService": { "type": ["string", "null"], "description": "Place of Service (C7)" },
+        "EmployerId": { "type": ["string", "null"], "description": "Employer ID (CZ)" },
+        "SmokerCode": { "type": ["string", "null"], "description": "Smoker/Non-Smoker Code (1C)" },
+        "Pregnant": { "type": ["string", "null"], "description": "Pregnancy Indicator (2C)" },
+        "Email": { "type": ["string", "null"], "description": "Patient E-Mail Address (HN)" },
+        "Residence": { "type": ["string", "null"], "description": "Patient Residence (4X)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Claim": {
+      "type": "object",
+      "description": "Claim Segment (AM07) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "PrescriptionServiceReference": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Prescription/Service Reference Number Qualifier (EM)" },
+            "Number": { "type": ["string", "null"], "description": "Prescription/Service Reference Number (D2)" }
+          }
+        },
+        "ProductService": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Product/Service ID Qualifier (E1)" },
+            "Id": { "type": ["string", "null"], "description": "Product/Service ID (D7)" }
+          }
+        },
+        "AssociatedPrescriptionService": {
+          "type": "object",
+          "properties": {
+            "Number": { "type": ["string", "null"], "description": "Associated Prescription/Service Reference Number (EN)" },
+            "Date": { "type": ["string", "null"], "format": "date", "description": "Associated Prescription/Service Date (EP)" }
+          }
+        },
+        "ProcedureModifierCodeCount": { "type": ["integer", "null"], "description": "Procedure Modifier Code Count (SE)" },
+        "ProcedureModifierCodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Code": { "type": ["string", "null"], "description": "Procedure Modifier Code (ER)" }
+            }
+          }
+        },
+        "QuantityDispensed": { "type": ["number", "null"], "description": "Quantity Dispensed (E7) - 3 decimal places" },
+        "FillNumber": { "type": ["string", "null"], "description": "Fill Number (D3)" },
+        "DaysSupply": { "type": ["integer", "null"], "description": "Days Supply (D5)" },
+        "CompoundCode": { "type": ["string", "null"], "description": "Compound Code (D6) - 1=Not Compound, 2=Compound" },
+        "DispenseAsWritten": { "type": ["string", "null"], "description": "Dispense as Written (DAW) Code (D8)" },
+        "DateWritten": { "type": ["string", "null"], "format": "date", "description": "Date Prescription Written (DE)" },
+        "RefillsAuthorized": { "type": ["integer", "null"], "description": "Number of Refills Authorized (DF)" },
+        "OriginCode": { "type": ["string", "null"], "description": "Prescription Origin Code (DJ)" },
+        "SubmissionClarificationCodeCount": { "type": ["integer", "null"], "description": "Submission Clarification Code Count (NX)" },
+        "SubmissionClarificationCodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Code": { "type": ["string", "null"], "description": "Submission Clarification Code (DK)" }
+            }
+          }
+        },
+        "QuantityPrescribed": { "type": ["number", "null"], "description": "Quantity Prescribed (ET)" },
+        "OtherCoverageCode": { "type": ["string", "null"], "description": "Other Coverage Code (C8)" },
+        "SpecialPackagingIndicator": { "type": ["string", "null"], "description": "Special Packaging Indicator (DT)" },
+        "OriginallyPrescribedProductService": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Originally Prescribed Product/Service Code Qualifier (EJ)" },
+            "Code": { "type": ["string", "null"], "description": "Originally Prescribed Product/Service Code (EA)" },
+            "Quantity": { "type": ["number", "null"], "description": "Originally Prescribed Quantity (EB)" }
+          }
+        },
+        "AlternateId": { "type": ["string", "null"], "description": "Alternate ID (CW)" },
+        "ScheduledPrescriptionId": { "type": ["string", "null"], "description": "Scheduled Prescription ID Number (EK)" },
+        "UnitOfMeasure": { "type": ["string", "null"], "description": "Unit of Measure (28)" },
+        "LevelOfService": { "type": ["string", "null"], "description": "Level of Service (DI)" },
+        "PriorAuthorization": {
+          "type": "object",
+          "properties": {
+            "TypeCode": { "type": ["string", "null"], "description": "Prior Authorization Type Code (EU)" },
+            "NumberSubmitted": { "type": ["string", "null"], "description": "Prior Authorization Number Submitted (EV)" }
+          }
+        },
+        "IntermediaryAuthorization": {
+          "type": "object",
+          "properties": {
+            "TypeId": { "type": ["string", "null"], "description": "Intermediary Authorization Type ID (EW)" },
+            "Id": { "type": ["string", "null"], "description": "Intermediary Authorization ID (EX)" }
+          }
+        },
+        "DispensingStatus": { "type": ["string", "null"], "description": "Dispensing Status (HD)" },
+        "IntendedQuantityDispensed": { "type": ["number", "null"], "description": "Quantity Intended to be Dispensed (HF)" },
+        "IntendedDaysSupply": { "type": ["integer", "null"], "description": "Days Supply Intended to be Dispensed (HG)" },
+        "DelayReasonCode": { "type": ["string", "null"], "description": "Delay Reason Code (NV)" },
+        "TransactionReferenceNumber": { "type": ["string", "null"], "description": "Transaction Reference Number (K5)" },
+        "PatientAssignmentIndicator": { "type": ["string", "null"], "description": "Patient Assignment Indicator (MT)" },
+        "RouteOfAdministration": { "type": ["string", "null"], "description": "Route of Administration (E2)" },
+        "CompoundType": { "type": ["string", "null"], "description": "Compound Type (G1)" },
+        "MedicaidSubrogationControlNumber": { "type": ["string", "null"], "description": "Medicaid Subrogation Internal Control Number (N4)" },
+        "PharmacyServiceType": { "type": ["string", "null"], "description": "Pharmacy Service Type (U7)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Pricing": {
+      "type": "object",
+      "description": "Pricing Segment (AM11) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "IngredientCostSubmitted": { "type": ["number", "null"], "description": "Ingredient Cost Submitted (D9)" },
+        "DispensingFeeSubmitted": { "type": ["number", "null"], "description": "Dispensing Fee Submitted (DC)" },
+        "ProfessionalServiceFeeSubmitted": { "type": ["number", "null"], "description": "Professional Service Fee Submitted (BE)" },
+        "PatientPaidAmountSubmitted": { "type": ["number", "null"], "description": "Patient Paid Amount Submitted (DX)" },
+        "IncentiveAmountSubmitted": { "type": ["number", "null"], "description": "Incentive Amount Submitted (E3)" },
+        "OtherAmountClaimSubmittedCount": { "type": ["integer", "null"], "description": "Other Amount Claimed Submitted Count (H7)" },
+        "OtherAmountClaimSubmitted": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Qualifier": { "type": ["string", "null"], "description": "Other Amount Claimed Submitted Qualifier (H8)" },
+              "AmountSubmitted": { "type": ["number", "null"], "description": "Other Amount Claimed Submitted (H9)" }
+            }
+          }
+        },
+        "FlatSalesTaxAmountSubmitted": { "type": ["number", "null"], "description": "Flat Sales Tax Amount Submitted (HA)" },
+        "PercentageSalesTaxAmountSubmitted": { "type": ["number", "null"], "description": "Percentage Sales Tax Amount Submitted (GE)" },
+        "PercentageSalesTaxRateSubmitted": { "type": ["number", "null"], "description": "Percentage Sales Tax Rate Submitted (HE)" },
+        "PercentageSalesTaxBasisSubmitted": { "type": ["string", "null"], "description": "Percentage Sales Tax Basis Submitted (JE)" },
+        "UsualAndCustmaryCharge": { "type": ["number", "null"], "description": "Usual and Customary Charge (DQ)" },
+        "GrossAmountDue": { "type": ["number", "null"], "description": "Gross Amount Due (DU)" },
+        "BasisOfCostDetermination": { "type": ["string", "null"], "description": "Basis of Cost Determination (DN)" },
+        "MedicaidPaidAmount": { "type": ["number", "null"], "description": "Medicaid Paid Amount (N3)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.PharmacyProvider": {
+      "type": "object",
+      "description": "Pharmacy Provider Segment (AM02) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "IdQualifier": { "type": ["string", "null"], "description": "Pharmacy Provider ID Qualifier (EY)" },
+        "Id": { "type": ["string", "null"], "description": "Pharmacy Provider ID (E9)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Prescriber": {
+      "type": "object",
+      "description": "Prescriber Segment (AM03) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "IdQualifier": { "type": ["string", "null"], "description": "Prescriber ID Qualifier (EZ)" },
+        "Id": { "type": ["string", "null"], "description": "Prescriber ID (DB)" },
+        "LastName": { "type": ["string", "null"], "description": "Prescriber Last Name (DR)" },
+        "FirstName": { "type": ["string", "null"], "description": "Prescriber First Name (2J)" },
+        "Phone": { "type": ["string", "null"], "description": "Prescriber Phone Number (PM)" },
+        "Address": {
+          "type": "object",
+          "properties": {
+            "Street": { "type": ["string", "null"], "description": "Prescriber Street Address (2K)" },
+            "City": { "type": ["string", "null"], "description": "Prescriber City Address (2M)" },
+            "State": { "type": ["string", "null"], "description": "Prescriber State/Province Address (2N)" },
+            "Zip": { "type": ["string", "null"], "description": "Prescriber Zip/Postal Zone (2P)" }
+          }
+        },
+        "PrimaryCareProvider": {
+          "type": "object",
+          "properties": {
+            "IdQualifier": { "type": ["string", "null"], "description": "Primary Care Provider ID Qualifier (2E)" },
+            "Id": { "type": ["string", "null"], "description": "Primary Care Provider ID (DL)" },
+            "LastName": { "type": ["string", "null"], "description": "Primary Care Provider Last Name (4E)" }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.CoordinationOfBenefits": {
+      "type": "object",
+      "description": "Coordination of Benefits Segment (AM05) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Count": { "type": ["integer", "null"], "description": "Other Payer Count (4C)" },
+        "OtherPayer": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "CoverageType": { "type": ["string", "null"], "description": "Other Payer Coverage Type (5C)" },
+              "IdQualifier": { "type": ["string", "null"], "description": "Other Payer ID Qualifier (6C)" },
+              "Id": { "type": ["string", "null"], "description": "Other Payer ID (7C)" },
+              "Date": { "type": ["string", "null"], "format": "date", "description": "Other Payer Date (E8)" },
+              "ControlNumber": { "type": ["string", "null"], "description": "Internal Control Number (A7)" },
+              "OtherPayerAmountPaidCount": { "type": ["integer", "null"], "description": "Other Payer Amount Paid Count (HB)" },
+              "OtherPayerAmountsPaid": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Qualifier": { "type": ["string", "null"], "description": "Other Payer Amount Paid Qualifier (HC)" },
+                    "AmountPaid": { "type": ["number", "null"], "description": "Other Payer Amount Paid (DV)" }
+                  }
+                }
+              },
+              "OtherPayerRejectCount": { "type": ["integer", "null"], "description": "Other Payer Reject Count (5E)" },
+              "OtherPayerRejects": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "RejectCode": { "type": ["string", "null"], "description": "Other Payer Reject Code (6E)" }
+                  }
+                }
+              },
+              "OtherPayerPatientResponsibilityAmountCount": { "type": ["integer", "null"], "description": "Other Payer-Patient Responsibility Amount Count (NR)" },
+              "OtherPayerPatientResponsibilityAmounts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Qualifier": { "type": ["string", "null"], "description": "Other Payer-Patient Responsibility Amount Qualifier (NP)" },
+                    "Amount": { "type": ["number", "null"], "description": "Other Payer-Patient Responsibility Amount (NQ)" }
+                  }
+                }
+              },
+              "BenefitStageCount": { "type": ["integer", "null"], "description": "Benefit Stage Count (MU)" },
+              "BenefitStageAmounts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Qualifier": { "type": ["string", "null"], "description": "Benefit Stage Qualifier (MV)" },
+                    "Amount": { "type": ["number", "null"], "description": "Benefit Stage Amount (MW)" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.WorkersCompensation": {
+      "type": "object",
+      "description": "Workers Compensation Segment (AM06) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "InjuryDate": { "type": ["string", "null"], "format": "date", "description": "Date of Injury (DY)" },
+        "Employer": {
+          "type": "object",
+          "properties": {
+            "Name": { "type": ["string", "null"], "description": "Employer Name (CF)" },
+            "Address": {
+              "type": "object",
+              "properties": {
+                "Street": { "type": ["string", "null"], "description": "Employer Street Address (CG)" },
+                "City": { "type": ["string", "null"], "description": "Employer City Address (CH)" },
+                "State": { "type": ["string", "null"], "description": "Employer State/Province Address (CI)" },
+                "Zip": { "type": ["string", "null"], "description": "Employer Zip/Postal Zone (CJ)" }
+              }
+            },
+            "Phone": { "type": ["string", "null"], "description": "Employer Phone Number (CK)" },
+            "ContactName": { "type": ["string", "null"], "description": "Employer Contact Name (CL)" }
+          }
+        },
+        "CarrierId": { "type": ["string", "null"], "description": "Carrier ID (CR)" },
+        "ClaimReferenceId": { "type": ["string", "null"], "description": "Claim/Reference ID (DZ)" },
+        "BillingEntityTypeIndicator": { "type": ["string", "null"], "description": "Billing Entity Type Indicator (TR)" },
+        "PayTo": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Pay To Qualifier (TS)" },
+            "Id": { "type": ["string", "null"], "description": "Pay To ID (TT)" },
+            "Name": { "type": ["string", "null"], "description": "Pay To Name (TU)" },
+            "PayToAddress": {
+              "type": "object",
+              "properties": {
+                "Street": { "type": ["string", "null"], "description": "Pay To Street Address (TV)" },
+                "City": { "type": ["string", "null"], "description": "Pay To City Address (TW)" },
+                "State": { "type": ["string", "null"], "description": "Pay To State/Province Address (TX)" },
+                "Zip": { "type": ["string", "null"], "description": "Pay To Zip/Postal Zone (TY)" }
+              }
+            }
+          }
+        },
+        "GenericEquivalentProduct": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Generic Equivalent Product ID Qualifier (TZ)" },
+            "Id": { "type": ["string", "null"], "description": "Generic Equivalent Product ID (UA)" }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Dur": {
+      "type": "object",
+      "description": "DUR/PPS Segment (AM08) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Counter": { "type": ["integer", "null"], "description": "DUR/PPS Code Counter (7E)" },
+              "ReasonForServiceCode": { "type": ["string", "null"], "description": "Reason for Service Code (E4)" },
+              "ProfessionalServiceCode": { "type": ["string", "null"], "description": "Professional Service Code (E5)" },
+              "ResultOfServiceCode": { "type": ["string", "null"], "description": "Result of Service Code (E6)" },
+              "LevelOfEffort": { "type": ["string", "null"], "description": "DUR/PPS Level of Effort (8E)" },
+              "CoAgent": {
+                "type": "object",
+                "properties": {
+                  "Qualifier": { "type": ["string", "null"], "description": "DUR Co-Agent ID Qualifier (J9)" },
+                  "Id": { "type": ["string", "null"], "description": "DUR Co-Agent ID (H6)" }
+                }
+              }
+            }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Coupon": {
+      "type": "object",
+      "description": "Coupon Segment (AM09) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Type": { "type": ["string", "null"], "description": "Coupon Type (KE)" },
+        "Number": { "type": ["string", "null"], "description": "Coupon Number (ME)" },
+        "Amount": { "type": ["number", "null"], "description": "Coupon Value Amount (NE)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Compound": {
+      "type": "object",
+      "description": "Compound Segment (AM10) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "DosageFormDescriptionCode": { "type": ["string", "null"], "description": "Compound Dosage Form Description Code (EF)" },
+        "DispensingUnitFormIndicator": { "type": ["string", "null"], "description": "Compound Dispensing Unit Form Indicator (EG)" },
+        "IngredientCount": { "type": ["integer", "null"], "description": "Compound Ingredient Component Count (EC)" },
+        "Ingredients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Product": {
+                "type": "object",
+                "properties": {
+                  "Qualifier": { "type": ["string", "null"], "description": "Compound Product ID Qualifier (RE)" },
+                  "Id": { "type": ["string", "null"], "description": "Compound Product ID (TE)" }
+                }
+              },
+              "Quantity": { "type": ["number", "null"], "description": "Compound Ingredient Quantity (ED)" },
+              "DrugCost": { "type": ["number", "null"], "description": "Compound Ingredient Drug Cost (EE)" },
+              "BasisOfCostDetermination": { "type": ["string", "null"], "description": "Compound Ingredient Basis of Cost Determination (UE)" },
+              "ModifierCodeCount": { "type": ["integer", "null"], "description": "Compound Ingredient Modifier Code Count (2G)" },
+              "ModifierCodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Code": { "type": ["string", "null"], "description": "Compound Ingredient Modifier Code (2H)" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Clinical": {
+      "type": "object",
+      "description": "Clinical Segment (AM13) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "DiagnosisCount": { "type": ["integer", "null"], "description": "Diagnosis Code Count (VE)" },
+        "Diagnoses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Qualifier": { "type": ["string", "null"], "description": "Diagnosis Code Qualifier (WE)" },
+              "Code": { "type": ["string", "null"], "description": "Diagnosis Code (DO)" }
+            }
+          }
+        },
+        "Measurements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Counter": { "type": ["integer", "null"], "description": "Clinical Information Counter (XE)" },
+              "Date": { "type": ["string", "null"], "format": "date", "description": "Measurement Date (ZE)" },
+              "Time": { "type": ["string", "null"], "description": "Measurement Time (H1) - HHmm" },
+              "Dimension": { "type": ["string", "null"], "description": "Measurement Dimension (H2)" },
+              "Unit": { "type": ["string", "null"], "description": "Measurement Unit (H3)" },
+              "Value": { "type": ["string", "null"], "description": "Measurement Value (H4)" }
+            }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.AdditionalDocumentation": {
+      "type": "object",
+      "description": "Additional Documentation Segment (AM14) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "TypeId": { "type": ["string", "null"], "description": "Additional Documentation Type ID (2Q)" },
+        "RequestPeriod": {
+          "type": "object",
+          "properties": {
+            "BeginDate": { "type": ["string", "null"], "format": "date", "description": "Request Period Begin Date (2V)" },
+            "RevisedDate": { "type": ["string", "null"], "format": "date", "description": "Request Period Recertification/Revised Date (2W)" },
+            "Status": { "type": ["string", "null"], "description": "Request Status (2U)" }
+          }
+        },
+        "LengthOfNeed": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Length of Need Qualifier (2S)" },
+            "Value": { "type": ["string", "null"], "description": "Length of Need (2R)" }
+          }
+        },
+        "PrescriberSupplierDateSigned": { "type": ["string", "null"], "format": "date", "description": "Prescriber/Supplier Date Signed (2T)" },
+        "SupportingDocumentation": { "type": ["string", "null"], "description": "Supporting Documentation (2X)" },
+        "QuestionCount": { "type": ["integer", "null"], "description": "Question Number/Letter Count (2Z)" },
+        "Questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Number": { "type": ["string", "null"], "description": "Question Number/Letter (4B)" },
+              "PercentResponse": { "type": ["number", "null"], "description": "Question Percent Response (4D)" },
+              "ResponseDate": { "type": ["string", "null"], "format": "date", "description": "Question Date Response (4G)" },
+              "DollarAmountResponse": { "type": ["number", "null"], "description": "Question Dollar Amount Response (4H)" },
+              "NumericResponse": { "type": ["integer", "null"], "description": "Question Numeric Response (4J)" },
+              "AlphanumericResponse": { "type": ["string", "null"], "description": "Question Alphanumeric Response (4K)" }
+            }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Facility": {
+      "type": "object",
+      "description": "Facility Segment (AM15) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Id": { "type": ["string", "null"], "description": "Facility ID (8C)" },
+        "Name": { "type": ["string", "null"], "description": "Facility Name (3Q)" },
+        "Address": {
+          "type": "object",
+          "properties": {
+            "Street": { "type": ["string", "null"], "description": "Facility Street Address (3U)" },
+            "City": { "type": ["string", "null"], "description": "Facility City Address (5J)" },
+            "State": { "type": ["string", "null"], "description": "Facility State/Province Address (3V)" },
+            "Zip": { "type": ["string", "null"], "description": "Facility Zip/Postal Zone (6D)" }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.Narrative": {
+      "type": "object",
+      "description": "Narrative Segment (AM16) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Message": { "type": ["string", "null"], "description": "Narrative Message (BM)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.PriorAuthorizationRequestAndBilling": {
+      "type": "object",
+      "description": "Prior Authorization Request and Billing Segment (AM12) - Request",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "RequestType": { "type": ["string", "null"], "description": "Prior Authorization Request Type (PA)" },
+        "RequestPeriodBeginDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Request Period Begin Date (PB)" },
+        "RequestPeriodEndDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Request Period End Date (PC)" },
+        "BasisOfRequest": { "type": ["string", "null"], "description": "Prior Authorization Basis of Request (PD)" },
+        "AuthorizedRepresentative": {
+          "type": "object",
+          "properties": {
+            "FirstName": { "type": ["string", "null"], "description": "Prior Authorization Authorized Representative First Name (PE)" },
+            "LastName": { "type": ["string", "null"], "description": "Prior Authorization Authorized Representative Last Name (PF)" },
+            "AuthorizedRepresentativeAddress": {
+              "type": "object",
+              "properties": {
+                "Street": { "type": ["string", "null"], "description": "Prior Authorization Authorized Representative Street Address (PG)" },
+                "City": { "type": ["string", "null"], "description": "Prior Authorization Authorized Representative City Address (PH)" },
+                "State": { "type": ["string", "null"], "description": "Prior Authorization Authorized Representative State/Province Address (PJ)" },
+                "Zip": { "type": ["string", "null"], "description": "Prior Authorization Authorized Representative Zip/Postal Zone (PK)" }
+              }
+            }
+          }
+        },
+        "NumberAssigned": { "type": ["string", "null"], "description": "Prior Authorization Number Assigned (PY)" },
+        "Number": { "type": ["string", "null"], "description": "Authorization Number (F3)" },
+        "SupportingDocumentation": { "type": ["string", "null"], "description": "Prior Authorization Supporting Documentation (PP)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "request.DataCollection": {
+      "type": "object",
+      "description": "Data Collection Segment (AMXX) - Request - Internal/Vendor-specific",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "InventoryCategoryCode": { "type": ["string", "null"] },
+        "PatientId": { "type": ["string", "null"] },
+        "PayerSequence": { "type": ["string", "null"] },
+        "SubstitutionType": { "type": ["string", "null"] },
+        "DispensingType": { "type": ["string", "null"] },
+        "CompanyNumber": { "type": ["string", "null"] },
+        "PayPlan": { "type": ["string", "null"] },
+        "PatientLocationCode": { "type": ["string", "null"] },
+        "ClaimIndicator": { "type": ["string", "null"] },
+        "Facility": { "type": ["string", "null"] },
+        "TransactionTime": { "type": ["string", "null"] },
+        "MedicarePartDPriceCode": { "type": ["string", "null"] },
+        "TestTransaction": { "type": ["string", "null"] },
+        "PharmacyNpi": { "type": ["string", "null"] },
+        "CycleFillListIndictor": { "type": ["string", "null"] },
+        "AcquisitionCost": { "type": ["number", "null"] },
+        "SellingPrice": { "type": ["number", "null"] },
+        "PaymentType": { "type": ["string", "null"] },
+        "NursingHome": { "type": ["string", "null"] },
+        "PatientCodeDeidentified": { "type": ["string", "null"] },
+        "PrescriptionStopDate": { "type": ["string", "null"], "format": "date" },
+        "PriceCodeType": { "type": ["string", "null"] },
+        "PatientLanguage": { "type": ["string", "null"] },
+        "PrescriberDea": { "type": ["string", "null"] },
+        "SecondaryTernaryIndicator": { "type": ["string", "null"] },
+        "DecimalQuantity": { "type": ["number", "null"] },
+        "PrescriberStateId": { "type": ["string", "null"] },
+        "PrescribedNdc": { "type": ["string", "null"] },
+        "ElectronicRxTransactionReferenceNumber": { "type": ["string", "null"] },
+        "ElectronicRxInitiatorControlReferenceNumber": { "type": ["string", "null"] },
+        "PharmacyDea": { "type": ["string", "null"] },
+        "PrescriberNpi": { "type": ["string", "null"] },
+        "DrugAWP": { "type": ["number", "null"] },
+        "ClassificationCode": { "type": ["string", "null"] },
+        "PHIParticipation": { "type": ["string", "null"] },
+        "MarketingParticipation": { "type": ["string", "null"] },
+        "PatientSocialSecurityNumber": { "type": ["string", "null"] },
+        "PatientDriversLicenseNumber": { "type": ["string", "null"] },
+        "PriorAuthorizationProcessed": { "type": ["string", "null"] },
+        "NPPADea": { "type": ["string", "null"] },
+        "NPPANpi": { "type": ["string", "null"] },
+        "NPPAStateId": { "type": ["string", "null"] },
+        "DrugCode": { "type": ["string", "null"] },
+        "PharmacistLastName": { "type": ["string", "null"] },
+        "PharmacistFirstName": { "type": ["string", "null"] },
+        "PharmacistInitials": { "type": ["string", "null"] },
+        "PharmacistNpi": { "type": ["string", "null"] },
+        "PharmacistStateLicenseNumber": { "type": ["string", "null"] },
+        "PrescriberDeaSuffix": { "type": ["string", "null"] },
+        "PrescriberXDea": { "type": ["string", "null"] },
+        "TreatmentType": { "type": ["string", "null"] },
+        "PrescribedQuantity": { "type": ["number", "null"] },
+        "CdtDiagnosisCode": { "type": ["string", "null"] },
+        "PartialFillCounter": { "type": ["string", "null"] },
+        "PrescriptionSerialNumber": { "type": ["string", "null"] },
+        "OwnerLastName": { "type": ["string", "null"] },
+        "OwnerFirstName": { "type": ["string", "null"] },
+        "OwnerBirthDate": { "type": ["string", "null"], "format": "date" },
+        "PrescriberStateLicenseQualifier": { "type": ["string", "null"] },
+        "NPPAStateLicenseQualifier": { "type": ["string", "null"] },
+        "AnimalOwnerSex": { "type": ["string", "null"] },
+        "DeliveryStreetAddress": { "type": ["string", "null"] },
+        "DeliveryCity": { "type": ["string", "null"] },
+        "DeliveryState": { "type": ["string", "null"] },
+        "DeliveryZip": { "type": ["string", "null"] },
+        "AllowHighDollarAwpUpdate": { "type": ["string", "null"] },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.Message": {
+      "type": "object",
+      "description": "Message Segment (AM20) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Message": { "type": ["string", "null"], "description": "Message (F4)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.Insurance": {
+      "type": "object",
+      "description": "Insurance Segment (AM25) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "GroupId": { "type": ["string", "null"], "description": "Group ID (C1)" },
+        "PlanId": { "type": ["string", "null"], "description": "Plan ID (FO)" },
+        "NetworkReimbursementId": { "type": ["string", "null"], "description": "Network Reimbursement ID (2F)" },
+        "Payer": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Payer ID Qualifier (J7)" },
+            "Id": { "type": ["string", "null"], "description": "Payer ID (J8)" }
+          }
+        },
+        "Medicaid": {
+          "type": "object",
+          "properties": {
+            "Id": { "type": ["string", "null"], "description": "Medicaid ID Number (N5)" },
+            "AgencyNumber": { "type": ["string", "null"], "description": "Medicaid Agency Number (N6)" }
+          }
+        },
+        "CardholderId": { "type": ["string", "null"], "description": "Cardholder ID (C2)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.InsuranceAdditionalInformation": {
+      "type": "object",
+      "description": "Insurance Additional Information Segment (AM27) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "MedicarePartD": {
+          "type": "object",
+          "properties": {
+            "MedicarePartDCoverageCode": { "type": ["string", "null"], "description": "Medicare Part D Coverage Code (UR)" },
+            "LICSLevel": { "type": ["string", "null"], "description": "Medicare Part D LICS Level (UQ)" },
+            "BenefitId": { "type": ["string", "null"], "description": "Medicare Part D Benefit ID (U6)" },
+            "NextMedicarePartDEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Next Medicare Part D Effective Date (US)" },
+            "NextMedicarePartDTerminationDate": { "type": ["string", "null"], "format": "date", "description": "Next Medicare Part D Termination Date (UT)" },
+            "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+          }
+        },
+        "ContractNumber": { "type": ["string", "null"], "description": "Contract Number (U1)" },
+        "FormularyId": { "type": ["string", "null"], "description": "Formulary ID (FF)" }
+      }
+    },
+
+    "response.Patient": {
+      "type": "object",
+      "description": "Patient Segment (AM29) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "FirstName": { "type": ["string", "null"], "description": "Patient First Name (CA)" },
+        "LastName": { "type": ["string", "null"], "description": "Patient Last Name (CB)" },
+        "BirthDate": { "type": ["string", "null"], "format": "date", "description": "Patient Date of Birth (C4)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.Status": {
+      "type": "object",
+      "description": "Response Status Segment (AM21) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "ResponseStatusCode": { "type": ["string", "null"], "description": "Response Status (AN) - A=Approved, C=Captured, D=DUR, P=Paid, R=Rejected" },
+        "AuthorizationNumber": { "type": ["string", "null"], "description": "Authorization Number (F3)" },
+        "RejectCodeCount": { "type": ["integer", "null"], "description": "Reject Count (FA)" },
+        "RejectCodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Code": { "type": ["string", "null"], "description": "Reject Code (FB)" },
+              "OccurrenceIndicator": { "type": ["integer", "null"], "description": "Reject Field Occurrence Indicator (4F)" }
+            }
+          }
+        },
+        "ApprovalMessageCodeCount": { "type": ["integer", "null"], "description": "Approved Message Code Count (5F)" },
+        "ApprovalMessageCodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Code": { "type": ["string", "null"], "description": "Approved Message Code (6F)" }
+            }
+          }
+        },
+        "AdditionalMessageCount": { "type": ["integer", "null"], "description": "Additional Message Information Count (UF)" },
+        "AdditionalMessages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Qualifier": { "type": ["string", "null"], "description": "Additional Message Information Qualifier (UH)" },
+              "Message": { "type": ["string", "null"], "description": "Additional Message Information (FQ)" },
+              "Continuation": { "type": ["string", "null"], "description": "Additional Message Information Continuity (UG)" }
+            }
+          }
+        },
+        "HelpDeskPhoneNumber": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Help Desk Phone Number Qualifier (7F)" },
+            "Number": { "type": ["string", "null"], "description": "Help Desk Phone Number (8F)" }
+          }
+        },
+        "TransactionReferenceNumber": { "type": ["string", "null"], "description": "Transaction Reference Number (K5)" },
+        "InternalControlNumber": { "type": ["string", "null"], "description": "Internal Control Number (A7)" },
+        "Url": { "type": ["string", "null"], "description": "URL (MA)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.Claim": {
+      "type": "object",
+      "description": "Response Claim Segment (AM22) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "PrescriptionServiceReference": {
+          "type": "object",
+          "properties": {
+            "Qualifier": { "type": ["string", "null"], "description": "Prescription/Service Reference Number Qualifier (EM)" },
+            "Number": { "type": ["string", "null"], "description": "Prescription/Service Reference Number (D2)" }
+          }
+        },
+        "PreferredProductCount": { "type": ["integer", "null"], "description": "Preferred Product Count (9F)" },
+        "PreferredProducts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "IdQualifier": { "type": ["string", "null"], "description": "Preferred Product ID Qualifier (AP)" },
+              "Id": { "type": ["string", "null"], "description": "Preferred Product ID (AR)" },
+              "Incentive": { "type": ["number", "null"], "description": "Preferred Product Incentive (AS)" },
+              "CostShareIncentive": { "type": ["number", "null"], "description": "Preferred Product Cost Share Incentive (AT)" },
+              "Description": { "type": ["string", "null"], "description": "Preferred Product Description (AU)" }
+            }
+          }
+        },
+        "MedicaidSubrogationInternalControlNumber": { "type": ["string", "null"], "description": "Medicaid Subrogation Internal Control Number (N4)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.Pricing": {
+      "type": "object",
+      "description": "Response Pricing Segment (AM23) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "PatientPayAmount": { "type": ["number", "null"], "description": "Patient Pay Amount (F5)" },
+        "IngredientCostPaid": { "type": ["number", "null"], "description": "Ingredient Cost Paid (F6)" },
+        "DispensingFeePaid": { "type": ["number", "null"], "description": "Dispensing Fee Paid (F7)" },
+        "TaxExemptIndicator": { "type": ["string", "null"], "description": "Tax Exempt Indicator (AV)" },
+        "FlatSalesTaxAmountPaid": { "type": ["number", "null"], "description": "Flat Sales Tax Amount Paid (AW)" },
+        "PercentageSalesTaxAmountPaid": { "type": ["number", "null"], "description": "Percentage Sales Tax Amount Paid (AX)" },
+        "PercentageSalesTaxRatePaid": { "type": ["number", "null"], "description": "Percentage Sales Tax Rate Paid (AY)" },
+        "PercentageSalesTaxBasisPaid": { "type": ["string", "null"], "description": "Percentage Sales Tax Basis Paid (AZ)" },
+        "IncentiveAmountPaid": { "type": ["number", "null"], "description": "Incentive Amount Paid (FL)" },
+        "ProfessionalServiceFeePaid": { "type": ["number", "null"], "description": "Professional Service Fee Paid (J1)" },
+        "OtherAmountPaidCount": { "type": ["integer", "null"], "description": "Other Amount Paid Count (J2)" },
+        "OtherAmountsPaid": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Qualifier": { "type": ["string", "null"], "description": "Other Amount Paid Qualifier (J3)" },
+              "AmountPaid": { "type": ["number", "null"], "description": "Other Amount Paid (J4)" }
+            }
+          }
+        },
+        "OtherPayerAmountRecognized": { "type": ["number", "null"], "description": "Other Payer Amount Recognized (J5)" },
+        "TotalAmountPaid": { "type": ["number", "null"], "description": "Total Amount Paid (F9)" },
+        "BasisOfReimbursementDetermination": { "type": ["integer", "null"], "description": "Basis of Reimbursement Determination (FM)" },
+        "AmountAttributedToSalesTax": { "type": ["number", "null"], "description": "Amount Attributed to Sales Tax (FN)" },
+        "AccumulatedDeductibleAmount": { "type": ["number", "null"], "description": "Accumulated Deductible Amount (FC)" },
+        "RemainingDeductibleAmount": { "type": ["number", "null"], "description": "Remaining Deductible Amount (FD)" },
+        "RemainingBenefitAmount": { "type": ["number", "null"], "description": "Remaining Benefit Amount (FE)" },
+        "AmountAppliedToPeriodicDeductible": { "type": ["number", "null"], "description": "Amount Applied to Periodic Deductible (FH)" },
+        "CopayAmount": { "type": ["number", "null"], "description": "Copay Amount (FI)" },
+        "AmountExceedingPeriodicBenefitMax": { "type": ["number", "null"], "description": "Amount Exceeding Periodic Benefit Maximum (FK)" },
+        "BasisOfCalculation": {
+          "type": "object",
+          "properties": {
+            "DispensingFee": { "type": ["string", "null"], "description": "Basis of Calculation - Dispensing Fee (HH)" },
+            "Copay": { "type": ["string", "null"], "description": "Basis of Calculation - Copay (HJ)" },
+            "FlatSalesTax": { "type": ["string", "null"], "description": "Basis of Calculation - Flat Sales Tax (HK)" },
+            "PercentageSalesTax": { "type": ["string", "null"], "description": "Basis of Calculation - Percentage Sales Tax (HM)" },
+            "Coinsurance": { "type": ["string", "null"], "description": "Basis of Calculation - Coinsurance (4V)" }
+          }
+        },
+        "AmountAttributedToProcessorFee": { "type": ["number", "null"], "description": "Amount Attributed to Processor Fee (NZ)" },
+        "PatientSalesTaxAmount": { "type": ["number", "null"], "description": "Patient Sales Tax Amount (EQ)" },
+        "PlanSalesTaxAmount": { "type": ["number", "null"], "description": "Plan Sales Tax Amount (2Y)" },
+        "CoinsuranceAmount": { "type": ["number", "null"], "description": "Coinsurance Amount (4U)" },
+        "BenefitStageCount": { "type": ["integer", "null"], "description": "Benefit Stage Count (MU)" },
+        "BenefitStageAmounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Qualifier": { "type": ["string", "null"], "description": "Benefit Stage Qualifier (MV)" },
+              "Amount": { "type": ["number", "null"], "description": "Benefit Stage Amount (MW)" }
+            }
+          }
+        },
+        "EstimatedGenericSavings": { "type": ["number", "null"], "description": "Estimated Generic Savings (G3)" },
+        "SpendingAccountAmountRemaining": { "type": ["number", "null"], "description": "Spending Account Amount Remaining (UC)" },
+        "HealthPlanFundedAssistanceAmount": { "type": ["number", "null"], "description": "Health Plan-funded Assistance Amount (UD)" },
+        "AmountAttributedToNetworkSelection": { "type": ["number", "null"], "description": "Amount Attributed to Provider Network Selection (UJ)" },
+        "AmountAttributedToBrandProductSelection": { "type": ["number", "null"], "description": "Amount Attributed to Product Selection (Brand) (UK)" },
+        "AmountAttributedToNonPreferredFormularyProductSelection": { "type": ["number", "null"], "description": "Amount Attributed to Product Selection (Non-Preferred Formulary) (UM)" },
+        "AmountAttributedToBrandNonPreferredFormularyProductSelection": { "type": ["number", "null"], "description": "Amount Attributed to Product Selection (Brand Non-Preferred Formulary) (UN)" },
+        "AmountAttributedToCoverageGap": { "type": ["number", "null"], "description": "Amount Attributed to Coverage Gap (UP)" },
+        "IngredientCostContractedReimbursableAmount": { "type": ["number", "null"], "description": "Ingredient Cost Contracted/Reimbursable Amount (U8)" },
+        "DispensingFeeContractedReimbursableAmount": { "type": ["number", "null"], "description": "Dispensing Fee Contracted/Reimbursable Amount (U9)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.Dur": {
+      "type": "object",
+      "description": "Response DUR/PPS Segment (AM24) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "Items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Counter": { "type": ["integer", "null"], "description": "DUR/PPS Response Code Counter (J6)" },
+              "ReasonForServiceCode": { "type": ["string", "null"], "description": "Reason for Service Code (E4)" },
+              "ClinicalSignificanceCode": { "type": ["string", "null"], "description": "Clinical Significance Code (FS)" },
+              "OtherPharmacyIndicator": { "type": ["string", "null"], "description": "Other Pharmacy Indicator (FT)" },
+              "PreviousFillDate": { "type": ["string", "null"], "format": "date", "description": "Previous Date of Fill (FU)" },
+              "PreviousFillDateQuantity": { "type": ["number", "null"], "description": "Quantity of Previous Fill (FV)" },
+              "DatabaseIndicator": { "type": ["string", "null"], "description": "DUR/PPS Database Indicator (FW)" },
+              "OtherPrescriberIndicator": { "type": ["string", "null"], "description": "Other Prescriber Indicator (FX)" },
+              "FreeText": { "type": ["string", "null"], "description": "DUR Free Text Message (FY)" },
+              "AdditionalText": { "type": ["string", "null"], "description": "DUR Additional Text (NS)" }
+            }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.PriorAuthorization": {
+      "type": "object",
+      "description": "Response Prior Authorization Segment (AM26) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "ProcessedDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Processed Date (PR)" },
+        "EffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Effective Date (PS)" },
+        "ExpirationDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Expiration Date (PT)" },
+        "Quantity": { "type": ["number", "null"], "description": "Prior Authorization Quantity (RA)" },
+        "AmountAuthorized": { "type": ["number", "null"], "description": "Prior Authorization Dollars Authorized (RB)" },
+        "RefillsAuthorized": { "type": ["integer", "null"], "description": "Prior Authorization Number of Refills Authorized (PW)" },
+        "QuantityAccumulated": { "type": ["number", "null"], "description": "Prior Authorization Quantity Accumulated (PX)" },
+        "NumberAssigned": { "type": ["string", "null"], "description": "Prior Authorization Number Assigned (PY)" },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    },
+
+    "response.CoordinationOfBenefits": {
+      "type": "object",
+      "description": "Response Coordination of Benefits Segment (AM28) - Response",
+      "properties": {
+        "SegmentId": { "$ref": "#/$defs/SegmentId" },
+        "OtherPayerCount": { "type": ["integer", "null"], "description": "Other Payer ID Count (NT)" },
+        "OtherPayers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "CoverageType": { "type": ["string", "null"], "description": "Other Payer Coverage Type (5C)" },
+              "IdQualifier": { "type": ["string", "null"], "description": "Other Payer ID Qualifier (6C)" },
+              "Id": { "type": ["string", "null"], "description": "Other Payer ID (7C)" },
+              "Pcn": { "type": ["string", "null"], "description": "Other Payer Processor Control Number (MH)" },
+              "CardholderId": { "type": ["string", "null"], "description": "Other Payer Cardholder ID (NU)" },
+              "GroupId": { "type": ["string", "null"], "description": "Other Payer Group ID (MJ)" },
+              "PersonCode": { "type": ["string", "null"], "description": "Other Payer Person Code (UV)" },
+              "HelpDeskPhone": { "type": ["string", "null"], "description": "Other Payer Help Desk Phone Number (UB)" },
+              "PatientRelationshipCode": { "type": ["string", "null"], "description": "Other Payer Patient Relationship Code (UW)" },
+              "BenefitEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Other Payer Benefit Effective Date (UX)" },
+              "BenefitTerminationDate": { "type": ["string", "null"], "format": "date", "description": "Other Payer Benefit Termination Date (UY)" }
+            }
+          }
+        },
+        "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
+      }
+    }
+  }
+}
