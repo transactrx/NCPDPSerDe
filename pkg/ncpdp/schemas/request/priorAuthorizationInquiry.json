@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transactrx.com/ncpdp/schemas/request/priorAuthorizationInquiry.json",
+  "title": "NCPDP Prior Authorization Inquiry Request (P3)",
+  "description": "Prior Authorization Inquiry Request Transaction",
+  "type": "object",
+  "properties": {
+    "Header": {
+      "type": "object",
+      "properties": {
+        "RawValue": { "type": "string" },
+        "Size": { "type": "integer" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Bin": { "type": "string", "maxLength": 6 },
+            "Version": { "type": "string", "maxLength": 2 },
+            "TransactionCode": { "type": "string", "const": "P3" },
+            "Pcn": { "type": "string", "maxLength": 10 },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
+            "ServiceProviderId": { "type": "string", "maxLength": 15 },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" },
+            "SoftwareVendorCertificationId": { "type": "string", "maxLength": 10 }
+          }
+        }
+      }
+    },
+    "Insurance": { "$ref": "../ncpdp-schemas.json#/$defs/request.Insurance" },
+    "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } },
+    "Authorizations": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "Raw": { "type": "string" },
+          "Authorization": { "$ref": "../ncpdp-schemas.json#/$defs/request.PriorAuthorizationRequestAndBilling" },
+          "DataCollection": { "$ref": "../ncpdp-schemas.json#/$defs/request.DataCollection" },
+          "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } }
+        }
+      }
+    }
+  },
+  "required": ["Header", "Insurance", "Authorizations"]
+}

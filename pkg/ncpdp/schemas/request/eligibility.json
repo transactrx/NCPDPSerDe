@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transactrx.com/ncpdp/schemas/request/eligibility.json",
+  "title": "NCPDP Eligibility Request (E1)",
+  "description": "Eligibility Verification Request Transaction - Used to verify patient eligibility",
+  "type": "object",
+  "properties": {
+    "Header": {
+      "type": "object",
+      "properties": {
+        "RawValue": { "type": "string" },
+        "Size": { "type": "integer" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Bin": { "type": "string", "maxLength": 6 },
+            "Version": { "type": "string", "maxLength": 2 },
+            "TransactionCode": { "type": "string", "const": "E1" },
+            "Pcn": { "type": "string", "maxLength": 10 },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 1 },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
+            "ServiceProviderId": { "type": "string", "maxLength": 15 },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" },
+            "SoftwareVendorCertificationId": { "type": "string", "maxLength": 10 }
+          },
+          "required": ["Bin", "Version", "TransactionCode", "RecordCount", "ServiceProviderIdQualifier", "ServiceProviderId", "DateOfService"]
+        }
+      }
+    },
+    "Insurance": { "$ref": "../ncpdp-schemas.json#/$defs/request.Insurance" },
+    "Patient": { "$ref": "../ncpdp-schemas.json#/$defs/request.Patient" },
+    "Pharmacy": { "$ref": "../ncpdp-schemas.json#/$defs/request.PharmacyProvider" },
+    "Prescriber": { "$ref": "../ncpdp-schemas.json#/$defs/request.Prescriber" },
+    "AdditionalDocumentation": { "$ref": "../ncpdp-schemas.json#/$defs/request.AdditionalDocumentation" },
+    "DataCollection": { "$ref": "../ncpdp-schemas.json#/$defs/request.DataCollection" },
+    "DynamicSegments": {
+      "type": "array",
+      "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" }
+    }
+  },
+  "required": ["Header", "Insurance", "Patient"]
+}

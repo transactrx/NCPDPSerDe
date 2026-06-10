@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transactrx.com/ncpdp/schemas/request/billing.json",
+  "title": "NCPDP Billing Request (B1)",
+  "description": "Billing Request Transaction - Used to submit new prescriptions for adjudication",
+  "type": "object",
+  "properties": {
+    "Header": {
+      "type": "object",
+      "description": "NCPDP Request Header",
+      "properties": {
+        "RawValue": { "type": "string" },
+        "Size": { "type": "integer" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Bin": { "type": "string", "maxLength": 6, "description": "BIN Number" },
+            "Version": { "type": "string", "maxLength": 2, "description": "Version (D0)" },
+            "TransactionCode": { "type": "string", "const": "B1", "description": "Transaction Code for Billing" },
+            "Pcn": { "type": "string", "maxLength": 10, "description": "Processor Control Number" },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
+            "ServiceProviderId": { "type": "string", "maxLength": 15 },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" },
+            "SoftwareVendorCertificationId": { "type": "string", "maxLength": 10 }
+          },
+          "required": ["Bin", "Version", "TransactionCode", "RecordCount", "ServiceProviderIdQualifier", "ServiceProviderId", "DateOfService"]
+        }
+      }
+    },
+    "Insurance": { "$ref": "../ncpdp-schemas.json#/$defs/request.Insurance" },
+    "Patient": { "$ref": "../ncpdp-schemas.json#/$defs/request.Patient" },
+    "DynamicSegments": {
+      "type": "array",
+      "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" }
+    },
+    "Claims": {
+      "type": "array",
+      "maxItems": 4,
+      "description": "Claim records (up to 4 per transaction)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Raw": { "type": "string", "description": "Raw claim group data" },
+          "Claim": { "$ref": "../ncpdp-schemas.json#/$defs/request.Claim" },
+          "Pricing": { "$ref": "../ncpdp-schemas.json#/$defs/request.Pricing" },
+          "Pharmacy": { "$ref": "../ncpdp-schemas.json#/$defs/request.PharmacyProvider" },
+          "Prescriber": { "$ref": "../ncpdp-schemas.json#/$defs/request.Prescriber" },
+          "CoordinationOfBenefits": { "$ref": "../ncpdp-schemas.json#/$defs/request.CoordinationOfBenefits" },
+          "WorkersCompensation": { "$ref": "../ncpdp-schemas.json#/$defs/request.WorkersCompensation" },
+          "Dur": { "$ref": "../ncpdp-schemas.json#/$defs/request.Dur" },
+          "Coupon": { "$ref": "../ncpdp-schemas.json#/$defs/request.Coupon" },
+          "Compound": { "$ref": "../ncpdp-schemas.json#/$defs/request.Compound" },
+          "Clinical": { "$ref": "../ncpdp-schemas.json#/$defs/request.Clinical" },
+          "AdditionalDocumentation": { "$ref": "../ncpdp-schemas.json#/$defs/request.AdditionalDocumentation" },
+          "Facility": { "$ref": "../ncpdp-schemas.json#/$defs/request.Facility" },
+          "Narrative": { "$ref": "../ncpdp-schemas.json#/$defs/request.Narrative" },
+          "DataCollection": { "$ref": "../ncpdp-schemas.json#/$defs/request.DataCollection" },
+          "DynamicSegments": {
+            "type": "array",
+            "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" }
+          }
+        }
+      }
+    }
+  },
+  "required": ["Header", "Insurance", "Patient", "Claims"]
+}

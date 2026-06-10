@@ -175,6 +175,10 @@ func (h *NcpdpHeader[V]) ParseNcpdpHeader() error {
 		}
 	}
 
+	if size > len(h.RawValue) {
+		return fmt.Errorf("NCPDP header data length %d is shorter than expected header size %d", len(h.RawValue), size)
+	}
+
 	h.Value = *item
 	h.Size = size
 	h.RawValue = h.RawValue[:size]

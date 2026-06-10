@@ -156,6 +156,27 @@ func TestParsingResponseHeader(t *testing.T) {
 	}
 }
 
+func TestParsingResponseHeaderShorterThanLayoutReturnsError(t *testing.T) {
+	// Previously panicked at "h.RawValue = h.RawValue[:size]" with a
+	// slice-bounds-out-of-range when raw data was shorter than the layout
+	// size (31 for ResponseHeader).
+	for _, raw := range []string{"D", "D0B11A"} {
+		header := NcpdpHeader[ResponseHeader]{RawValue: raw}
+		if err := header.ParseNcpdpHeader(); err == nil {
+			t.Errorf("expected error for raw %q (length %d), got nil", raw, len(raw))
+		}
+	}
+}
+
+func TestParsingRequestHeaderShorterThanLayoutReturnsError(t *testing.T) {
+	for _, raw := range []string{"8", "880151D0B1"} {
+		header := NcpdpHeader[RequestHeader]{RawValue: raw}
+		if err := header.ParseNcpdpHeader(); err == nil {
+			t.Errorf("expected error for raw %q (length %d), got nil", raw, len(raw))
+		}
+	}
+}
+
 func TestBuildingRequestHeader(t *testing.T) {
 	for _, test := range buildRequestHeaderTests {
 		header := NcpdpHeader[RequestHeader]{

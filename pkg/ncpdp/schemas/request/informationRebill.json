@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transactrx.com/ncpdp/schemas/request/informationRebill.json",
+  "title": "NCPDP Information Reporting Rebill Request (N2)",
+  "description": "Information Reporting Rebill Request Transaction",
+  "type": "object",
+  "properties": {
+    "Header": {
+      "type": "object",
+      "properties": {
+        "RawValue": { "type": "string" },
+        "Size": { "type": "integer" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Bin": { "type": "string", "maxLength": 6 },
+            "Version": { "type": "string", "maxLength": 2 },
+            "TransactionCode": { "type": "string", "const": "N2" },
+            "Pcn": { "type": "string", "maxLength": 10 },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
+            "ServiceProviderId": { "type": "string", "maxLength": 15 },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" },
+            "SoftwareVendorCertificationId": { "type": "string", "maxLength": 10 }
+          }
+        }
+      }
+    },
+    "Insurance": { "$ref": "../ncpdp-schemas.json#/$defs/request.Insurance" },
+    "Patient": { "$ref": "../ncpdp-schemas.json#/$defs/request.Patient" },
+    "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } },
+    "Claims": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "Raw": { "type": "string" },
+          "Claim": { "$ref": "../ncpdp-schemas.json#/$defs/request.Claim" },
+          "Pricing": { "$ref": "../ncpdp-schemas.json#/$defs/request.Pricing" },
+          "Pharmacy": { "$ref": "../ncpdp-schemas.json#/$defs/request.PharmacyProvider" },
+          "Prescriber": { "$ref": "../ncpdp-schemas.json#/$defs/request.Prescriber" },
+          "WorkersCompensation": { "$ref": "../ncpdp-schemas.json#/$defs/request.WorkersCompensation" },
+          "Dur": { "$ref": "../ncpdp-schemas.json#/$defs/request.Dur" },
+          "Clinical": { "$ref": "../ncpdp-schemas.json#/$defs/request.Clinical" },
+          "DataCollection": { "$ref": "../ncpdp-schemas.json#/$defs/request.DataCollection" },
+          "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } }
+        }
+      }
+    }
+  },
+  "required": ["Header", "Insurance", "Patient", "Claims"]
+}

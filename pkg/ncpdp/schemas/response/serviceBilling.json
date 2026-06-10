@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transactrx.com/ncpdp/schemas/response/serviceBilling.json",
+  "title": "NCPDP Service Billing Response (S1)",
+  "description": "Service Billing Response Transaction",
+  "type": "object",
+  "properties": {
+    "Header": {
+      "type": "object",
+      "properties": {
+        "RawValue": { "type": "string" },
+        "Size": { "type": "integer" },
+        "Value": {
+          "type": "object",
+          "properties": {
+            "Version": { "type": "string", "maxLength": 2 },
+            "TransactionCode": { "type": "string", "const": "S1" },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "Status": { "type": "string", "maxLength": 1 },
+            "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
+            "ServiceProviderId": { "type": "string", "maxLength": 15 },
+            "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" }
+          }
+        }
+      }
+    },
+    "Message": { "$ref": "../ncpdp-schemas.json#/$defs/response.Message" },
+    "Insurance": { "$ref": "../ncpdp-schemas.json#/$defs/response.Insurance" },
+    "Patient": { "$ref": "../ncpdp-schemas.json#/$defs/response.Patient" },
+    "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } },
+    "Claims": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "Raw": { "type": "string" },
+          "Status": { "$ref": "../ncpdp-schemas.json#/$defs/response.Status" },
+          "Claim": { "$ref": "../ncpdp-schemas.json#/$defs/response.Claim" },
+          "Pricing": { "$ref": "../ncpdp-schemas.json#/$defs/response.Pricing" },
+          "Dur": { "$ref": "../ncpdp-schemas.json#/$defs/response.Dur" },
+          "PriorAuthorization": { "$ref": "../ncpdp-schemas.json#/$defs/response.PriorAuthorization" },
+          "CoordinationOfBenefits": { "$ref": "../ncpdp-schemas.json#/$defs/response.CoordinationOfBenefits" },
+          "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } }
+        }
+      }
+    }
+  },
+  "required": ["Header", "Claims"]
+}
