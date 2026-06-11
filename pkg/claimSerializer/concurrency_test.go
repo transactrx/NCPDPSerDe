@@ -32,30 +32,7 @@ func Test_SerializeIsConcurrencySafe(t *testing.T) {
 			defer wg.Done()
 
 			for i := 0; i < iterations; i++ {
-				// Serialize the shared object (concurrent reads of one struct)
-				got, err := Serialize(&shared)
-				if err != nil {
-					t.Errorf("Failed to serialize shared object: %v", err)
-					return
-				}
-				if got != baseline {
-					t.Errorf("Serialized output mismatch under concurrency.\nWanted: %q\nGot:    %q", baseline, got)
-					return
-				}
-
-				// Full round trip with a goroutine-local object
-				local := request.Billing{}
-				if err := claimdeserializer.DeserializeType(buildF6BillingRequest(), &local); err != nil {
-					t.Errorf("Failed to deserialize local object: %v", err)
-					return
-				}
-				got, err = Serialize(&local)
-				if err != nil {
-					t.Errorf("Failed to serialize local object: %v", err)
-					return
-				}
-				if got != baseline {
-					t.Errorf("Local round-trip output mismatch under concurrency.\nWanted: %q\nGot:    %q", baseline, got)
+				if !serializeSharedConcurrently(t, &shared, baseline) || !roundTripLocalConcurrently(t, baseline) {
 					return
 				}
 			}
@@ -63,4 +40,46 @@ func Test_SerializeIsConcurrencySafe(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+// Serialize the shared object (concurrent reads of one struct).
+func serializeSharedConcurrently(t *testing.T, shared *request.Billing, baseline string) bool {
+	t.Helper()
+
+	got, err := Serialize(shared)
+	if err != nil {
+		t.Errorf("Failed to serialize shared object: %v", err)
+		return false
+	}
+
+	if got != baseline {
+		t.Errorf("Serialized output mismatch under concurrency.\nWanted: %q\nGot:    %q", baseline, got)
+		return false
+	}
+
+	return true
+}
+
+// Full round trip with a goroutine-local object.
+func roundTripLocalConcurrently(t *testing.T, baseline string) bool {
+	t.Helper()
+
+	local := request.Billing{}
+	if err := claimdeserializer.DeserializeType(buildF6BillingRequest(), &local); err != nil {
+		t.Errorf("Failed to deserialize local object: %v", err)
+		return false
+	}
+
+	got, err := Serialize(&local)
+	if err != nil {
+		t.Errorf("Failed to serialize local object: %v", err)
+		return false
+	}
+
+	if got != baseline {
+		t.Errorf("Local round-trip output mismatch under concurrency.\nWanted: %q\nGot:    %q", baseline, got)
+		return false
+	}
+
+	return true
 }
