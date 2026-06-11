@@ -99,6 +99,62 @@ func Test_GetSegmentAttribute_ParsesAllKeys(t *testing.T) {
 	}
 }
 
+func Test_GetRequestType(t *testing.T) {
+	RegisterTypes()
+
+	tranType, err := GetRequestType("B1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tranType.Name() != "Billing" {
+		t.Errorf("Request type mismatch. Wanted: Billing   Got: %v", tranType.Name())
+	}
+
+	if _, err := GetRequestType("ZZ"); err == nil {
+		t.Error("Expected error for unknown request transaction code, got nil")
+	}
+}
+
+func Test_GetResponseType(t *testing.T) {
+	RegisterTypes()
+
+	tranType, err := GetResponseType("B2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tranType.Name() != "Reversal" {
+		t.Errorf("Response type mismatch. Wanted: Reversal   Got: %v", tranType.Name())
+	}
+
+	if _, err := GetResponseType("ZZ"); err == nil {
+		t.Error("Expected error for unknown response transaction code, got nil")
+	}
+}
+
+func Test_DynamicFieldName(t *testing.T) {
+	tests := []struct {
+		name      string
+		fieldCode string
+		order     int
+		want      string
+	}{
+		{"plain code", "D7", 3, "Field_D7_3"},
+		{"ampersand replaced", "&B", 1, "Field_ampersandB_1"},
+		{"hash replaced", "#A", 2, "Field_hashA_2"},
+		{"exclamation replaced", "!F", 7, "Field_exclamationF_7"},
+		{"multiple illegal characters", "{}", 4, "Field_leftbracerightbrace_4"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := DynamicFieldName(test.fieldCode, test.order)
+			if got != test.want {
+				t.Errorf("DynamicFieldName(%q, %v) mismatch. Wanted: %q   Got: %q", test.fieldCode, test.order, test.want, got)
+			}
+		})
+	}
+}
+
 func Test_GetSegmentAttribute_CacheReturnsSameResult(t *testing.T) {
 	const tag = "code=AM11,order=7"
 
