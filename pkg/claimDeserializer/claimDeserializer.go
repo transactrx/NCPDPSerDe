@@ -249,7 +249,7 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 		initializeStruct(groupElementType, groupItem)
 
 		// Set field defined as "raw" data tag
-		setStructFieldByCodeTag(groupElementType, groupItem, rawGroupTag, reflect.ValueOf(fmt.Sprint(string(ncpdp.GROUP), rawClaimGroup)), 0, 0, false)
+		setStructFieldByCodeTag(groupElementType, groupItem, rawGroupTag, reflect.ValueOf(string(ncpdp.GROUP)+rawClaimGroup), 0, 0, false)
 
 		// Set segment data
 		evaluateSegments(rawClaimGroup, groupElementType, groupItem)
@@ -437,12 +437,12 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
-	for _, rawSeg := range rawSegments {
-		segmentMap, err := serde.GetSegmentDefinitionById(baseType)
-		if err != nil {
-			return err
-		}
+	segmentMap, err := serde.GetSegmentDefinitionById(baseType)
+	if err != nil {
+		return err
+	}
 
+	for _, rawSeg := range rawSegments {
 		// Get all fields
 		rawFields := stringutils.SplitBySeparator(rawSeg, ncpdp.FIELD)
 
@@ -478,7 +478,7 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 		initializeStruct(elementType, segment)
 
 		// Set field defined as "raw" data tag
-		setStructFieldByCodeTag(elementType, segment, rawSegmentTag, reflect.ValueOf(fmt.Sprint(string(ncpdp.SEGMENT), rawSeg)), 0, 0, false)
+		setStructFieldByCodeTag(elementType, segment, rawSegmentTag, reflect.ValueOf(string(ncpdp.SEGMENT)+rawSeg), 0, 0, false)
 
 		fieldCountMap := map[string]int{}
 

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
@@ -286,7 +287,9 @@ func mergeSliceFieldCodes(baseType reflect.Type, baseVal reflect.Value, skipCode
 			}
 		}
 
-		collectFieldCodes(field.Type.Elem(), merged)
+		for code := range fieldCodesForType(field.Type.Elem()) {
+			merged[code] = true
+		}
 	}
 
 	if merged == nil {
@@ -294,6 +297,26 @@ func mergeSliceFieldCodes(baseType reflect.Type, baseVal reflect.Value, skipCode
 	}
 
 	return merged
+}
+
+var fieldCodesCache sync.Map
+
+// Cached set of field tag codes for a struct type. The returned map must not be modified.
+func fieldCodesForType(structType reflect.Type) map[string]bool {
+	structType = reflectionutils.GetElementType(structType)
+	if structType.Kind() != reflect.Struct {
+		return nil
+	}
+
+	if cached, ok := fieldCodesCache.Load(structType); ok {
+		return cached.(map[string]bool)
+	}
+
+	codes := map[string]bool{}
+	collectFieldCodes(structType, codes)
+	fieldCodesCache.Store(structType, codes)
+
+	return codes
 }
 
 // Collect all field tag codes defined on a struct type, recursing into nested structs.
