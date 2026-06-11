@@ -237,6 +237,366 @@ func Test_CanUpdateField(t *testing.T) {
 	}
 }
 
+// F6 request header is 58 bytes: version(2) tranCode(2) IIN(8) PCN(10) recordCount(1) SPIQ(2) SPI(15) DOS(8) vendorCertId(10)
+const F6_REQUEST_B1_HEADER = "F6B100880151TEST      1011234567893     20260611SVCID     "
+
+// Raw test constants embed invisible separator bytes, so the F6 sample is built programmatically.
+// F6 (vEB+) has no group separators; the single transaction's segments
+// directly follow the shared segments.
+func buildF6BillingRequest() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_REQUEST_B1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C1TESTGROUP" + fs + "C61" +
+		ss + fs + "AM01" + fs + "RR2" + fs + "CX01" + fs + "CY111111111" + fs + "CX02" + fs + "CY222222222" + fs + "C419341231" + fs + "C51" + fs + "CAJOHN" + fs + "0CQUINCY" + fs + "CBDOE" +
+		ss + fs + "AM07" + fs + "EM1" + fs + "D26000001" + fs + "E103" + fs + "D700172240780" + fs + "E70000001000" + fs + "D300" + fs + "D530" + fs + "D61" + fs + "D80" + fs + "DE20260611" + fs + "U701" +
+		ss + fs + "AM19" + fs + "8G1" + fs + "8H01" + fs + "8KQQ" + fs + "8MINTERMEDIARY01"
+}
+
+// F6 response header layout is identical to D0 (31 bytes).
+const F6_RESPONSE_B1_HEADER = "F6B11A011234567893     20260611"
+
+func buildF6BillingResponse() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_RESPONSE_B1_HEADER +
+		ss + fs + "AM25" + fs + "C1TESTGROUP" + fs + "KR2" + fs + "J701" + fs + "J8PAYER001" + fs + "J702" + fs + "J8PAYER002" + fs + "C2CARD123" +
+		ss + fs + "AM21" + fs + "ANA" +
+		ss + fs + "AM22" + fs + "EM1" + fs + "D26000001"
+}
+
+func assertString(t *testing.T, name string, got *string, want string) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %q   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %q   Got: %q", name, want, *got)
+	}
+}
+
+func assertInt(t *testing.T, name string, got *int, want int) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %v   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %v   Got: %v", name, want, *got)
+	}
+}
+
+// assertFieldCount verifies how many times a field code is emitted in the
+// serialized transmission.
+func assertFieldCount(t *testing.T, serialized, code string, want int) {
+	t.Helper()
+	if got := strings.Count(serialized, string(ncpdp.FIELD)+code); got != want {
+		t.Errorf("Serialized %s occurrence mismatch. Wanted: %v   Got: %v", code, want, got)
+	}
+}
+
+func assertNoGroupSeparators(t *testing.T, serialized string) {
+	t.Helper()
+	if got := strings.Count(serialized, string(ncpdp.GROUP)); got != 0 {
+		t.Errorf("F6 transmissions must not contain group separators. Found: %v", got)
+	}
+}
+
+func assertHeaderPrefix(t *testing.T, serialized, wantHeader string) {
+	t.Helper()
+	if len(serialized) < len(wantHeader) || serialized[:len(wantHeader)] != wantHeader {
+		t.Errorf("Serialized F6 header mismatch.\nWanted prefix: %q\nGot:           %q", wantHeader, serialized[:min(len(serialized), len(wantHeader))])
+	}
+}
+
+func Test_CanRoundTripF6BillingRequest(t *testing.T) {
+	obj := request.Billing{}
+	err := claimdeserializer.DeserializeType(buildF6BillingRequest(), &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	assertHeaderPrefix(t, serialized, F6_REQUEST_B1_HEADER)
+	assertNoGroupSeparators(t, serialized)
+
+	// Repeating patient ID: the Ids slice must survive the round trip and the
+	// scalar Id/IdQualifier must not cause duplicate CX/CY field emission.
+	assertFieldCount(t, serialized, "CX", 2)
+	assertFieldCount(t, serialized, "CY", 2)
+
+	// Re-deserialize and verify the F6 fields survive the round trip
+	obj2 := request.Billing{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	if obj2.Header.Value != obj.Header.Value {
+		t.Errorf("Header mismatch after round trip.\nWanted: %+v\nGot:    %+v", obj.Header.Value, obj2.Header.Value)
+	}
+	assertString(t, "Patient middle name (F6 field 0C) after round trip", obj2.Patient.MiddleName, "QUINCY")
+
+	if len(obj2.Patient.Ids) != 2 {
+		t.Errorf("Patient ids count mismatch after round trip. Wanted: 2   Got: %v", len(obj2.Patient.Ids))
+	}
+	if len(obj2.Claims) != 1 {
+		t.Fatalf("Group count mismatch after round trip. Wanted: 1   Got: %v", len(obj2.Claims))
+	}
+	intermediary := obj2.Claims[0].Intermediary
+	assertInt(t, "Intermediary id count (F6 field 8G) after round trip", intermediary.IdCount, 1)
+	if len(intermediary.Ids) != 1 || intermediary.Ids[0].Id == nil || *intermediary.Ids[0].Id != "INTERMEDIARY01" {
+		t.Errorf("Intermediary ids (F6 segment AM19) mismatch after round trip. Got: %+v", intermediary.Ids)
+	}
+}
+
+func Test_CanRoundTripF6BillingResponse(t *testing.T) {
+	obj := response.Billing{}
+	err := claimdeserializer.DeserializeType(buildF6BillingResponse(), &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	if got := strings.Count(serialized, string(ncpdp.GROUP)); got != 0 {
+		t.Errorf("F6 transmissions must not contain group separators. Found: %v", got)
+	}
+
+	// Repeating payer ID: the Payers slice must survive the round trip and the
+	// singular Payer must not cause duplicate J7/J8 field emission.
+	fs := string(ncpdp.FIELD)
+	if got := strings.Count(serialized, fs+"J7"); got != 2 {
+		t.Errorf("Serialized J7 occurrence mismatch. Wanted: 2   Got: %v", got)
+	}
+	if got := strings.Count(serialized, fs+"J8"); got != 2 {
+		t.Errorf("Serialized J8 occurrence mismatch. Wanted: 2   Got: %v", got)
+	}
+
+	obj2 := response.Billing{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	if len(obj2.Insurance.Payers) != 2 {
+		t.Fatalf("Payers count mismatch after round trip. Wanted: 2   Got: %v", len(obj2.Insurance.Payers))
+	}
+	for i, want := range []struct{ qualifier, id string }{{"01", "PAYER001"}, {"02", "PAYER002"}} {
+		got := obj2.Insurance.Payers[i]
+		if got.Qualifier == nil || *got.Qualifier != want.qualifier || got.Id == nil || *got.Id != want.id {
+			t.Errorf("Payers[%d] mismatch after round trip. Wanted: %s/%s   Got: %v/%v", i, want.qualifier, want.id, got.Qualifier, got.Id)
+		}
+	}
+}
+
+const F6_REQUEST_FULL_HEADER = "F6B188015600PCN12345671011234567893     20260611VENDORCERT"
+
+// Built from the raw F6 sample (RawSample_F6.txt) with CRLF line breaks
+// removed. F6 has no group separator: AM11 follows the shared segments
+// directly and is assigned to the single claim group by segment ID.
+func buildF6FullBillingRequest() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_REQUEST_FULL_HEADER +
+		ss + fs + "AM04" + fs + "C2CARDID" + fs + "CCCARDFIRST" + fs + "CDCARDLAST" + fs + "FOPLANID" + fs + "C90" + fs + "C1D0PAID" + fs + "C3001" + fs + "C61" + fs + "2AMEDIGAPID" + fs + "2BSC" + fs + "2DN" + fs + "N5MEDICAIDIDNUMBER" +
+		ss + fs + "AM01" + fs + "RR1" + fs + "CX99" + fs + "CYPATIENTID" + fs + "C419850601" + fs + "C51" + fs + "CAFIRSTNAME" + fs + "CBLASTNAME" + fs + "7A1234 FIRST ADDRESS LINE" + fs + "7B7890 SECOND ADDRESS LINE" + fs + "CNROEBUCK" + fs + "COSC" + fs + "CP293764444" + fs + "1KUS" + fs + "CQ8645555555" + fs + "C701" + fs + "CZEMPLOYERID" + fs + "2C1" + fs + "HNEMAIL@DOMAIN.COM" + fs + "4X1" + fs + "S8337915000" +
+		ss + fs + "AM11" + fs + "D91234567H" + fs + "DC250{" + fs + "BE200{" + fs + "DX" + fs + "E350{" + fs + "H71" + fs + "H801" + fs + "H975E" + fs + "RK1" + fs + "RLAB" + fs + "HA43B" + fs + "GE12345G" + fs + "HE10000" + fs + "JE02" + fs + "DQ1345670{" + fs + "DU1247532B" + fs + "DN01"
+}
+
+func Test_CanRoundTripF6FullFieldSample(t *testing.T) {
+	obj := request.Billing{}
+	err := claimdeserializer.DeserializeType(buildF6FullBillingRequest(), &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	assertHeaderPrefix(t, serialized, F6_REQUEST_FULL_HEADER)
+	assertNoGroupSeparators(t, serialized)
+
+	// Single-occurrence dual-mapped patient ID must serialize exactly once.
+	assertFieldCount(t, serialized, "CX", 1)
+	assertFieldCount(t, serialized, "CY", 1)
+	assertFieldCount(t, serialized, "RL", 1)
+
+	obj2 := request.Billing{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	if obj2.Header.Value != obj.Header.Value {
+		t.Errorf("Header mismatch after round trip.\nWanted: %+v\nGot:    %+v", obj.Header.Value, obj2.Header.Value)
+	}
+
+	patient := obj2.Patient
+	assertString(t, "Patient street line 1 (F6 field 7A) after round trip", patient.Address.StreetLine1, "1234 FIRST ADDRESS LINE")
+	assertString(t, "Patient street line 2 (F6 field 7B) after round trip", patient.Address.StreetLine2, "7890 SECOND ADDRESS LINE")
+	assertString(t, "Patient country code (F6 field 1K) after round trip", patient.Address.CountryCode, "US")
+	assertString(t, "Patient species (F6 field S8) after round trip", patient.Species, "337915000")
+	if len(patient.Ids) != 1 || patient.Ids[0].Id == nil || *patient.Ids[0].Id != "PATIENTID" {
+		t.Errorf("Patient ids mismatch after round trip. Got: %+v", patient.Ids)
+	}
+	assertString(t, "Patient scalar id qualifier after round trip", patient.IdQualifier, "99")
+	assertString(t, "Patient scalar id after round trip", patient.Id, "PATIENTID")
+
+	if len(obj2.Claims) != 1 {
+		t.Fatalf("Group count mismatch after round trip. Wanted: 1   Got: %v", len(obj2.Claims))
+	}
+
+	assertF6FullSamplePricingRoundTrip(t, obj2)
+}
+
+func assertF6FullSamplePricingRoundTrip(t *testing.T, obj request.Billing) {
+	t.Helper()
+
+	pricing := obj.Claims[0].Pricing
+	for _, want := range []struct {
+		name string
+		got  *float64
+		val  float64
+	}{
+		{"ingredient cost (D9)", pricing.IngredientCostSubmitted, 123456.78},
+		{"dispensing fee (DC)", pricing.DispensingFeeSubmitted, 25.00},
+		{"professional service fee (BE)", pricing.ProfessionalServiceFeeSubmitted, 20.00},
+		{"patient paid amount (DX, empty in source)", pricing.PatientPaidAmountSubmitted, 0},
+		{"incentive amount (E3)", pricing.IncentiveAmountSubmitted, 5.00},
+		{"flat sales tax (HA)", pricing.FlatSalesTaxAmountSubmitted, 4.32},
+		{"percentage sales tax amount (GE)", pricing.PercentageSalesTaxAmountSubmitted, 1234.57},
+		{"percentage sales tax rate (HE)", pricing.PercentageSalesTaxRateSubmitted, 1.0000},
+		{"usual and customary charge (DQ)", pricing.UsualAndCustmaryCharge, 134567.00},
+		{"gross amount due (DU)", pricing.GrossAmountDue, 124753.22},
+	} {
+		if want.got == nil || *want.got != want.val {
+			t.Errorf("Pricing %s mismatch after round trip. Wanted: %v   Got: %v", want.name, want.val, want.got)
+		}
+	}
+	if len(pricing.OtherAmountClaimSubmitted) != 1 || pricing.OtherAmountClaimSubmitted[0].AmountSubmitted == nil || *pricing.OtherAmountClaimSubmitted[0].AmountSubmitted != 7.55 {
+		t.Errorf("Pricing other amounts (H8/H9) mismatch after round trip. Got: %+v", pricing.OtherAmountClaimSubmitted)
+	}
+	if len(pricing.RegulatoryFees) != 1 || pricing.RegulatoryFees[0].TypeCode == nil || *pricing.RegulatoryFees[0].TypeCode != "AB" {
+		t.Errorf("Pricing regulatory fees (RK/RL) mismatch after round trip. Got: %+v", pricing.RegulatoryFees)
+	}
+}
+
+// F6 (vEB+) allows only a single transaction per transmission, and without
+// group separators multiple claim groups cannot be represented.
+func Test_F6SerializeRejectsMultipleClaimGroups(t *testing.T) {
+	obj := request.Billing{}
+	err := claimdeserializer.DeserializeType(buildF6BillingRequest(), &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	obj.Claims = append(obj.Claims, obj.Claims[0])
+
+	_, err = Serialize(&obj)
+	if err == nil {
+		t.Fatal("Expected error serializing an F6 claim with multiple claim groups, got nil")
+	}
+}
+
+func Test_CanRoundTripF6PricingRegulatoryFees(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	rawData := F6_REQUEST_B1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C61" +
+		ss + fs + "AM07" + fs + "EM1" + fs + "D26000001" + fs + "E103" + fs + "D700172240780" +
+		ss + fs + "AM11" + fs + "D9100{" + fs + "RK2" + fs + "RL01" + fs + "RL02"
+
+	obj := request.Billing{}
+	err := claimdeserializer.DeserializeType(rawData, &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	if len(obj.Claims) != 1 {
+		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
+	}
+
+	pricing := obj.Claims[0].Pricing
+	if pricing.RegulatoryFeeCount == nil || *pricing.RegulatoryFeeCount != 2 {
+		t.Errorf("Regulatory fee count (F6 field RK) mismatch. Wanted: 2   Got: %v", pricing.RegulatoryFeeCount)
+	}
+	if len(pricing.RegulatoryFees) != 2 {
+		t.Fatalf("Regulatory fees count mismatch. Wanted: 2   Got: %v", len(pricing.RegulatoryFees))
+	}
+	for i, want := range []string{"01", "02"} {
+		got := pricing.RegulatoryFees[i].TypeCode
+		if got == nil || *got != want {
+			t.Errorf("Regulatory fee type code (F6 field RL) [%d] mismatch. Wanted: %s   Got: %v", i, want, got)
+		}
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	if got := strings.Count(serialized, fs+"RL"); got != 2 {
+		t.Errorf("Serialized RL occurrence mismatch. Wanted: 2   Got: %v", got)
+	}
+
+	obj2 := request.Billing{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	if len(obj2.Claims) != 1 || len(obj2.Claims[0].Pricing.RegulatoryFees) != 2 {
+		t.Errorf("Regulatory fees not preserved through round trip. Got: %+v", obj2.Claims)
+	}
+}
+
+// Test_D0DualMappedFieldsSerializeOnce guards the serializer skip logic for D0
+// data: a single CX/CY occurrence populates both the backward-compatible
+// scalars and the repeating Ids slice, but must serialize exactly once.
+func Test_D0DualMappedFieldsSerializeOnce(t *testing.T) {
+	obj := request.Billing{}
+	err := claimdeserializer.DeserializeType(REQUEST_B1, &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	assertString(t, "Patient id qualifier", obj.Patient.IdQualifier, "99")
+	assertString(t, "Patient id", obj.Patient.Id, "VERI")
+	if len(obj.Patient.Ids) != 1 {
+		t.Fatalf("Patient ids count mismatch. Wanted: 1   Got: %v", len(obj.Patient.Ids))
+	}
+	assertString(t, "Patient ids[0] qualifier", obj.Patient.Ids[0].Qualifier, "99")
+	assertString(t, "Patient ids[0] id", obj.Patient.Ids[0].Id, "VERI")
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	assertFieldCount(t, serialized, "CX", 1)
+	assertFieldCount(t, serialized, "CY", 1)
+
+	obj2 := request.Billing{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	assertString(t, "Patient id qualifier after round trip", obj2.Patient.IdQualifier, "99")
+	assertString(t, "Patient id after round trip", obj2.Patient.Id, "VERI")
+}
+
 // Test_PreservesTrailingWhitespace verifies that trailing whitespace in field values
 // is preserved through the deserialize -> serialize roundtrip.
 func Test_PreservesTrailingWhitespace(t *testing.T) {

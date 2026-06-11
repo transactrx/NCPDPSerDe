@@ -26,6 +26,8 @@ type PredeterminationOfBenefitsRecord struct {
 	Claim                  responsesegment.Claim                  `segment:"code=AM22,order=2"`
 	Pricing                responsesegment.Pricing                `segment:"code=AM23,order=3"`
 	Dur                    responsesegment.Dur                    `segment:"code=AM24,order=4"`
-	CoordinationOfBenefits responsesegment.CoordinationOfBenefits `segment:"code=AM28,order=5"`
-	DynamicSegments        []dynamic.DynamicStruct                `segment:"code=dynamic,order=100"`
+	CoordinationOfBenefits    responsesegment.CoordinationOfBenefits    `segment:"code=AM28,order=5"`
+	OtherRelatedBenefitDetail responsesegment.OtherRelatedBenefitDetail `segment:"code=AM39,order=6"`
+	Provider                  responsesegment.Provider                  `segment:"code=AM40,order=7"`
+	DynamicSegments           []dynamic.DynamicStruct                   `segment:"code=dynamic,order=100"`
 }

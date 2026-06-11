@@ -124,13 +124,11 @@ func getRegisteredType(key string) (reflect.Type, error) {
 }
 
 func GetRequestType(tranCode string) (reflect.Type, error) {
-	key := fmt.Sprintf("%v|request", tranCode)
-	return getRegisteredType(key)
+	return getRegisteredType(tranCode + "|request")
 }
 
 func GetResponseType(tranCode string) (reflect.Type, error) {
-	key := fmt.Sprintf("%v|response", tranCode)
-	return getRegisteredType(key)
+	return getRegisteredType(tranCode + "|response")
 }
 
 // Register types we need to dynamically create.
@@ -178,8 +176,14 @@ func RegisterTypes() {
 	})
 }
 
+var segmentAttributeCache sync.Map
+
 // Get segment attribute data.
 func GetSegmentAttribute(tag string) (SegmentAttribute, error) {
+	if cached, ok := segmentAttributeCache.Load(tag); ok {
+		return cached.(SegmentAttribute), nil
+	}
+
 	attribute := SegmentAttribute{}
 
 	tagFields := strings.Split(tag, ",")
@@ -197,6 +201,8 @@ func GetSegmentAttribute(tag string) (SegmentAttribute, error) {
 			attribute.Order, _ = strconv.Atoi(parseTag(tagField, OrderTag))
 		}
 	}
+
+	segmentAttributeCache.Store(tag, attribute)
 
 	return attribute, nil
 }
@@ -225,8 +231,14 @@ func GetHeaderAttribute(tag string) (HeaderAttribute, error) {
 	return attribute, nil
 }
 
+var fieldAttributeCache sync.Map
+
 // Get field attribute data.
 func GetFieldAttribute(tag string) (FieldAttribute, error) {
+	if cached, ok := fieldAttributeCache.Load(tag); ok {
+		return cached.(FieldAttribute), nil
+	}
+
 	attribute := FieldAttribute{}
 
 	tagFields := strings.Split(tag, ",")
@@ -254,6 +266,8 @@ func GetFieldAttribute(tag string) (FieldAttribute, error) {
 		}
 	}
 
+	fieldAttributeCache.Store(tag, attribute)
+
 	return attribute, nil
 }
 
@@ -264,22 +278,25 @@ func inferFormat(key string) string {
 
 // Parse tag data for specified key/value pair.
 func parseTag(tagField, tagKey string) string {
-	if !strings.HasPrefix(tagField, tagKey) {
+	tagValue, found := strings.CutPrefix(tagField, tagKey+"=")
+	if !found {
 		return Empty
 	}
-
-	tagFormat := fmt.Sprintf("%v=", tagKey) + "%v"
-	var tagValue string
-
-	fmt.Sscanf(tagField, tagFormat, &tagValue)
 
 	return tagValue
 }
 
-// Get map of segment definitions by segment ID.
+var segmentDefinitionByIdCache sync.Map
+
+// Get map of segment definitions by segment ID. The returned map is cached and must not be modified.
 func GetSegmentDefinitionById(tType reflect.Type) (map[string]SegmentDefinition, error) {
-	segmentMap := make(map[string]SegmentDefinition)
 	baseType := reflectionutils.GetElementType(tType)
+
+	if cached, ok := segmentDefinitionByIdCache.Load(baseType); ok {
+		return cached.(map[string]SegmentDefinition), nil
+	}
+
+	segmentMap := make(map[string]SegmentDefinition)
 
 	for i := 0; i < baseType.NumField(); i++ {
 		field := baseType.Field(i)
@@ -295,13 +312,22 @@ func GetSegmentDefinitionById(tType reflect.Type) (map[string]SegmentDefinition,
 		}
 	}
 
+	segmentDefinitionByIdCache.Store(baseType, segmentMap)
+
 	return segmentMap, nil
 }
 
-// Get map of segment definitions by segment order.
+var segmentDefinitionByOrderCache sync.Map
+
+// Get map of segment definitions by segment order. The returned map is cached and must not be modified.
 func GetSegmentDefinitionByOrder(tType reflect.Type) (map[int]SegmentDefinition, error) {
-	segmentMap := make(map[int]SegmentDefinition)
 	baseType := reflectionutils.GetElementType(tType)
+
+	if cached, ok := segmentDefinitionByOrderCache.Load(baseType); ok {
+		return cached.(map[int]SegmentDefinition), nil
+	}
+
+	segmentMap := make(map[int]SegmentDefinition)
 
 	for i := 0; i < baseType.NumField(); i++ {
 		field := baseType.Field(i)
@@ -318,6 +344,8 @@ func GetSegmentDefinitionByOrder(tType reflect.Type) (map[int]SegmentDefinition,
 			}
 		}
 	}
+
+	segmentDefinitionByOrderCache.Store(baseType, segmentMap)
 
 	return segmentMap, nil
 }
@@ -431,10 +459,7 @@ func GetDynamicSlice(tType reflect.Type, tagType string) (*reflect.StructField, 
 // Create dynamic field name. Handle repeating fields by
 // including the element index within the name.
 func DynamicFieldName(fieldCode string, order int) string {
-	return fmt.Sprintf(
-		"Field_%v_%v",
-		replaceIllegalCharacters(fieldCode),
-		order)
+	return "Field_" + replaceIllegalCharacters(fieldCode) + "_" + strconv.Itoa(order)
 }
 
 // Replace illegal characters in field names.

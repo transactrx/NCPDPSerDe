@@ -27,8 +27,11 @@ type BillingRecord struct {
 	Pricing                responsesegment.Pricing                `segment:"code=AM23,order=3"`
 	Dur                    responsesegment.Dur                    `segment:"code=AM24,order=4"`
 	PriorAuthorization     responsesegment.PriorAuthorization     `segment:"code=AM26,order=5"`
-	CoordinationOfBenefits responsesegment.CoordinationOfBenefits `segment:"code=AM28,order=6"`
-	DynamicSegments        []dynamic.DynamicStruct                `segment:"code=dynamic,order=100"`
+	CoordinationOfBenefits    responsesegment.CoordinationOfBenefits    `segment:"code=AM28,order=6"`
+	Intermediary              responsesegment.Intermediary              `segment:"code=AM36,order=7"`
+	OtherRelatedBenefitDetail responsesegment.OtherRelatedBenefitDetail `segment:"code=AM39,order=8"`
+	Provider                  responsesegment.Provider                  `segment:"code=AM40,order=9"`
+	DynamicSegments           []dynamic.DynamicStruct                   `segment:"code=dynamic,order=100"`
 
 	//TOOD: Include price update info
 }

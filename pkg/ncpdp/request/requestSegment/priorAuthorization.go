@@ -27,8 +27,11 @@ type AuthorizedRepresentative struct {
 }
 
 type AuthorizedRepresentativeAddress struct {
-	Street *string `field:"code=PG,order=8"`
-	City   *string `field:"code=PH,order=9"`
-	State  *string `field:"code=PJ,order=10"`
-	Zip    *string `field:"code=PK,order=11"`
+	Street      *string `field:"code=PG,order=8"`
+	StreetLine1 *string `field:"code=7D,order=15"`
+	StreetLine2 *string `field:"code=8B,order=16"`
+	City        *string `field:"code=PH,order=9"`
+	State       *string `field:"code=PJ,order=10"`
+	Zip         *string `field:"code=PK,order=11"`
+	CountryCode *string `field:"code=1U,order=17"`
 }

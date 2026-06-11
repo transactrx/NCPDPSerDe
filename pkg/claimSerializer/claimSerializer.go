@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
@@ -40,8 +41,11 @@ func Serialize[V any](claim *V) (string, error) {
 	}
 	builder.WriteString(rawSegs)
 
-	// Build groups
-	rawGrps, err := buildGroups(claimType, claimObjectRef)
+	// Build groups. vEB+ versions (e.g. F6) eliminated the group separator and
+	// allow only a single transaction per transmission.
+	omitGroupSeparators := strings.HasPrefix(rawHdr, "F")
+
+	rawGrps, err := buildGroups(claimType, claimObjectRef, omitGroupSeparators)
 	if err != nil {
 		return serde.Empty, err
 	}
@@ -85,7 +89,7 @@ func buildHeader(structType reflect.Type, structVal reflect.Value) (string, erro
 }
 
 // Build raw groups.
-func buildGroups(structType reflect.Type, structVal reflect.Value) (string, error) {
+func buildGroups(structType reflect.Type, structVal reflect.Value, omitGroupSeparators bool) (string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -101,6 +105,10 @@ func buildGroups(structType reflect.Type, structVal reflect.Value) (string, erro
 
 	groupSlice := baseVal.FieldByName(groupField.Name)
 
+	if omitGroupSeparators && groupSlice.Len() > 1 {
+		return serde.Empty, fmt.Errorf("NCPDP versions without group separators (vEB and higher) allow a single transaction per transmission; found %d claim groups", groupSlice.Len())
+	}
+
 	builder := strings.Builder{}
 
 	for i := 0; i < groupSlice.Len(); i++ {
@@ -111,7 +119,9 @@ func buildGroups(structType reflect.Type, structVal reflect.Value) (string, erro
 			return serde.Empty, err
 		}
 
-		builder.WriteByte(ncpdp.GROUP)
+		if !omitGroupSeparators {
+			builder.WriteByte(ncpdp.GROUP)
+		}
 		builder.WriteString(rawSegs)
 	}
 
@@ -183,7 +193,7 @@ func buildSegment(structType reflect.Type, structVal reflect.Value) (string, err
 	builder.WriteByte(ncpdp.SEGMENT)
 
 	// Build map of fields and contents
-	rawFieldMap, err := buildFieldMap(baseType, baseVal)
+	rawFieldMap, err := buildFieldMap(baseType, baseVal, nil)
 	if err != nil {
 		return builder.String(), err
 	}
@@ -213,7 +223,7 @@ func buildSegment(structType reflect.Type, structVal reflect.Value) (string, err
 	return rawSegment, nil
 }
 
-func buildFieldMap(structType reflect.Type, structVal reflect.Value) (map[int]string, error) {
+func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes map[string]bool) (map[int]string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -223,6 +233,11 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value) (map[int]st
 		baseType = reflectionutils.GetElementType(ds.DynamicType)
 		baseVal = reflectionutils.GetElementValue(reflect.ValueOf(ds.Value))
 	}
+
+	// Codes already emitted by populated repeating slices suppress their scalar
+	// counterparts so dual-mapped fields (D0 scalar + F6 repeating slice) are
+	// not serialized twice.
+	skipCodes = mergeSliceFieldCodes(baseType, baseVal, skipCodes)
 
 	rawFieldMap := make(map[int]string)
 
@@ -236,7 +251,7 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value) (map[int]st
 			return rawFieldMap, err
 		}
 
-		fieldResult, err := buildStructField(field.Type, fieldVal, &fieldAttribute)
+		fieldResult, err := buildStructField(field.Type, fieldVal, &fieldAttribute, skipCodes)
 		if err != nil {
 			return rawFieldMap, err
 		}
@@ -249,77 +264,189 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value) (map[int]st
 	return rawFieldMap, nil
 }
 
-func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute) (map[int]string, error) {
-	rawFieldMap := make(map[int]string)
+// Union of skipCodes and the field codes contained in non-empty slice fields.
+func mergeSliceFieldCodes(baseType reflect.Type, baseVal reflect.Value, skipCodes map[string]bool) map[string]bool {
+	var merged map[string]bool
 
-	switch ft.Kind() {
-	case reflect.Struct:
-		return buildFieldMap(ft, fieldVal)
+	for i := 0; i < baseType.NumField(); i++ {
+		field := baseType.Field(i)
 
-	case reflect.Pointer:
-		if fieldAttribute != nil && fieldAttribute.Order > 0 {
-			if !fieldVal.IsNil() {
-				rawField, err := buildField(*fieldAttribute, fieldVal.Elem())
-				if err != nil {
-					return rawFieldMap, err
-				}
-
-				rawFieldMap[fieldAttribute.Order] = rawField
-			}
-
-			break
+		if field.Type.Kind() != reflect.Slice {
+			continue
 		}
 
-		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute)
+		fieldVal := baseVal.FieldByName(field.Name)
+		if !fieldVal.IsValid() || fieldVal.Len() == 0 {
+			continue
+		}
 
-	case reflect.Slice, reflect.Array:
-		builder := strings.Builder{}
-		order := math.MaxInt
-
-		for i := 0; i < fieldVal.Len(); i++ {
-			element := fieldVal.Index(i)
-
-			fm, err := buildFieldMap(element.Type(), element)
-			if err != nil {
-				return rawFieldMap, err
-			}
-
-			// Get keys and sort
-			fmKeys := make([]int, 0, len(fm))
-			for k := range fm {
-				fmKeys = append(fmKeys, k)
-			}
-
-			slices.Sort(fmKeys)
-
-			// Concat all fields for element
-			for _, fmOrder := range fmKeys {
-				fmVal, ok := fm[fmOrder]
-				if ok {
-					builder.WriteString(fmVal)
-
-					if fmOrder < order {
-						order = fmOrder
-					}
-				}
+		if merged == nil {
+			merged = make(map[string]bool, len(skipCodes))
+			for k := range skipCodes {
+				merged[k] = true
 			}
 		}
 
-		rawString := builder.String()
-		if rawString != serde.Empty {
-			rawFieldMap[order] = rawString
-		}
-
-	default:
-		if fieldAttribute != nil && fieldAttribute.Order > 0 {
-			rawField, err := buildField(*fieldAttribute, fieldVal)
-			if err != nil {
-				return rawFieldMap, err
-			}
-
-			rawFieldMap[fieldAttribute.Order] = rawField
+		for code := range fieldCodesForType(field.Type.Elem()) {
+			merged[code] = true
 		}
 	}
+
+	if merged == nil {
+		return skipCodes
+	}
+
+	return merged
+}
+
+var fieldCodesCache sync.Map
+
+// Cached set of field tag codes for a struct type. The returned map must not be modified.
+func fieldCodesForType(structType reflect.Type) map[string]bool {
+	structType = reflectionutils.GetElementType(structType)
+	if structType.Kind() != reflect.Struct {
+		return nil
+	}
+
+	if cached, ok := fieldCodesCache.Load(structType); ok {
+		return cached.(map[string]bool)
+	}
+
+	codes := map[string]bool{}
+	collectFieldCodes(structType, codes)
+	fieldCodesCache.Store(structType, codes)
+
+	return codes
+}
+
+// Collect all field tag codes defined on a struct type, recursing into nested structs.
+func collectFieldCodes(structType reflect.Type, codes map[string]bool) {
+	structType = reflectionutils.GetElementType(structType)
+	if structType.Kind() != reflect.Struct {
+		return
+	}
+
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+
+		tag := field.Tag.Get(serde.FieldTag)
+		if tag != serde.Empty {
+			attr, err := serde.GetFieldAttribute(tag)
+			if err == nil && attr.Code != serde.Empty {
+				codes[attr.Code] = true
+			}
+		}
+
+		switch field.Type.Kind() {
+		case reflect.Struct:
+			collectFieldCodes(field.Type, codes)
+		case reflect.Pointer:
+			if field.Type.Elem().Kind() == reflect.Struct {
+				collectFieldCodes(field.Type.Elem(), codes)
+			}
+		}
+	}
+}
+
+func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+	switch ft.Kind() {
+	case reflect.Struct:
+		return buildFieldMap(ft, fieldVal, skipCodes)
+
+	case reflect.Pointer:
+		return buildPointerField(ft, fieldVal, fieldAttribute, skipCodes)
+
+	case reflect.Slice, reflect.Array:
+		return buildSliceField(fieldVal)
+
+	default:
+		return buildScalarField(fieldVal, fieldAttribute, skipCodes)
+	}
+}
+
+func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+	if fieldAttribute == nil || fieldAttribute.Order <= 0 {
+		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute, skipCodes)
+	}
+
+	rawFieldMap := make(map[int]string)
+
+	if fieldVal.IsNil() || skipCodes[fieldAttribute.Code] {
+		return rawFieldMap, nil
+	}
+
+	rawField, err := buildField(*fieldAttribute, fieldVal.Elem())
+	if err != nil {
+		return rawFieldMap, err
+	}
+
+	rawFieldMap[fieldAttribute.Order] = rawField
+
+	return rawFieldMap, nil
+}
+
+func buildSliceField(fieldVal reflect.Value) (map[int]string, error) {
+	rawFieldMap := make(map[int]string)
+
+	builder := strings.Builder{}
+	order := math.MaxInt
+
+	for i := 0; i < fieldVal.Len(); i++ {
+		element := fieldVal.Index(i)
+
+		fm, err := buildFieldMap(element.Type(), element, nil)
+		if err != nil {
+			return rawFieldMap, err
+		}
+
+		elementOrder := writeSortedFieldMap(&builder, fm)
+		if elementOrder < order {
+			order = elementOrder
+		}
+	}
+
+	rawString := builder.String()
+	if rawString != serde.Empty {
+		rawFieldMap[order] = rawString
+	}
+
+	return rawFieldMap, nil
+}
+
+// writeSortedFieldMap appends the map values to the builder in order and
+// returns the lowest order present (math.MaxInt when the map is empty).
+func writeSortedFieldMap(builder *strings.Builder, fm map[int]string) int {
+	fmKeys := make([]int, 0, len(fm))
+	for k := range fm {
+		fmKeys = append(fmKeys, k)
+	}
+
+	slices.Sort(fmKeys)
+
+	for _, fmOrder := range fmKeys {
+		builder.WriteString(fm[fmOrder])
+	}
+
+	if len(fmKeys) == 0 {
+		return math.MaxInt
+	}
+
+	return fmKeys[0]
+}
+
+func buildScalarField(fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+	rawFieldMap := make(map[int]string)
+
+	if fieldAttribute == nil || fieldAttribute.Order <= 0 || skipCodes[fieldAttribute.Code] {
+		return rawFieldMap, nil
+	}
+
+	rawField, err := buildField(*fieldAttribute, fieldVal)
+	if err != nil {
+		return rawFieldMap, err
+	}
+
+	rawFieldMap[fieldAttribute.Order] = rawField
 
 	return rawFieldMap, nil
 }
