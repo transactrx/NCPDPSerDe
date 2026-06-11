@@ -267,6 +267,47 @@ func buildF6BillingResponse() string {
 		ss + fs + "AM22" + fs + "EM1" + fs + "D26000001"
 }
 
+func assertString(t *testing.T, name string, got *string, want string) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %q   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %q   Got: %q", name, want, *got)
+	}
+}
+
+func assertInt(t *testing.T, name string, got *int, want int) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %v   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %v   Got: %v", name, want, *got)
+	}
+}
+
+// assertFieldCount verifies how many times a field code is emitted in the
+// serialized transmission.
+func assertFieldCount(t *testing.T, serialized, code string, want int) {
+	t.Helper()
+	if got := strings.Count(serialized, string(ncpdp.FIELD)+code); got != want {
+		t.Errorf("Serialized %s occurrence mismatch. Wanted: %v   Got: %v", code, want, got)
+	}
+}
+
+func assertNoGroupSeparators(t *testing.T, serialized string) {
+	t.Helper()
+	if got := strings.Count(serialized, string(ncpdp.GROUP)); got != 0 {
+		t.Errorf("F6 transmissions must not contain group separators. Found: %v", got)
+	}
+}
+
+func assertHeaderPrefix(t *testing.T, serialized, wantHeader string) {
+	t.Helper()
+	if len(serialized) < len(wantHeader) || serialized[:len(wantHeader)] != wantHeader {
+		t.Errorf("Serialized F6 header mismatch.\nWanted prefix: %q\nGot:           %q", wantHeader, serialized[:min(len(serialized), len(wantHeader))])
+	}
+}
+
 func Test_CanRoundTripF6BillingRequest(t *testing.T) {
 	obj := request.Billing{}
 	err := claimdeserializer.DeserializeType(buildF6BillingRequest(), &obj)
@@ -279,9 +320,13 @@ func Test_CanRoundTripF6BillingRequest(t *testing.T) {
 		t.Fatalf("Failed to serialize: %v", err)
 	}
 
-	if len(serialized) < 58 || serialized[:58] != F6_REQUEST_B1_HEADER {
-		t.Errorf("Serialized F6 header mismatch.\nWanted prefix: %q\nGot:           %q", F6_REQUEST_B1_HEADER, serialized[:min(len(serialized), 58)])
-	}
+	assertHeaderPrefix(t, serialized, F6_REQUEST_B1_HEADER)
+	assertNoGroupSeparators(t, serialized)
+
+	// Repeating patient ID: the Ids slice must survive the round trip and the
+	// scalar Id/IdQualifier must not cause duplicate CX/CY field emission.
+	assertFieldCount(t, serialized, "CX", 2)
+	assertFieldCount(t, serialized, "CY", 2)
 
 	// Re-deserialize and verify the F6 fields survive the round trip
 	obj2 := request.Billing{}
@@ -293,23 +338,8 @@ func Test_CanRoundTripF6BillingRequest(t *testing.T) {
 	if obj2.Header.Value != obj.Header.Value {
 		t.Errorf("Header mismatch after round trip.\nWanted: %+v\nGot:    %+v", obj.Header.Value, obj2.Header.Value)
 	}
-	if obj2.Patient.MiddleName == nil || *obj2.Patient.MiddleName != "QUINCY" {
-		t.Errorf("Patient middle name (F6 field 0C) mismatch after round trip. Wanted: QUINCY   Got: %v", obj2.Patient.MiddleName)
-	}
+	assertString(t, "Patient middle name (F6 field 0C) after round trip", obj2.Patient.MiddleName, "QUINCY")
 
-	if got := strings.Count(serialized, string(ncpdp.GROUP)); got != 0 {
-		t.Errorf("F6 transmissions must not contain group separators. Found: %v", got)
-	}
-
-	// Repeating patient ID: the Ids slice must survive the round trip and the
-	// scalar Id/IdQualifier must not cause duplicate CX/CY field emission.
-	fs := string(ncpdp.FIELD)
-	if got := strings.Count(serialized, fs+"CX"); got != 2 {
-		t.Errorf("Serialized CX occurrence mismatch. Wanted: 2   Got: %v", got)
-	}
-	if got := strings.Count(serialized, fs+"CY"); got != 2 {
-		t.Errorf("Serialized CY occurrence mismatch. Wanted: 2   Got: %v", got)
-	}
 	if len(obj2.Patient.Ids) != 2 {
 		t.Errorf("Patient ids count mismatch after round trip. Wanted: 2   Got: %v", len(obj2.Patient.Ids))
 	}
@@ -317,9 +347,7 @@ func Test_CanRoundTripF6BillingRequest(t *testing.T) {
 		t.Fatalf("Group count mismatch after round trip. Wanted: 1   Got: %v", len(obj2.Claims))
 	}
 	intermediary := obj2.Claims[0].Intermediary
-	if intermediary.IdCount == nil || *intermediary.IdCount != 1 {
-		t.Errorf("Intermediary id count (F6 field 8G) mismatch after round trip. Wanted: 1   Got: %v", intermediary.IdCount)
-	}
+	assertInt(t, "Intermediary id count (F6 field 8G) after round trip", intermediary.IdCount, 1)
 	if len(intermediary.Ids) != 1 || intermediary.Ids[0].Id == nil || *intermediary.Ids[0].Id != "INTERMEDIARY01" {
 		t.Errorf("Intermediary ids (F6 segment AM19) mismatch after round trip. Got: %+v", intermediary.Ids)
 	}
@@ -395,25 +423,13 @@ func Test_CanRoundTripF6FullFieldSample(t *testing.T) {
 		t.Fatalf("Failed to serialize: %v", err)
 	}
 
-	if len(serialized) < 58 || serialized[:58] != F6_REQUEST_FULL_HEADER {
-		t.Errorf("Serialized F6 header mismatch.\nWanted prefix: %q\nGot:           %q", F6_REQUEST_FULL_HEADER, serialized[:min(len(serialized), 58)])
-	}
-
-	if got := strings.Count(serialized, string(ncpdp.GROUP)); got != 0 {
-		t.Errorf("F6 transmissions must not contain group separators. Found: %v", got)
-	}
+	assertHeaderPrefix(t, serialized, F6_REQUEST_FULL_HEADER)
+	assertNoGroupSeparators(t, serialized)
 
 	// Single-occurrence dual-mapped patient ID must serialize exactly once.
-	fs := string(ncpdp.FIELD)
-	if got := strings.Count(serialized, fs+"CX"); got != 1 {
-		t.Errorf("Serialized CX occurrence mismatch. Wanted: 1   Got: %v", got)
-	}
-	if got := strings.Count(serialized, fs+"CY"); got != 1 {
-		t.Errorf("Serialized CY occurrence mismatch. Wanted: 1   Got: %v", got)
-	}
-	if got := strings.Count(serialized, fs+"RL"); got != 1 {
-		t.Errorf("Serialized RL occurrence mismatch. Wanted: 1   Got: %v", got)
-	}
+	assertFieldCount(t, serialized, "CX", 1)
+	assertFieldCount(t, serialized, "CY", 1)
+	assertFieldCount(t, serialized, "RL", 1)
 
 	obj2 := request.Billing{}
 	err = claimdeserializer.DeserializeType(serialized, &obj2)
@@ -426,30 +442,27 @@ func Test_CanRoundTripF6FullFieldSample(t *testing.T) {
 	}
 
 	patient := obj2.Patient
-	if patient.Address.StreetLine1 == nil || *patient.Address.StreetLine1 != "1234 FIRST ADDRESS LINE" {
-		t.Errorf("Patient street line 1 (F6 field 7A) mismatch after round trip. Got: %v", patient.Address.StreetLine1)
-	}
-	if patient.Address.StreetLine2 == nil || *patient.Address.StreetLine2 != "7890 SECOND ADDRESS LINE" {
-		t.Errorf("Patient street line 2 (F6 field 7B) mismatch after round trip. Got: %v", patient.Address.StreetLine2)
-	}
-	if patient.Address.CountryCode == nil || *patient.Address.CountryCode != "US" {
-		t.Errorf("Patient country code (F6 field 1K) mismatch after round trip. Got: %v", patient.Address.CountryCode)
-	}
-	if patient.Species == nil || *patient.Species != "337915000" {
-		t.Errorf("Patient species (F6 field S8) mismatch after round trip. Got: %v", patient.Species)
-	}
+	assertString(t, "Patient street line 1 (F6 field 7A) after round trip", patient.Address.StreetLine1, "1234 FIRST ADDRESS LINE")
+	assertString(t, "Patient street line 2 (F6 field 7B) after round trip", patient.Address.StreetLine2, "7890 SECOND ADDRESS LINE")
+	assertString(t, "Patient country code (F6 field 1K) after round trip", patient.Address.CountryCode, "US")
+	assertString(t, "Patient species (F6 field S8) after round trip", patient.Species, "337915000")
 	if len(patient.Ids) != 1 || patient.Ids[0].Id == nil || *patient.Ids[0].Id != "PATIENTID" {
 		t.Errorf("Patient ids mismatch after round trip. Got: %+v", patient.Ids)
 	}
-	if patient.IdQualifier == nil || *patient.IdQualifier != "99" || patient.Id == nil || *patient.Id != "PATIENTID" {
-		t.Errorf("Patient scalar id mismatch after round trip. Got: %v/%v", patient.IdQualifier, patient.Id)
-	}
+	assertString(t, "Patient scalar id qualifier after round trip", patient.IdQualifier, "99")
+	assertString(t, "Patient scalar id after round trip", patient.Id, "PATIENTID")
 
 	if len(obj2.Claims) != 1 {
 		t.Fatalf("Group count mismatch after round trip. Wanted: 1   Got: %v", len(obj2.Claims))
 	}
 
-	pricing := obj2.Claims[0].Pricing
+	assertF6FullSamplePricingRoundTrip(t, obj2)
+}
+
+func assertF6FullSamplePricingRoundTrip(t *testing.T, obj request.Billing) {
+	t.Helper()
+
+	pricing := obj.Claims[0].Pricing
 	for _, want := range []struct {
 		name string
 		got  *float64
@@ -558,32 +571,21 @@ func Test_D0DualMappedFieldsSerializeOnce(t *testing.T) {
 		t.Fatalf("Failed to deserialize: %v", err)
 	}
 
-	if obj.Patient.IdQualifier == nil || *obj.Patient.IdQualifier != "99" {
-		t.Errorf("Patient id qualifier mismatch. Wanted: 99   Got: %v", obj.Patient.IdQualifier)
-	}
-	if obj.Patient.Id == nil || *obj.Patient.Id != "VERI" {
-		t.Errorf("Patient id mismatch. Wanted: VERI   Got: %v", obj.Patient.Id)
-	}
+	assertString(t, "Patient id qualifier", obj.Patient.IdQualifier, "99")
+	assertString(t, "Patient id", obj.Patient.Id, "VERI")
 	if len(obj.Patient.Ids) != 1 {
 		t.Fatalf("Patient ids count mismatch. Wanted: 1   Got: %v", len(obj.Patient.Ids))
 	}
-	if obj.Patient.Ids[0].Qualifier == nil || *obj.Patient.Ids[0].Qualifier != "99" ||
-		obj.Patient.Ids[0].Id == nil || *obj.Patient.Ids[0].Id != "VERI" {
-		t.Errorf("Patient ids[0] mismatch. Wanted: 99/VERI   Got: %v/%v", obj.Patient.Ids[0].Qualifier, obj.Patient.Ids[0].Id)
-	}
+	assertString(t, "Patient ids[0] qualifier", obj.Patient.Ids[0].Qualifier, "99")
+	assertString(t, "Patient ids[0] id", obj.Patient.Ids[0].Id, "VERI")
 
 	serialized, err := Serialize(&obj)
 	if err != nil {
 		t.Fatalf("Failed to serialize: %v", err)
 	}
 
-	fs := string(ncpdp.FIELD)
-	if got := strings.Count(serialized, fs+"CX"); got != 1 {
-		t.Errorf("Serialized CX occurrence mismatch. Wanted: 1   Got: %v", got)
-	}
-	if got := strings.Count(serialized, fs+"CY"); got != 1 {
-		t.Errorf("Serialized CY occurrence mismatch. Wanted: 1   Got: %v", got)
-	}
+	assertFieldCount(t, serialized, "CX", 1)
+	assertFieldCount(t, serialized, "CY", 1)
 
 	obj2 := request.Billing{}
 	err = claimdeserializer.DeserializeType(serialized, &obj2)
@@ -591,12 +593,8 @@ func Test_D0DualMappedFieldsSerializeOnce(t *testing.T) {
 		t.Fatalf("Failed to deserialize serialized claim: %v", err)
 	}
 
-	if obj2.Patient.IdQualifier == nil || *obj2.Patient.IdQualifier != "99" {
-		t.Errorf("Patient id qualifier mismatch after round trip. Wanted: 99   Got: %v", obj2.Patient.IdQualifier)
-	}
-	if obj2.Patient.Id == nil || *obj2.Patient.Id != "VERI" {
-		t.Errorf("Patient id mismatch after round trip. Wanted: VERI   Got: %v", obj2.Patient.Id)
-	}
+	assertString(t, "Patient id qualifier after round trip", obj2.Patient.IdQualifier, "99")
+	assertString(t, "Patient id after round trip", obj2.Patient.Id, "VERI")
 }
 
 // Test_PreservesTrailingWhitespace verifies that trailing whitespace in field values

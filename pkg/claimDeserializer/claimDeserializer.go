@@ -272,32 +272,9 @@ func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type
 		return err
 	}
 
-	transactionIndex := -1
-
-	if groupField != nil {
-		groupElementType := groupField.Type.Elem()
-
-		groupSegmentMap, err := serde.GetSegmentDefinitionById(reflectionutils.GetElementType(groupElementType))
-		if err != nil {
-			return err
-		}
-
-		segIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.SEGMENT})
-		for segIndex != -1 {
-			nextIndex := stringutils.IndexOfAny(rawClaimString, segIndex+1, []byte{ncpdp.SEGMENT})
-
-			endIndex := len(rawClaimString)
-			if nextIndex != -1 {
-				endIndex = nextIndex
-			}
-
-			if _, ok := groupSegmentMap[segmentIdOf(rawClaimString[segIndex+1:endIndex])]; ok {
-				transactionIndex = segIndex
-				break
-			}
-
-			segIndex = nextIndex
-		}
+	transactionIndex, err := findTransactionIndex(rawClaimString, groupField)
+	if err != nil {
+		return err
 	}
 
 	sharedRaw := rawClaimString
@@ -333,6 +310,38 @@ func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type
 	groupSlice.Set(reflect.Append(groupSlice, groupItem))
 
 	return nil
+}
+
+// findTransactionIndex locates the start of the single (vEB+) claim group: the
+// first segment whose ID belongs to the group struct. Returns -1 when the
+// struct has no group slice or no segment matches.
+func findTransactionIndex(rawClaimString string, groupField *reflect.StructField) (int, error) {
+	if groupField == nil {
+		return -1, nil
+	}
+
+	groupSegmentMap, err := serde.GetSegmentDefinitionById(reflectionutils.GetElementType(groupField.Type.Elem()))
+	if err != nil {
+		return -1, err
+	}
+
+	segIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.SEGMENT})
+	for segIndex != -1 {
+		nextIndex := stringutils.IndexOfAny(rawClaimString, segIndex+1, []byte{ncpdp.SEGMENT})
+
+		endIndex := len(rawClaimString)
+		if nextIndex != -1 {
+			endIndex = nextIndex
+		}
+
+		if _, ok := groupSegmentMap[segmentIdOf(rawClaimString[segIndex+1:endIndex])]; ok {
+			return segIndex, nil
+		}
+
+		segIndex = nextIndex
+	}
+
+	return -1, nil
 }
 
 // segmentIdOf returns the segment ID field (e.g. "AM07") of a raw segment.

@@ -545,37 +545,19 @@ func Test_CanParseF6BillingRequest(t *testing.T) {
 	}
 
 	header := obj.Header.Value
-	if header.Version != ncpdp.F6 {
-		t.Errorf("Version mismatch. Wanted: F6   Got: %q", header.Version)
-	}
-	if header.Bin != "00880151" {
-		t.Errorf("Bin/IIN mismatch. Wanted: 00880151   Got: %q", header.Bin)
-	}
-	if header.TransactionCode != "B1" {
-		t.Errorf("TransactionCode mismatch. Wanted: B1   Got: %q", header.TransactionCode)
-	}
-	if header.Pcn != "TEST" {
-		t.Errorf("Pcn mismatch. Wanted: TEST   Got: %q", header.Pcn)
-	}
-	if header.RecordCount != 1 {
-		t.Errorf("RecordCount mismatch. Wanted: 1   Got: %v", header.RecordCount)
-	}
-	if obj.Header.Size != 58 {
-		t.Errorf("Header size mismatch. Wanted: 58   Got: %v", obj.Header.Size)
-	}
+	assertValue(t, "Version", header.Version, ncpdp.F6)
+	assertValue(t, "Bin/IIN", header.Bin, "00880151")
+	assertValue(t, "TransactionCode", header.TransactionCode, "B1")
+	assertValue(t, "Pcn", header.Pcn, "TEST")
+	assertValue(t, "RecordCount", header.RecordCount, 1)
+	assertValue(t, "Header size", obj.Header.Size, 58)
 
-	if obj.Patient.FirstName == nil || *obj.Patient.FirstName != "JOHN" {
-		t.Errorf("Patient first name mismatch. Wanted: JOHN   Got: %v", obj.Patient.FirstName)
-	}
-	if obj.Patient.MiddleName == nil || *obj.Patient.MiddleName != "QUINCY" {
-		t.Errorf("Patient middle name (F6 field 0C) mismatch. Wanted: QUINCY   Got: %v", obj.Patient.MiddleName)
-	}
+	assertString(t, "Patient first name", obj.Patient.FirstName, "JOHN")
+	assertString(t, "Patient middle name (F6 field 0C)", obj.Patient.MiddleName, "QUINCY")
 
 	// Repeating patient ID (F6): scalars keep one occurrence for backward
 	// compatibility, the Ids slice captures every occurrence.
-	if obj.Patient.IdCount == nil || *obj.Patient.IdCount != 2 {
-		t.Errorf("Patient id count (F6 field RR) mismatch. Wanted: 2   Got: %v", obj.Patient.IdCount)
-	}
+	assertInt(t, "Patient id count (F6 field RR)", obj.Patient.IdCount, 2)
 	if obj.Patient.Id == nil || obj.Patient.IdQualifier == nil {
 		t.Error("Patient scalar Id/IdQualifier not populated")
 	}
@@ -583,30 +565,21 @@ func Test_CanParseF6BillingRequest(t *testing.T) {
 		t.Fatalf("Patient ids count mismatch. Wanted: 2   Got: %v", len(obj.Patient.Ids))
 	}
 	for i, want := range []struct{ qualifier, id string }{{"01", "111111111"}, {"02", "222222222"}} {
-		got := obj.Patient.Ids[i]
-		if got.Qualifier == nil || *got.Qualifier != want.qualifier || got.Id == nil || *got.Id != want.id {
-			t.Errorf("Patient ids[%d] mismatch. Wanted: %s/%s   Got: %v/%v", i, want.qualifier, want.id, got.Qualifier, got.Id)
-		}
+		assertString(t, fmt.Sprintf("Patient ids[%d] qualifier", i), obj.Patient.Ids[i].Qualifier, want.qualifier)
+		assertString(t, fmt.Sprintf("Patient ids[%d] id", i), obj.Patient.Ids[i].Id, want.id)
 	}
 
 	if len(obj.Claims) != 1 {
 		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
 	}
 
-	claim := obj.Claims[0]
-	intermediary := claim.Intermediary
-	if intermediary.IdCount == nil || *intermediary.IdCount != 1 {
-		t.Errorf("Intermediary id count (F6 field 8G) mismatch. Wanted: 1   Got: %v", intermediary.IdCount)
-	}
+	intermediary := obj.Claims[0].Intermediary
+	assertInt(t, "Intermediary id count (F6 field 8G)", intermediary.IdCount, 1)
 	if len(intermediary.Ids) != 1 {
 		t.Fatalf("Intermediary ids (F6 segment AM19) count mismatch. Wanted: 1   Got: %v", len(intermediary.Ids))
 	}
-	if intermediary.Ids[0].Qualifier == nil || *intermediary.Ids[0].Qualifier != "QQ" {
-		t.Errorf("Intermediary id qualifier (F6 field 8K) mismatch. Wanted: QQ   Got: %v", intermediary.Ids[0].Qualifier)
-	}
-	if intermediary.Ids[0].Id == nil || *intermediary.Ids[0].Id != "INTERMEDIARY01" {
-		t.Errorf("Intermediary id (F6 field 8M) mismatch. Wanted: INTERMEDIARY01   Got: %v", intermediary.Ids[0].Id)
-	}
+	assertString(t, "Intermediary id qualifier (F6 field 8K)", intermediary.Ids[0].Qualifier, "QQ")
+	assertString(t, "Intermediary id (F6 field 8M)", intermediary.Ids[0].Id, "INTERMEDIARY01")
 }
 
 func Test_CanParseF6BillingResponse(t *testing.T) {
@@ -663,6 +636,22 @@ func buildF6FullBillingRequest() string {
 		ss + fs + "AM11" + fs + "D91234567H" + fs + "DC250{" + fs + "BE200{" + fs + "DX" + fs + "E350{" + fs + "H71" + fs + "H801" + fs + "H975E" + fs + "RK1" + fs + "RLAB" + fs + "HA43B" + fs + "GE12345G" + fs + "HE10000" + fs + "JE02" + fs + "DQ1345670{" + fs + "DU1247532B" + fs + "DN01"
 }
 
+func assertValue[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Errorf("%s mismatch. Wanted: %v   Got: %v", name, want, got)
+	}
+}
+
+func assertInt(t *testing.T, name string, got *int, want int) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %v   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %v   Got: %v", name, want, *got)
+	}
+}
+
 func assertString(t *testing.T, name string, got *string, want string) {
 	t.Helper()
 	if got == nil {
@@ -692,37 +681,35 @@ func Test_CanParseF6FullFieldSample(t *testing.T) {
 		t.Fatalf("expected request.Billing, got: %T", i)
 	}
 
+	assertF6FullSampleHeader(t, obj)
+	assertF6FullSampleInsurance(t, obj)
+	assertF6FullSamplePatient(t, obj)
+
+	if len(obj.Claims) != 1 {
+		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
+	}
+
+	assertF6FullSamplePricing(t, obj)
+}
+
+func assertF6FullSampleHeader(t *testing.T, obj request.Billing) {
+	t.Helper()
+
 	header := obj.Header.Value
-	if header.Version != ncpdp.F6 {
-		t.Errorf("Version mismatch. Wanted: F6   Got: %q", header.Version)
-	}
-	if header.Bin != "88015600" {
-		t.Errorf("Bin/IIN mismatch. Wanted: 88015600   Got: %q", header.Bin)
-	}
-	if header.TransactionCode != "B1" {
-		t.Errorf("TransactionCode mismatch. Wanted: B1   Got: %q", header.TransactionCode)
-	}
-	if header.Pcn != "PCN1234567" {
-		t.Errorf("Pcn mismatch. Wanted: PCN1234567   Got: %q", header.Pcn)
-	}
-	if header.RecordCount != 1 {
-		t.Errorf("RecordCount mismatch. Wanted: 1   Got: %v", header.RecordCount)
-	}
-	if header.ServiceProviderIdQualifier != "01" {
-		t.Errorf("ServiceProviderIdQualifier mismatch. Wanted: 01   Got: %q", header.ServiceProviderIdQualifier)
-	}
-	if header.ServiceProviderId != "1234567893" {
-		t.Errorf("ServiceProviderId mismatch. Wanted: 1234567893   Got: %q", header.ServiceProviderId)
-	}
-	if header.DateOfService != "20260611" {
-		t.Errorf("DateOfService mismatch. Wanted: 20260611   Got: %q", header.DateOfService)
-	}
-	if header.SoftwareVendorCertificationId != "VENDORCERT" {
-		t.Errorf("SoftwareVendorCertificationId mismatch. Wanted: VENDORCERT   Got: %q", header.SoftwareVendorCertificationId)
-	}
-	if obj.Header.Size != 58 {
-		t.Errorf("Header size mismatch. Wanted: 58   Got: %v", obj.Header.Size)
-	}
+	assertValue(t, "Version", header.Version, ncpdp.F6)
+	assertValue(t, "Bin/IIN", header.Bin, "88015600")
+	assertValue(t, "TransactionCode", header.TransactionCode, "B1")
+	assertValue(t, "Pcn", header.Pcn, "PCN1234567")
+	assertValue(t, "RecordCount", header.RecordCount, 1)
+	assertValue(t, "ServiceProviderIdQualifier", header.ServiceProviderIdQualifier, "01")
+	assertValue(t, "ServiceProviderId", header.ServiceProviderId, "1234567893")
+	assertValue(t, "DateOfService", header.DateOfService, "20260611")
+	assertValue(t, "SoftwareVendorCertificationId", header.SoftwareVendorCertificationId, "VENDORCERT")
+	assertValue(t, "Header size", obj.Header.Size, 58)
+}
+
+func assertF6FullSampleInsurance(t *testing.T, obj request.Billing) {
+	t.Helper()
 
 	insurance := obj.Insurance
 	assertString(t, "Insurance cardholder id (C2)", insurance.Cardholder.Id, "CARDID")
@@ -740,11 +727,13 @@ func Test_CanParseF6FullFieldSample(t *testing.T) {
 	if len(insurance.DynamicFields) != 0 {
 		t.Errorf("Insurance dynamic field spillover. Wanted: 0   Got: %v", len(insurance.DynamicFields))
 	}
+}
+
+func assertF6FullSamplePatient(t *testing.T, obj request.Billing) {
+	t.Helper()
 
 	patient := obj.Patient
-	if patient.IdCount == nil || *patient.IdCount != 1 {
-		t.Errorf("Patient id count (RR) mismatch. Wanted: 1   Got: %v", patient.IdCount)
-	}
+	assertInt(t, "Patient id count (RR)", patient.IdCount, 1)
 	assertString(t, "Patient id qualifier (CX)", patient.IdQualifier, "99")
 	assertString(t, "Patient id (CY)", patient.Id, "PATIENTID")
 	if len(patient.Ids) != 1 {
@@ -775,10 +764,10 @@ func Test_CanParseF6FullFieldSample(t *testing.T) {
 	if len(patient.DynamicFields) != 0 {
 		t.Errorf("Patient dynamic field spillover. Wanted: 0   Got: %v", len(patient.DynamicFields))
 	}
+}
 
-	if len(obj.Claims) != 1 {
-		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
-	}
+func assertF6FullSamplePricing(t *testing.T, obj request.Billing) {
+	t.Helper()
 
 	pricing := obj.Claims[0].Pricing
 	assertFloat(t, "Pricing ingredient cost (D9)", pricing.IngredientCostSubmitted, 123456.78)

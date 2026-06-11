@@ -326,76 +326,104 @@ func collectFieldCodes(structType reflect.Type, codes map[string]bool) {
 }
 
 func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
-	rawFieldMap := make(map[int]string)
-
 	switch ft.Kind() {
 	case reflect.Struct:
 		return buildFieldMap(ft, fieldVal, skipCodes)
 
 	case reflect.Pointer:
-		if fieldAttribute != nil && fieldAttribute.Order > 0 {
-			if !fieldVal.IsNil() && !skipCodes[fieldAttribute.Code] {
-				rawField, err := buildField(*fieldAttribute, fieldVal.Elem())
-				if err != nil {
-					return rawFieldMap, err
-				}
-
-				rawFieldMap[fieldAttribute.Order] = rawField
-			}
-
-			break
-		}
-
-		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute, skipCodes)
+		return buildPointerField(ft, fieldVal, fieldAttribute, skipCodes)
 
 	case reflect.Slice, reflect.Array:
-		builder := strings.Builder{}
-		order := math.MaxInt
-
-		for i := 0; i < fieldVal.Len(); i++ {
-			element := fieldVal.Index(i)
-
-			fm, err := buildFieldMap(element.Type(), element, nil)
-			if err != nil {
-				return rawFieldMap, err
-			}
-
-			// Get keys and sort
-			fmKeys := make([]int, 0, len(fm))
-			for k := range fm {
-				fmKeys = append(fmKeys, k)
-			}
-
-			slices.Sort(fmKeys)
-
-			// Concat all fields for element
-			for _, fmOrder := range fmKeys {
-				fmVal, ok := fm[fmOrder]
-				if ok {
-					builder.WriteString(fmVal)
-
-					if fmOrder < order {
-						order = fmOrder
-					}
-				}
-			}
-		}
-
-		rawString := builder.String()
-		if rawString != serde.Empty {
-			rawFieldMap[order] = rawString
-		}
+		return buildSliceField(fieldVal)
 
 	default:
-		if fieldAttribute != nil && fieldAttribute.Order > 0 && !skipCodes[fieldAttribute.Code] {
-			rawField, err := buildField(*fieldAttribute, fieldVal)
-			if err != nil {
-				return rawFieldMap, err
-			}
+		return buildScalarField(fieldVal, fieldAttribute, skipCodes)
+	}
+}
 
-			rawFieldMap[fieldAttribute.Order] = rawField
+func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+	if fieldAttribute == nil || fieldAttribute.Order <= 0 {
+		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute, skipCodes)
+	}
+
+	rawFieldMap := make(map[int]string)
+
+	if fieldVal.IsNil() || skipCodes[fieldAttribute.Code] {
+		return rawFieldMap, nil
+	}
+
+	rawField, err := buildField(*fieldAttribute, fieldVal.Elem())
+	if err != nil {
+		return rawFieldMap, err
+	}
+
+	rawFieldMap[fieldAttribute.Order] = rawField
+
+	return rawFieldMap, nil
+}
+
+func buildSliceField(fieldVal reflect.Value) (map[int]string, error) {
+	rawFieldMap := make(map[int]string)
+
+	builder := strings.Builder{}
+	order := math.MaxInt
+
+	for i := 0; i < fieldVal.Len(); i++ {
+		element := fieldVal.Index(i)
+
+		fm, err := buildFieldMap(element.Type(), element, nil)
+		if err != nil {
+			return rawFieldMap, err
+		}
+
+		elementOrder := writeSortedFieldMap(&builder, fm)
+		if elementOrder < order {
+			order = elementOrder
 		}
 	}
+
+	rawString := builder.String()
+	if rawString != serde.Empty {
+		rawFieldMap[order] = rawString
+	}
+
+	return rawFieldMap, nil
+}
+
+// writeSortedFieldMap appends the map values to the builder in order and
+// returns the lowest order present (math.MaxInt when the map is empty).
+func writeSortedFieldMap(builder *strings.Builder, fm map[int]string) int {
+	fmKeys := make([]int, 0, len(fm))
+	for k := range fm {
+		fmKeys = append(fmKeys, k)
+	}
+
+	slices.Sort(fmKeys)
+
+	for _, fmOrder := range fmKeys {
+		builder.WriteString(fm[fmOrder])
+	}
+
+	if len(fmKeys) == 0 {
+		return math.MaxInt
+	}
+
+	return fmKeys[0]
+}
+
+func buildScalarField(fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+	rawFieldMap := make(map[int]string)
+
+	if fieldAttribute == nil || fieldAttribute.Order <= 0 || skipCodes[fieldAttribute.Code] {
+		return rawFieldMap, nil
+	}
+
+	rawField, err := buildField(*fieldAttribute, fieldVal)
+	if err != nil {
+		return rawFieldMap, err
+	}
+
+	rawFieldMap[fieldAttribute.Order] = rawField
 
 	return rawFieldMap, nil
 }
