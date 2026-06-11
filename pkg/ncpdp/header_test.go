@@ -168,6 +168,67 @@ func TestParsingResponseHeaderShorterThanLayoutReturnsError(t *testing.T) {
 	}
 }
 
+var f6RequestHeaderTests = []requestHeaderValueTest{
+	{
+		claim:  "F6F100880151TEST      1011234567893     20260611SVCID     ",
+		header: RequestHeader{Bin: "00880151", Version: "F6", TransactionCode: "F1", Pcn: "TEST", RecordCount: 1, ServiceProviderIdQualifier: "01", ServiceProviderId: "1234567893", DateOfService: "20260611", SoftwareVendorCertificationId: "SVCID"},
+	},
+	{
+		claim:  "F6F161003800          4070000240        20260611          ",
+		header: RequestHeader{Bin: "61003800", Version: "F6", TransactionCode: "F1", Pcn: "", RecordCount: 4, ServiceProviderIdQualifier: "07", ServiceProviderId: "0000240", DateOfService: "20260611", SoftwareVendorCertificationId: ""},
+	},
+}
+
+func TestParsingF6RequestHeader(t *testing.T) {
+	for _, test := range f6RequestHeaderTests {
+		header := NcpdpHeader[RequestHeader]{
+			RawValue: test.claim,
+		}
+
+		err := header.ParseNcpdpHeader()
+
+		if err != nil {
+			t.Error(err)
+			break
+		}
+
+		if header.Value != test.header {
+			t.Errorf("Header mismatch. Wanted: %+v   Got: %+v", test.header, header.Value)
+		}
+
+		if header.Size != 58 {
+			t.Errorf("Header size mismatch. Wanted: '58'   Got: %q", header.Size)
+		}
+	}
+}
+
+func TestBuildingF6RequestHeader(t *testing.T) {
+	for _, test := range f6RequestHeaderTests {
+		header := NcpdpHeader[RequestHeader]{
+			Value: test.header,
+		}
+
+		err := header.BuildNcpdpHeader()
+		if err != nil {
+			t.Error(err)
+			break
+		}
+
+		if header.RawValue != test.claim {
+			t.Errorf("RawValue mismatch. Wanted: %q   Got: %q", test.claim, header.RawValue)
+		}
+	}
+}
+
+func TestParsingF6RequestHeaderShorterThanLayoutReturnsError(t *testing.T) {
+	for _, raw := range []string{"F", "F6F100880151"} {
+		header := NcpdpHeader[RequestHeader]{RawValue: raw}
+		if err := header.ParseNcpdpHeader(); err == nil {
+			t.Errorf("expected error for raw %q (length %d), got nil", raw, len(raw))
+		}
+	}
+}
+
 func TestParsingRequestHeaderShorterThanLayoutReturnsError(t *testing.T) {
 	for _, raw := range []string{"8", "880151D0B1"} {
 		header := NcpdpHeader[RequestHeader]{RawValue: raw}

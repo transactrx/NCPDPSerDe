@@ -23,6 +23,7 @@ const (
 const (
 	dZeroRequestLength  = 56
 	dZeroResponseLength = 31
+	f6RequestLength     = 58
 )
 
 // Parse raw data.
@@ -39,7 +40,7 @@ func Deserialize(rawClaimString string) (interface{}, error) {
 	}
 
 	// Assume request
-	if firstSeparatorIndex == dZeroRequestLength {
+	if firstSeparatorIndex == dZeroRequestLength || firstSeparatorIndex == f6RequestLength {
 		return DeserializeRequest(rawClaimString)
 	}
 
@@ -64,7 +65,12 @@ func DeserializeRequest(rawClaimString string) (interface{}, error) {
 		return nil, fmt.Errorf("unable to determine transaction type")
 	}
 
+	// D0 request headers lead with the BIN (digits); F6 headers lead with the
+	// version (e.g. "F6"), which moves the transaction code to bytes 2-4.
 	tranCode := rawClaimString[8:10]
+	if rawClaimString[0] == 'F' {
+		tranCode = rawClaimString[2:4]
+	}
 
 	claimType, err := serde.GetRequestType(tranCode)
 	if err != nil {
@@ -141,11 +147,25 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 	// Set header
 	evaluateHeader(rawClaimString, claimType, claimObjectRef)
 
+	groupIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.GROUP})
+
+	if groupIndex < 0 && strings.HasPrefix(rawClaimString, "F") {
+		// vEB+ (e.g. F6) eliminated the group separator and allows only a single
+		// transaction per transmission; the claim segments directly follow the
+		// shared segments and are located by segment ID instead.
+		err := evaluateUngroupedTransaction(rawClaimString, claimType, claimObjectRef)
+		if err != nil {
+			return nil, err
+		}
+
+		return claimObjectRef.Interface(), nil
+	}
+
 	// Set group data
 	evaluateGrouping(rawClaimString, claimType, claimObjectRef)
 
 	// Set shared segment data
-	endIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.GROUP})
+	endIndex := groupIndex
 	if endIndex <= 0 {
 		endIndex = len(rawClaimString)
 	}
@@ -239,6 +259,92 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 	}
 
 	return nil
+}
+
+// Evaluate an ungrouped (vEB+/F6) transmission. No group separators exist, so
+// the single transaction's segments are located by segment ID: the first
+// segment that belongs to the claim group struct starts the transaction, and
+// it plus everything after it parse as one claim group. Segments before it
+// parse as shared segments.
+func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type, structVal reflect.Value) error {
+	groupField, err := serde.GetGroupSlice(structType)
+	if err != nil {
+		return err
+	}
+
+	transactionIndex := -1
+
+	if groupField != nil {
+		groupElementType := groupField.Type.Elem()
+
+		groupSegmentMap, err := serde.GetSegmentDefinitionById(reflectionutils.GetElementType(groupElementType))
+		if err != nil {
+			return err
+		}
+
+		segIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.SEGMENT})
+		for segIndex != -1 {
+			nextIndex := stringutils.IndexOfAny(rawClaimString, segIndex+1, []byte{ncpdp.SEGMENT})
+
+			endIndex := len(rawClaimString)
+			if nextIndex != -1 {
+				endIndex = nextIndex
+			}
+
+			if _, ok := groupSegmentMap[segmentIdOf(rawClaimString[segIndex+1:endIndex])]; ok {
+				transactionIndex = segIndex
+				break
+			}
+
+			segIndex = nextIndex
+		}
+	}
+
+	sharedRaw := rawClaimString
+	if transactionIndex != -1 {
+		sharedRaw = rawClaimString[:transactionIndex]
+	}
+
+	err = evaluateSegments(sharedRaw, structType, structVal)
+	if err != nil {
+		return err
+	}
+
+	if transactionIndex == -1 {
+		return nil
+	}
+
+	transactionRaw := rawClaimString[transactionIndex:]
+
+	groupElementType := groupField.Type.Elem()
+	groupItem := reflect.New(groupElementType).Elem()
+
+	initializeStruct(groupElementType, groupItem)
+
+	setStructFieldByCodeTag(groupElementType, groupItem, rawGroupTag, reflect.ValueOf(transactionRaw), 0, 0, false)
+
+	err = evaluateSegments(transactionRaw, groupElementType, groupItem)
+	if err != nil {
+		return err
+	}
+
+	baseVal := reflectionutils.GetElementValue(structVal)
+	groupSlice := baseVal.FieldByName(groupField.Name)
+	groupSlice.Set(reflect.Append(groupSlice, groupItem))
+
+	return nil
+}
+
+// segmentIdOf returns the segment ID field (e.g. "AM07") of a raw segment.
+func segmentIdOf(rawSeg string) string {
+	rawFields := stringutils.SplitBySeparator(rawSeg, ncpdp.FIELD)
+
+	idIndex := sliceutils.IndexOfStartsWith(ncpdp.SEGMENT_FIELD_ID, rawFields)
+	if idIndex < 0 {
+		return serde.Empty
+	}
+
+	return rawFields[idIndex]
 }
 
 // Add elements to dynamic field list.

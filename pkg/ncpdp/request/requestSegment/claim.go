@@ -44,6 +44,22 @@ type Claim struct {
 	CompoundType                       *string                 `field:"code=G1,order=41"`
 	MedicaidSubrogationControlNumber   *string                 `field:"code=N4,order=42"`
 	PharmacyServiceType                *string                 `field:"code=U7,order=43"`
+	ReconciliationId                   *string                 `field:"code=34,order=44"`
+	SubmissionTypeCodeCount            *int                    `field:"code=KZ,order=49"`
+	SubmissionTypeCodes                []SubmissionTypeCode
+	MultipleOrderGroupId               *string                 `field:"code=M3,order=51"`
+	MultipleOrderGroupReasonCode       *string                 `field:"code=M4,order=52"`
+	TotalPrescribedQuantityRemaining   *float64                `field:"code=KW,decimalPlaces=3,order=53"`
+	PreparationEnvironmentType         *string                 `field:"code=KU,order=54"`
+	PreparationEnvironmentEventCode    *string                 `field:"code=KT,order=55"`
+	TimeOfService                      *string                 `field:"code=Y6,order=56"`
+	SalesTransactionId                 *string                 `field:"code=ZF,order=57"`
+	ReportedAdjudicatedProgramType     *string                 `field:"code=ZS,order=58"`
+	OriginalManufacturerProduct        OriginalManufacturerProduct
+	LTPACDispenseFrequency             *int                    `field:"code=KK,order=61"`
+	LTPACBillingMethodology            *string                 `field:"code=KH,order=62"`
+	NumberOfLTPACDispensingEvents      *int                    `field:"code=KM,order=63"`
+	DoNotDispenseBeforeDate            *time.Time              `field:"code=K9,format=YYYYMMdd,order=64"`
 	DynamicFields                      []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
@@ -53,8 +69,12 @@ type PrescriptionServiceReference struct {
 }
 
 type AssociatedPrescriptionService struct {
-	Number *string    `field:"code=EN,order=6"`
-	Date   *time.Time `field:"code=EP,format=YYYYMMdd,order=7"`
+	Number                  *string    `field:"code=EN,order=6"`
+	Date                    *time.Time `field:"code=EP,format=YYYYMMdd,order=7"`
+	ReferenceNumberQualifier *string   `field:"code=XZ,order=45"`
+	ProviderIdQualifier      *string   `field:"code=XX,order=46"`
+	ProviderId               *string   `field:"code=XY,order=47"`
+	FillNumber               *string   `field:"code=X0,order=48"`
 }
 
 type ProductService struct {
@@ -84,4 +104,13 @@ type ProcedureModifierCode struct {
 
 type SubmissionClarificationCode struct {
 	Code *string `field:"code=DK,order=19"`
+}
+
+type SubmissionTypeCode struct {
+	Code *string `field:"code=K8,order=50"`
+}
+
+type OriginalManufacturerProduct struct {
+	Qualifier *string `field:"code=4P,order=59"`
+	Id        *string `field:"code=4N,order=60"`
 }

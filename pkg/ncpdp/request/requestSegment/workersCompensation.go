@@ -20,17 +20,23 @@ type WorkersCompensation struct {
 }
 
 type EmployerAddress struct {
-	Street *string `field:"code=CG,order=4"`
-	City   *string `field:"code=CH,order=5"`
-	State  *string `field:"code=CI,order=6"`
-	Zip    *string `field:"code=CJ,order=7"`
+	Street      *string `field:"code=CG,order=4"`
+	StreetLine1 *string `field:"code=8D,order=22"`
+	StreetLine2 *string `field:"code=7G,order=23"`
+	City        *string `field:"code=CH,order=5"`
+	State       *string `field:"code=CI,order=6"`
+	Zip         *string `field:"code=CJ,order=7"`
+	CountryCode *string `field:"code=1V,order=24"`
 }
 
 type Employer struct {
-	Name        *string `field:"code=CF,order=3"`
-	Address     EmployerAddress
-	Phone       *string `field:"code=CK,order=8"`
-	ContactName *string `field:"code=CL,order=9"`
+	Name             *string `field:"code=CF,order=3"`
+	Address          EmployerAddress
+	Phone            *string `field:"code=CK,order=8"`
+	PhoneExtension   *string `field:"code=7K,order=25"`
+	ContactName      *string `field:"code=CL,order=9"`
+	ContactFirstName *string `field:"code=7H,order=26"`
+	ContactLastName  *string `field:"code=7J,order=27"`
 }
 
 type PayTo struct {
@@ -41,10 +47,13 @@ type PayTo struct {
 }
 
 type PayToAddress struct {
-	Street *string `field:"code=TV,order=16"`
-	City   *string `field:"code=TW,order=17"`
-	State  *string `field:"code=TX,order=18"`
-	Zip    *string `field:"code=TY,order=19"`
+	Street      *string `field:"code=TV,order=16"`
+	StreetLine1 *string `field:"code=7R,order=28"`
+	StreetLine2 *string `field:"code=7S,order=29"`
+	City        *string `field:"code=TW,order=17"`
+	State       *string `field:"code=TX,order=18"`
+	Zip         *string `field:"code=TY,order=19"`
+	CountryCode *string `field:"code=1Z,order=30"`
 }
 
 type GenericEquivalentProduct struct {
