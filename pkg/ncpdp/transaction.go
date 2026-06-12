@@ -514,7 +514,11 @@ func (tran *NcpdpTransaction[V]) ScanRawDataForFieldValues(fieldCode string) []s
 		strValue := stringutils.Substring(tran.RawValue, startIndex, -1)
 		endIndex := stringutils.IndexOfAny(strValue, 0, []byte{FIELD, SEGMENT, GROUP, ETX})
 
-		if endIndex > 0 {
+		// endIndex == 0 means the field is empty (a separator immediately follows the
+		// field code) — without this case an empty field returned the remainder of the
+		// transmission, control characters and all. endIndex < 0 means no separator
+		// follows, so the value runs to the end of the raw data.
+		if endIndex >= 0 {
 			strValue = stringutils.Substring(strValue, 0, endIndex)
 		}
 
