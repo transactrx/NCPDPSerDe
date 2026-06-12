@@ -232,6 +232,131 @@ func validateSegment(t *testing.T, seg NcpdpSegment, recordIndex int, fields []f
 	}
 }
 
+const REQUEST_B1_F6 = "F6B188015600PCN1234567101 1234567893    20260611VENDORCERT" +
+	"\x1e\x1cAM04\x1cC2CARDID\x1cC1D0PAID" +
+	"\x1e\x1cAM01\x1cCAFIRST\x1cCBLAST" +
+	"\x1e\x1cAM07\x1cEM1\x1cD26000001\x1cE103\x1cD700172240780" +
+	"\x1e\x1cAM11\x1cD9123A"
+
+func TestParsingF6RequestBody(t *testing.T) {
+	tran := NewTransactionRequest(REQUEST_B1_F6)
+
+	err := tran.ParseNcpdp()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if tran.Header.Value.Version != F6 {
+		t.Errorf("Version mismatch. Wanted: %q   Got: %q", F6, tran.Header.Value.Version)
+	}
+
+	// F6 has no group separator: all segments are transaction-level
+	if len(tran.Records) != 0 {
+		t.Errorf("Record count mismatch. Wanted: 0   Got: %v", len(tran.Records))
+	}
+
+	if len(tran.Segments) != 4 {
+		t.Errorf("Segment count mismatch. Wanted: 4   Got: %v", len(tran.Segments))
+	}
+
+	if tran.RecordCount() != 1 {
+		t.Errorf("RecordCount mismatch. Wanted: 1   Got: %v", tran.RecordCount())
+	}
+
+	claimSegment := tran.FindSegmentInRecord(0, CLAIM_SEGMENT_ID)
+	if claimSegment == nil {
+		t.Fatal("FindSegmentInRecord(0, AM07) returned nil for F6 request")
+	}
+
+	rxField := claimSegment.FindFirstField(PRESCRIPTION_SERVICE_REFERENCE_NO_FIELD_ID)
+	if rxField == nil || rxField.Value != "6000001" {
+		t.Errorf("Rx number mismatch. Wanted: %q   Got: %v", "6000001", rxField)
+	}
+
+	if tran.FindSegmentInRecord(1, CLAIM_SEGMENT_ID) != nil {
+		t.Error("FindSegmentInRecord(1, AM07) should be nil when transaction has no records")
+	}
+}
+
+func TestRecordHelpersWithD0Batch(t *testing.T) {
+	tran := NewTransactionRequest(REQUEST_B1_BATCH)
+
+	err := tran.ParseNcpdp()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if tran.RecordCount() != 4 {
+		t.Errorf("RecordCount mismatch. Wanted: 4   Got: %v", tran.RecordCount())
+	}
+
+	for i := 0; i < 4; i++ {
+		if tran.FindSegmentInRecord(i, CLAIM_SEGMENT_ID) == nil {
+			t.Errorf("FindSegmentInRecord(%v, AM07) returned nil for D0 batch request", i)
+		}
+	}
+
+	if tran.FindSegmentInRecord(4, CLAIM_SEGMENT_ID) != nil {
+		t.Error("FindSegmentInRecord(4, AM07) should be nil beyond record range")
+	}
+}
+
+func buildVersionedResponse(version string) NcpdpTransaction[ResponseHeader] {
+	response := NewTransactionResponse("")
+
+	response.Header.Value.Version = version
+	response.Header.Value.TransactionCode = BILLING
+	response.Header.Value.RecordCount = 1
+	response.Header.Value.Status = ACCEPTED_STATUS
+	response.Header.Value.ServiceProviderIdQualifier = "01"
+	response.Header.Value.ServiceProviderId = "1234567893"
+	response.Header.Value.DateOfService = "20260611"
+
+	messageSegment := NcpdpSegment{Id: RESPONSE_MESSAGE_SEGMENT_ID}
+	messageSegment.AppendField(MESSAGE_FIELD_ID, "TEST MESSAGE")
+	response.Segments = append(response.Segments, messageSegment)
+
+	statusSegment := NcpdpSegment{Id: RESPONSE_STATUS_SEGMENT_ID}
+	statusSegment.AppendField(STATUS_FIELD_ID, REJECTED_STATUS)
+	statusSegment.AppendField(REJECT_CODE_FIELD_ID, "85")
+
+	record := NcpdpRecord{}
+	record.Segments = append(record.Segments, statusSegment)
+	response.Records = append(response.Records, record)
+
+	return response
+}
+
+func TestBuildingF6ResponseOmitsGroupSeparator(t *testing.T) {
+	response := buildVersionedResponse(F6)
+
+	err := response.BuildNcpdp()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.ContainsRune(response.RawValue, rune(GROUP)) {
+		t.Error("F6 response must not contain a group separator")
+	}
+
+	if !strings.Contains(response.RawValue, "AM21") {
+		t.Error("F6 response is missing the record's status segment")
+	}
+}
+
+func TestBuildingD0ResponseIncludesGroupSeparator(t *testing.T) {
+	response := buildVersionedResponse(D0)
+
+	err := response.BuildNcpdp()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.ContainsRune(response.RawValue, rune(GROUP)) {
+		t.Error("D0 response must contain a group separator")
+	}
+}
+
 func TestScanRawDataForFieldValues_Request(t *testing.T) {
 	tran := NcpdpTransaction[RequestHeader]{
 		RawValue: REQUEST_B1,
