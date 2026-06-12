@@ -28,6 +28,7 @@ type InformationRecord struct {
 	WorkersCompensation requestsegment.WorkersCompensation `segment:"code=AM06,order=4"`
 	Dur                 requestsegment.Dur                 `segment:"code=AM08,order=5"`
 	Clinical            requestsegment.Clinical            `segment:"code=AM13,order=7"`
+	PayerIdentification requestsegment.NTransactionPayerIdentification `segment:"code=AM38,order=8"`
 	DataCollection      requestsegment.DataCollection      `segment:"code=AMXX,order=99"`
 	DynamicSegments     []dynamic.DynamicStruct            `segment:"code=dynamic,order=100"`
 }

@@ -34,6 +34,7 @@ type PriorAuthorizationRecord struct {
 	AdditionalDocumentation requestsegment.AdditionalDocumentation             `segment:"code=AM14,order=11"`
 	Facility                requestsegment.Facility                            `segment:"code=AM15,order=12"`
 	Narrative               requestsegment.Narrative                           `segment:"code=AM16,order=13"`
+	Intermediary            requestsegment.Intermediary                        `segment:"code=AM19,order=14"`
 	DataCollection          requestsegment.DataCollection                      `segment:"code=AMXX,order=99"`
 	DynamicSegments         []dynamic.DynamicStruct                            `segment:"code=dynamic,order=100"`
 }

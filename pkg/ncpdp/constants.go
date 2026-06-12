@@ -18,6 +18,7 @@ const (
 // NCPDP Versions
 const (
 	D0 = "D0"
+	F6 = "F6"
 )
 
 // Response Status Codes

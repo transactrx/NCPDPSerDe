@@ -3,6 +3,7 @@ package responsesegment
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
@@ -26,10 +27,33 @@ type Status struct {
 	AdditionalMessageCount     *int `field:"code=UF,order=9"`
 	AdditionalMessages         []AdditionalMessage
 	HelpDeskPhoneNumber        HelpDeskPhoneNumber
-	TransactionReferenceNumber *string                 `field:"code=K5,order=15"`
-	InternalControlNumber      *string                 `field:"code=A7,order=16"`
-	Url                        *string                 `field:"code=MA,order=17"`
-	DynamicFields              []dynamic.DynamicStruct `field:"code=dynamic"`
+	TransactionReferenceNumber *string `field:"code=K5,order=15"`
+	InternalControlNumber      *string `field:"code=A7,order=16"`
+	Url                        *string `field:"code=MA,order=17"`
+
+	ReconciliationId *string `field:"code=34,order=18"`
+
+	HelpDeskSupportTypeCount *int `field:"code=BH,order=19"`
+	HelpDeskSupportTypes     []HelpDeskSupportType
+
+	HelpDeskBusinessUnitTypeCount *int `field:"code=BB,order=21"`
+	HelpDeskBusinessUnits         []HelpDeskBusinessUnit
+
+	HelpDeskContactInformationExtension *string    `field:"code=BD,order=25"`
+	AdjudicatedProgramType              *string    `field:"code=ZR,order=26"`
+	NextAvailableFillDate               *time.Time `field:"code=BT,format=YYYYMMdd,order=27"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
+}
+
+type HelpDeskSupportType struct {
+	Type *string `field:"code=BG,order=20"`
+}
+
+type HelpDeskBusinessUnit struct {
+	Type                        *string `field:"code=BA,order=22"`
+	ContactInformationQualifier *string `field:"code=BF,order=23"`
+	ContactInformation          *string `field:"code=BC,order=24"`
 }
 
 type RejectCode struct {

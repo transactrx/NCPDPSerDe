@@ -24,6 +24,7 @@ type PriorAuthorizationRequestOnlyRecord struct {
 	Claim                  responsesegment.Claim                  `segment:"code=AM22,order=2"`
 	PriorAuthorization     responsesegment.PriorAuthorization     `segment:"code=AM26,order=3"`
 	CoordinationOfBenefits responsesegment.CoordinationOfBenefits `segment:"code=AM28,order=4"`
+	Provider               responsesegment.Provider               `segment:"code=AM40,order=5"`
 	DynamicSegments        []dynamic.DynamicStruct                `segment:"code=dynamic,order=100"`
 
 	//TOOD: Include price update info

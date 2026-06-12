@@ -49,19 +49,22 @@ func IndexAt(str, searchTerm string, startIndex int) int {
 // Find first index of any of the specified characters.
 // Returns -1 when not found.
 func IndexOfAny(str string, fromIndex int, searchFor []byte) int {
-	if str == "" || len(searchFor) == 0 {
+	if str == "" || len(searchFor) == 0 || fromIndex >= len(str) {
 		return -1
 	}
 
-	for i := fromIndex; i < len(str); i++ {
-		ch := str[i]
-
-		if slices.Contains(searchFor, ch) {
-			return i
-		}
+	var index int
+	if len(searchFor) == 1 {
+		index = strings.IndexByte(str[fromIndex:], searchFor[0])
+	} else {
+		index = strings.IndexAny(str[fromIndex:], string(searchFor))
 	}
 
-	return -1
+	if index < 0 {
+		return -1
+	}
+
+	return index + fromIndex
 }
 
 // Get a section of a string.

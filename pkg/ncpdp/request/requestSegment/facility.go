@@ -7,15 +7,19 @@ import (
 
 type Facility struct {
 	SegmentId     ncpdp.SegmentId
-	Id            *string `field:"code=8C,order=2"`
-	Name          *string `field:"code=3Q,order=3"`
+	IdQualifier   *string `field:"code=3Z,order=2"`
+	Id            *string `field:"code=8C,order=3"`
+	Name          *string `field:"code=3Q,order=4"`
 	Address       FacilityAddress
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type FacilityAddress struct {
-	Street *string `field:"code=3U,order=4"`
-	City   *string `field:"code=5J,order=5"`
-	State  *string `field:"code=3V,order=6"`
-	Zip    *string `field:"code=6D,order=7"`
+	Street      *string `field:"code=3U,order=5"`
+	StreetLine1 *string `field:"code=7M,order=6"`
+	StreetLine2 *string `field:"code=7N,order=7"`
+	City        *string `field:"code=5J,order=8"`
+	State       *string `field:"code=3V,order=9"`
+	Zip         *string `field:"code=6D,order=10"`
+	CountryCode *string `field:"code=1X,order=11"`
 }

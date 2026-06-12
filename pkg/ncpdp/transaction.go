@@ -2,6 +2,7 @@ package ncpdp
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -67,12 +68,27 @@ func (tran *NcpdpTransaction[V]) buildBody() string {
 	builder.WriteString(buildSegments(tran.Segments))
 
 	//Build records
-	builder.WriteString(buildRecords(tran.Records))
+	builder.WriteString(buildRecords(tran.Records, useGroupSeparator(tran.Version())))
 
 	//ETX on the end
 	builder.WriteByte(ETX)
 
 	return builder.String()
+}
+
+// Version returns the NCPDP version from the transaction header.
+func (tran *NcpdpTransaction[V]) Version() string {
+	if tran == nil {
+		return Empty
+	}
+
+	return getStructVersion(reflect.ValueOf(tran.Header.Value))
+}
+
+// useGroupSeparator reports whether records are delimited by a group separator.
+// F6 limits a transmission to a single transaction and removed the group separator.
+func useGroupSeparator(version string) bool {
+	return !strings.HasPrefix(version, "F")
 }
 
 // Build raw value for segments.
@@ -87,6 +103,13 @@ func buildSegments(segments []NcpdpSegment) string {
 		// Write segment separator
 		builder.WriteByte(SEGMENT)
 
+		// Write segment ID when not already present as the leading AM field
+		// (parsed segments carry the ID in Fields; constructed segments do not)
+		if segment.Id != Empty && (len(segment.Fields) == 0 || segment.Fields[0].Id != SEGMENT_FIELD_ID) {
+			builder.WriteByte(FIELD)
+			builder.WriteString(segment.Id)
+		}
+
 		// Write fields
 		for _, field := range segment.Fields {
 			builder.WriteByte(FIELD)
@@ -97,8 +120,8 @@ func buildSegments(segments []NcpdpSegment) string {
 	return builder.String()
 }
 
-// Build raw value for segments.
-func buildRecords(records []NcpdpRecord) string {
+// Build raw value for records.
+func buildRecords(records []NcpdpRecord, groupSeparator bool) string {
 	if len(records) == 0 {
 		return Empty
 	}
@@ -107,7 +130,9 @@ func buildRecords(records []NcpdpRecord) string {
 
 	for _, record := range records {
 		// Write group separator
-		builder.WriteByte(GROUP)
+		if groupSeparator {
+			builder.WriteByte(GROUP)
+		}
 
 		// Write segments
 		builder.WriteString(buildSegments(record.Segments))
@@ -182,6 +207,49 @@ func (tran *NcpdpTransaction[V]) FindFirstField(segmentId, fieldId string, recor
 	}
 
 	return segment.FindFirstField(fieldId)
+}
+
+// RecordCount returns the number of parsed records. When the transaction has
+// no records (F6 removed the group separator, so transaction-level segments are
+// not grouped), it falls back to the header's transaction count.
+func (tran *NcpdpTransaction[V]) RecordCount() int {
+	if tran == nil {
+		return 0
+	}
+
+	if len(tran.Records) > 0 {
+		return len(tran.Records)
+	}
+
+	headerValue := reflect.ValueOf(tran.Header.Value)
+	countField := headerValue.FieldByName("RecordCount")
+	if countField.IsValid() && countField.Kind() == reflect.Int {
+		return int(countField.Int())
+	}
+
+	return 0
+}
+
+// FindSegmentInRecord finds a segment within the specified record. When the
+// transaction has no records (F6), record index 0 searches the
+// transaction-level segments instead.
+func (tran *NcpdpTransaction[V]) FindSegmentInRecord(recordIndex int, segmentId string) *NcpdpSegment {
+	if tran == nil || recordIndex < 0 {
+		return nil
+	}
+
+	if len(tran.Records) == 0 {
+		if recordIndex == 0 {
+			return tran.FindSegment(segmentId)
+		}
+		return nil
+	}
+
+	if recordIndex >= len(tran.Records) {
+		return nil
+	}
+
+	return tran.Records[recordIndex].FindSegment(segmentId)
 }
 
 // Insert field into claim body.

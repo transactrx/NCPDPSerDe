@@ -32,6 +32,7 @@ type ServiceRebillRecord struct {
 	AdditionalDocumentation requestsegment.AdditionalDocumentation `segment:"code=AM14,order=9"`
 	Facility                requestsegment.Facility                `segment:"code=AM15,order=10"`
 	Narrative               requestsegment.Narrative               `segment:"code=AM16,order=11"`
+	Intermediary            requestsegment.Intermediary            `segment:"code=AM19,order=12"`
 	DataCollection          requestsegment.DataCollection          `segment:"code=AMXX,order=99"`
 	DynamicSegments         []dynamic.DynamicStruct                `segment:"code=dynamic,order=100"`
 }

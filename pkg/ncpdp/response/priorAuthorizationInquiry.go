@@ -27,8 +27,10 @@ type PriorAuthorizationInquiryRecord struct {
 	Pricing                responsesegment.Pricing                `segment:"code=AM23,order=3"`
 	Dur                    responsesegment.Dur                    `segment:"code=AM24,order=5"`
 	PriorAuthorization     responsesegment.PriorAuthorization     `segment:"code=AM26,order=4"`
-	CoordinationOfBenefits responsesegment.CoordinationOfBenefits `segment:"code=AM28,order=6"`
-	DynamicSegments        []dynamic.DynamicStruct                `segment:"code=dynamic,order=100"`
+	CoordinationOfBenefits    responsesegment.CoordinationOfBenefits    `segment:"code=AM28,order=6"`
+	OtherRelatedBenefitDetail responsesegment.OtherRelatedBenefitDetail `segment:"code=AM39,order=7"`
+	Provider                  responsesegment.Provider                  `segment:"code=AM40,order=8"`
+	DynamicSegments           []dynamic.DynamicStruct                   `segment:"code=dynamic,order=100"`
 
 	//TOOD: Include price update info
 }
