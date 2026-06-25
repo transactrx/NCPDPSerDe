@@ -10,7 +10,10 @@ func (tran *NcpdpTransaction[ResponseHeader]) Status() string {
 		return Empty
 	}
 
-	seg := tran.Records[0].FindSegment(RESPONSE_STATUS_SEGMENT_ID)
+	// FindSegmentInRecord falls back to shared segments when Records is empty
+	// (F6 transmissions have no group separator, so the response status segment
+	// lives in tran.Segments rather than tran.Records[0]).
+	seg := tran.FindSegmentInRecord(0, RESPONSE_STATUS_SEGMENT_ID)
 	if seg == nil {
 		return Empty
 	}
@@ -54,14 +57,16 @@ func (tran *NcpdpTransaction[ResponseHeader]) GetRejectCodes() []string {
 		return codes
 	}
 
-	for _, record := range tran.Records {
-		seg := record.FindSegment(RESPONSE_STATUS_SEGMENT_ID)
+	// Iterate via RecordCount so F6 responses (no group separator, segments live
+	// at the transaction level) are read through FindSegmentInRecord's fallback.
+	for i := 0; i < tran.RecordCount(); i++ {
+		seg := tran.FindSegmentInRecord(i, RESPONSE_STATUS_SEGMENT_ID)
+		if seg == nil {
+			continue
+		}
 
-		if seg != nil {
-			segFields := seg.FindAllFields(REJECT_CODE_FIELD_ID)
-			for _, field := range segFields {
-				codes = append(codes, strings.TrimSpace(field.Value))
-			}
+		for _, field := range seg.FindAllFields(REJECT_CODE_FIELD_ID) {
+			codes = append(codes, strings.TrimSpace(field.Value))
 		}
 	}
 
@@ -75,27 +80,28 @@ func (tran *NcpdpTransaction[ResponseHeader]) GetAdditionalMessages() map[string
 		return messages
 	}
 
-	for _, record := range tran.Records {
-		seg := record.FindSegment(RESPONSE_STATUS_SEGMENT_ID)
+	for i := 0; i < tran.RecordCount(); i++ {
+		seg := tran.FindSegmentInRecord(i, RESPONSE_STATUS_SEGMENT_ID)
+		if seg == nil {
+			continue
+		}
 
-		if seg != nil {
-			qfrFields := seg.FindAllFields(ADDITIONAL_MESSAGE_QUALIFIER_FIELD_ID)
-			msgFields := seg.FindAllFields(ADDITIONAL_MESSAGE_FIELD_ID)
+		qfrFields := seg.FindAllFields(ADDITIONAL_MESSAGE_QUALIFIER_FIELD_ID)
+		msgFields := seg.FindAllFields(ADDITIONAL_MESSAGE_FIELD_ID)
 
-			for i := 0; i < len(msgFields); i++ {
-				qfr := Empty
-				msg := msgFields[i].GetString()
+		for j := 0; j < len(msgFields); j++ {
+			qfr := Empty
+			msg := msgFields[j].GetString()
 
-				if i < len(qfrFields) {
-					qfr = qfrFields[i].GetString()
-				}
-
-				if qfr == Empty {
-					qfr = fmt.Sprintf("%v", i)
-				}
-
-				messages[qfr] = msg
+			if j < len(qfrFields) {
+				qfr = qfrFields[j].GetString()
 			}
+
+			if qfr == Empty {
+				qfr = fmt.Sprintf("%v", j)
+			}
+
+			messages[qfr] = msg
 		}
 	}
 
