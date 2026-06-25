@@ -48,10 +48,7 @@ func equalStringSlices(a, b []string) bool {
 	return true
 }
 
-// D0 places AM21 inside a record (after a 0x1D group separator); F6 emits no
-// group separator so AM21 ends up at the transaction level. The helpers must
-// work for both shapes.
-var responseHelperCases = []struct {
+type responseHelperCase struct {
 	name              string
 	raw               string
 	wantStatus        string
@@ -62,7 +59,12 @@ var responseHelperCases = []struct {
 	wantRecordsLen    int
 	wantSharedSegLen  int // includes AM21 only when transaction has no records
 	statusInSharedSeg bool
-}{
+}
+
+// D0 places AM21 inside a record (after a 0x1D group separator); F6 emits no
+// group separator so AM21 ends up at the transaction level. The helpers must
+// work for both shapes.
+var responseHelperCases = []responseHelperCase{
 	{
 		name:              "D0 paid",
 		raw:               responseHeaderPaidD0 + "\x1d" + statusSegmentPaid,
@@ -117,41 +119,54 @@ func TestResponseHelpersAcrossVersions(t *testing.T) {
 	for _, tc := range responseHelperCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tran := parseResponse(t, tc.raw)
-
-			if len(tran.Records) != tc.wantRecordsLen {
-				t.Errorf("Records length mismatch. Wanted: %v   Got: %v", tc.wantRecordsLen, len(tran.Records))
-			}
-			if len(tran.Segments) != tc.wantSharedSegLen {
-				t.Errorf("Shared segments length mismatch. Wanted: %v   Got: %v", tc.wantSharedSegLen, len(tran.Segments))
-			}
-			if tc.statusInSharedSeg && tran.FindSegment(RESPONSE_STATUS_SEGMENT_ID) == nil {
-				t.Error("Expected AM21 to live in shared segments for F6 transmissions")
-			}
-
-			if got := tran.Status(); got != tc.wantStatus {
-				t.Errorf("Status mismatch. Wanted: %q   Got: %q", tc.wantStatus, got)
-			}
-			if got := tran.IsPaid(); got != tc.wantIsPaid {
-				t.Errorf("IsPaid mismatch. Wanted: %v   Got: %v", tc.wantIsPaid, got)
-			}
-			if got := tran.IsRejected(); got != tc.wantIsRejected {
-				t.Errorf("IsRejected mismatch. Wanted: %v   Got: %v", tc.wantIsRejected, got)
-			}
-
-			if got := tran.GetRejectCodes(); !equalStringSlices(got, tc.wantRejectCodes) {
-				t.Errorf("GetRejectCodes mismatch. Wanted: %v   Got: %v", tc.wantRejectCodes, got)
-			}
-
-			gotMessages := tran.GetAdditionalMessages()
-			if len(gotMessages) != len(tc.wantMessages) {
-				t.Errorf("GetAdditionalMessages length mismatch. Wanted: %v   Got: %v", tc.wantMessages, gotMessages)
-			}
-			for k, want := range tc.wantMessages {
-				if got, ok := gotMessages[k]; !ok || got != want {
-					t.Errorf("GetAdditionalMessages[%q] mismatch. Wanted: %q   Got: %q (present=%v)", k, want, got, ok)
-				}
-			}
+			verifyParsedShape(t, tran, tc)
+			verifyStatusFlags(t, tran, tc)
+			verifyRejectsAndMessages(t, tran, tc)
 		})
+	}
+}
+
+func verifyParsedShape(t *testing.T, tran *NcpdpTransaction[ResponseHeader], tc responseHelperCase) {
+	t.Helper()
+	if len(tran.Records) != tc.wantRecordsLen {
+		t.Errorf("Records length mismatch. Wanted: %v   Got: %v", tc.wantRecordsLen, len(tran.Records))
+	}
+	if len(tran.Segments) != tc.wantSharedSegLen {
+		t.Errorf("Shared segments length mismatch. Wanted: %v   Got: %v", tc.wantSharedSegLen, len(tran.Segments))
+	}
+	if tc.statusInSharedSeg && tran.FindSegment(RESPONSE_STATUS_SEGMENT_ID) == nil {
+		t.Error("Expected AM21 to live in shared segments for F6 transmissions")
+	}
+}
+
+func verifyStatusFlags(t *testing.T, tran *NcpdpTransaction[ResponseHeader], tc responseHelperCase) {
+	t.Helper()
+	if got := tran.Status(); got != tc.wantStatus {
+		t.Errorf("Status mismatch. Wanted: %q   Got: %q", tc.wantStatus, got)
+	}
+	if got := tran.IsPaid(); got != tc.wantIsPaid {
+		t.Errorf("IsPaid mismatch. Wanted: %v   Got: %v", tc.wantIsPaid, got)
+	}
+	if got := tran.IsRejected(); got != tc.wantIsRejected {
+		t.Errorf("IsRejected mismatch. Wanted: %v   Got: %v", tc.wantIsRejected, got)
+	}
+}
+
+func verifyRejectsAndMessages(t *testing.T, tran *NcpdpTransaction[ResponseHeader], tc responseHelperCase) {
+	t.Helper()
+	if got := tran.GetRejectCodes(); !equalStringSlices(got, tc.wantRejectCodes) {
+		t.Errorf("GetRejectCodes mismatch. Wanted: %v   Got: %v", tc.wantRejectCodes, got)
+	}
+
+	gotMessages := tran.GetAdditionalMessages()
+	if len(gotMessages) != len(tc.wantMessages) {
+		t.Errorf("GetAdditionalMessages length mismatch. Wanted: %v   Got: %v", tc.wantMessages, gotMessages)
+	}
+	for k, want := range tc.wantMessages {
+		got, ok := gotMessages[k]
+		if !ok || got != want {
+			t.Errorf("GetAdditionalMessages[%q] mismatch. Wanted: %q   Got: %q (present=%v)", k, want, got, ok)
+		}
 	}
 }
 
@@ -186,22 +201,26 @@ func TestResponseHelpersWithoutStatusSegment(t *testing.T) {
 		t.Run(version, func(t *testing.T) {
 			raw := version + "B11A011234567893     20260611"
 			tran := parseResponse(t, raw)
-
-			if got := tran.Status(); got != Empty {
-				t.Errorf("Status mismatch. Wanted empty   Got: %q", got)
-			}
-			if tran.IsPaid() {
-				t.Error("IsPaid should be false when no status segment is present")
-			}
-			if tran.IsRejected() {
-				t.Error("IsRejected should be false when no status segment is present")
-			}
-			if got := tran.GetRejectCodes(); len(got) != 0 {
-				t.Errorf("GetRejectCodes mismatch. Wanted empty   Got: %v", got)
-			}
-			if got := tran.GetAdditionalMessages(); len(got) != 0 {
-				t.Errorf("GetAdditionalMessages mismatch. Wanted empty   Got: %v", got)
-			}
+			verifyEmptyResponseHelpers(t, tran)
 		})
+	}
+}
+
+func verifyEmptyResponseHelpers(t *testing.T, tran *NcpdpTransaction[ResponseHeader]) {
+	t.Helper()
+	if got := tran.Status(); got != Empty {
+		t.Errorf("Status mismatch. Wanted empty   Got: %q", got)
+	}
+	if tran.IsPaid() {
+		t.Error("IsPaid should be false when no status segment is present")
+	}
+	if tran.IsRejected() {
+		t.Error("IsRejected should be false when no status segment is present")
+	}
+	if got := tran.GetRejectCodes(); len(got) != 0 {
+		t.Errorf("GetRejectCodes mismatch. Wanted empty   Got: %v", got)
+	}
+	if got := tran.GetAdditionalMessages(); len(got) != 0 {
+		t.Errorf("GetAdditionalMessages mismatch. Wanted empty   Got: %v", got)
 	}
 }
