@@ -20,15 +20,15 @@ type Information struct {
 }
 
 type InformationRecord struct {
-	Raw                 string                             `field:"code=rawgroup"`
-	Claim               requestsegment.Claim               `segment:"code=AM07,order=1"`
-	Pricing             requestsegment.Pricing             `segment:"code=AM11,order=6"`
-	Pharmacy            requestsegment.PharmacyProvider    `segment:"code=AM02,order=2"`
-	Prescriber          requestsegment.Prescriber          `segment:"code=AM03,order=3"`
-	WorkersCompensation requestsegment.WorkersCompensation `segment:"code=AM06,order=4"`
-	Dur                 requestsegment.Dur                 `segment:"code=AM08,order=5"`
-	Clinical            requestsegment.Clinical            `segment:"code=AM13,order=7"`
+	Raw                 string                                         `field:"code=rawgroup"`
+	Claim               requestsegment.Claim                           `segment:"code=AM07,order=1"`
+	Pricing             requestsegment.Pricing                         `segment:"code=AM11,order=6"`
+	Pharmacy            requestsegment.PharmacyProvider                `segment:"code=AM02,order=2"`
+	Prescriber          requestsegment.Prescriber                      `segment:"code=AM03,order=3"`
+	WorkersCompensation requestsegment.WorkersCompensation             `segment:"code=AM06,order=4"`
+	Dur                 requestsegment.Dur                             `segment:"code=AM08,order=5"`
+	Clinical            requestsegment.Clinical                        `segment:"code=AM13,order=7"`
 	PayerIdentification requestsegment.NTransactionPayerIdentification `segment:"code=AM38,order=8"`
-	DataCollection      requestsegment.DataCollection      `segment:"code=AMXX,order=99"`
-	DynamicSegments     []dynamic.DynamicStruct            `segment:"code=dynamic,order=100"`
+	DataCollection      requestsegment.DataCollection                  `segment:"code=AMXX,order=99"`
+	DynamicSegments     []dynamic.DynamicStruct                        `segment:"code=dynamic,order=100"`
 }

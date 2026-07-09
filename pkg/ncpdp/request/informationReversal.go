@@ -20,9 +20,9 @@ type InformationReversal struct {
 }
 
 type InformationReversalRecord struct {
-	Raw             string                        `field:"code=rawgroup"`
+	Raw                 string                                         `field:"code=rawgroup"`
 	Claim               requestsegment.Claim                           `segment:"code=AM07,order=1"`
 	PayerIdentification requestsegment.NTransactionPayerIdentification `segment:"code=AM38,order=2"`
 	DataCollection      requestsegment.DataCollection                  `segment:"code=AMXX,order=99"`
-	DynamicSegments []dynamic.DynamicStruct       `segment:"code=dynamic,order=100"`
+	DynamicSegments     []dynamic.DynamicStruct                        `segment:"code=dynamic,order=100"`
 }

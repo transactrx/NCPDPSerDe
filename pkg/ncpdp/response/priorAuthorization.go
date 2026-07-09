@@ -21,12 +21,12 @@ type PriorAuthorization struct {
 }
 
 type PriorAuthorizationRecord struct {
-	Raw                    string                                 `field:"code=rawgroup"`
-	Status                 responsesegment.Status                 `segment:"code=AM21,order=1"`
-	Claim                  responsesegment.Claim                  `segment:"code=AM22,order=2"`
-	Pricing                responsesegment.Pricing                `segment:"code=AM23,order=3"`
-	Dur                    responsesegment.Dur                    `segment:"code=AM24,order=5"`
-	PriorAuthorization     responsesegment.PriorAuthorization     `segment:"code=AM26,order=4"`
+	Raw                       string                                    `field:"code=rawgroup"`
+	Status                    responsesegment.Status                    `segment:"code=AM21,order=1"`
+	Claim                     responsesegment.Claim                     `segment:"code=AM22,order=2"`
+	Pricing                   responsesegment.Pricing                   `segment:"code=AM23,order=3"`
+	Dur                       responsesegment.Dur                       `segment:"code=AM24,order=5"`
+	PriorAuthorization        responsesegment.PriorAuthorization        `segment:"code=AM26,order=4"`
 	CoordinationOfBenefits    responsesegment.CoordinationOfBenefits    `segment:"code=AM28,order=6"`
 	Intermediary              responsesegment.Intermediary              `segment:"code=AM36,order=7"`
 	OtherRelatedBenefitDetail responsesegment.OtherRelatedBenefitDetail `segment:"code=AM39,order=8"`

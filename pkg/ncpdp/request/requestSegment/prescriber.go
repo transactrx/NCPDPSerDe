@@ -14,10 +14,10 @@ type Prescriber struct {
 	Phone               *string `field:"code=PM,order=5"`
 	Address             PrescriberAddress
 	PrimaryCareProvider PrimaryCareProvider
-	IdAssociatedState   *string                 `field:"code=ZK,order=14"`
-	IdAssociatedCountry *string                 `field:"code=3B,order=15"`
-	PhoneExtension      *string                 `field:"code=7T,order=16"`
-	MiddleName          *string                 `field:"code=0F,order=17"`
+	IdAssociatedState   *string `field:"code=ZK,order=14"`
+	IdAssociatedCountry *string `field:"code=3B,order=15"`
+	PhoneExtension      *string `field:"code=7T,order=16"`
+	MiddleName          *string `field:"code=0F,order=17"`
 	AlternateId         PrescriberAlternateId
 	DeaNumber           *string                 `field:"code=KV,order=25"`
 	PlaceOfService      *string                 `field:"code=RG,order=26"`

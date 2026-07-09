@@ -36,14 +36,14 @@ type Pricing struct {
 	CoinsuranceAmount                                            *float64 `field:"code=4U,decimalPlaces=2,overpunch=true,order=32"`
 	BenefitStageCount                                            *int     `field:"code=MU,order=34"`
 	BenefitStageAmounts                                          []BenefitStage
-	EstimatedGenericSavings                                      *float64                `field:"code=G3,decimalPlaces=2,overpunch=true,order=37"`
-	SpendingAccountAmountRemaining                               *float64                `field:"code=UC,decimalPlaces=2,overpunch=true,order=38"`
-	HealthPlanFundedAssistanceAmount                             *float64                `field:"code=UD,decimalPlaces=2,overpunch=true,order=39"`
-	AmountAttributedToNetworkSelection                           *float64                `field:"code=UJ,decimalPlaces=2,overpunch=true,order=40"`
-	AmountAttributedToBrandProductSelection                      *float64                `field:"code=UK,decimalPlaces=2,overpunch=true,order=41"`
-	AmountAttributedToNonPreferredFormularyProductSelection      *float64                `field:"code=UM,decimalPlaces=2,overpunch=true,order=42"`
-	AmountAttributedToBrandNonPreferredFormularyProductSelection *float64                `field:"code=UN,decimalPlaces=2,overpunch=true,order=43"`
-	AmountAttributedToCoverageGap                                *float64                `field:"code=UP,decimalPlaces=2,overpunch=true,order=44"`
+	EstimatedGenericSavings                                      *float64 `field:"code=G3,decimalPlaces=2,overpunch=true,order=37"`
+	SpendingAccountAmountRemaining                               *float64 `field:"code=UC,decimalPlaces=2,overpunch=true,order=38"`
+	HealthPlanFundedAssistanceAmount                             *float64 `field:"code=UD,decimalPlaces=2,overpunch=true,order=39"`
+	AmountAttributedToNetworkSelection                           *float64 `field:"code=UJ,decimalPlaces=2,overpunch=true,order=40"`
+	AmountAttributedToBrandProductSelection                      *float64 `field:"code=UK,decimalPlaces=2,overpunch=true,order=41"`
+	AmountAttributedToNonPreferredFormularyProductSelection      *float64 `field:"code=UM,decimalPlaces=2,overpunch=true,order=42"`
+	AmountAttributedToBrandNonPreferredFormularyProductSelection *float64 `field:"code=UN,decimalPlaces=2,overpunch=true,order=43"`
+	AmountAttributedToCoverageGap                                *float64 `field:"code=UP,decimalPlaces=2,overpunch=true,order=44"`
 	IngredientCostContractedReimbursableAmount                   *float64 `field:"code=U8,decimalPlaces=2,overpunch=true,order=45"`
 	DispensingFeeContractedReimbursableAmount                    *float64 `field:"code=U9,decimalPlaces=2,overpunch=true,order=46"`
 
