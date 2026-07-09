@@ -34,6 +34,25 @@ type OtherPayer struct {
 
 	BenefitStageCount   *int `field:"code=MU,order=16"`
 	BenefitStageAmounts []BenefitStage
+
+	AdjudicatedProgramType       *string `field:"code=9T,order=19"`
+	ReconciliationId             *string `field:"code=9V,order=20"`
+	PercentageTaxExemptIndicator *string `field:"code=P7,order=21"`
+
+	RegulatoryFeeTypeCount *int `field:"code=P9,order=22"`
+	RegulatoryFees         []OtherPayerRegulatoryFee
+
+	BenefitStageIndicatorCount *int `field:"code=9W,order=25"`
+	BenefitStageIndicators     []BenefitStageIndicator
+}
+
+type OtherPayerRegulatoryFee struct {
+	TypeCode        *string `field:"code=RN,order=23"`
+	ExemptIndicator *string `field:"code=P8,order=24"`
+}
+
+type BenefitStageIndicator struct {
+	Indicator *string `field:"code=9X,order=26"`
 }
 
 type OtherPayerAmountPaid struct {

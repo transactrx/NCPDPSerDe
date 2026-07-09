@@ -10,7 +10,10 @@ import (
 	stringutils "github.com/transactrx/NCPDPSerDe/pkg/stringUtils"
 )
 
-const layoutTag = "layout"
+const (
+	layoutTag   = "layout"
+	layoutF6Tag = "layoutF6"
+)
 
 type NcpdpHeader[V RequestHeader | ResponseHeader | FinancialRequestHeader | FinancialResponseHeader] struct {
 	RawValue string
@@ -18,16 +21,18 @@ type NcpdpHeader[V RequestHeader | ResponseHeader | FinancialRequestHeader | Fin
 	Value    V
 }
 
+// RequestHeader holds the parsed request header fields for both D0 and F6.
+// In F6 the field 101-A1 is called IIN; this code reuses Bin to hold either value.
 type RequestHeader struct {
-	Bin                           string `layout:"start=0,length=6,order=1"`
-	Version                       string `layout:"start=6,length=2,order=2"`
-	TransactionCode               string `layout:"start=8,length=2,order=3"`
-	Pcn                           string `layout:"start=10,length=10,order=4"`
-	RecordCount                   int    `layout:"start=20,length=1,order=5"`
-	ServiceProviderIdQualifier    string `layout:"start=21,length=2,order=6"`
-	ServiceProviderId             string `layout:"start=23,length=15,order=7"`
-	DateOfService                 string `layout:"start=38,length=8,order=8"`
-	SoftwareVendorCertificationId string `layout:"start=46,length=10,order=9"`
+	Bin                           string `layout:"start=0,length=6,order=1"   layoutF6:"start=4,length=8,order=3"`
+	Version                       string `layout:"start=6,length=2,order=2"   layoutF6:"start=0,length=2,order=1"`
+	TransactionCode               string `layout:"start=8,length=2,order=3"   layoutF6:"start=2,length=2,order=2"`
+	Pcn                           string `layout:"start=10,length=10,order=4" layoutF6:"start=12,length=10,order=4"`
+	RecordCount                   int    `layout:"start=20,length=1,order=5"  layoutF6:"start=22,length=1,order=5"`
+	ServiceProviderIdQualifier    string `layout:"start=21,length=2,order=6"  layoutF6:"start=23,length=2,order=6"`
+	ServiceProviderId             string `layout:"start=23,length=15,order=7" layoutF6:"start=25,length=15,order=7"`
+	DateOfService                 string `layout:"start=38,length=8,order=8"  layoutF6:"start=40,length=8,order=8"`
+	SoftwareVendorCertificationId string `layout:"start=46,length=10,order=9" layoutF6:"start=48,length=10,order=9"`
 }
 
 type ResponseHeader struct {
@@ -80,13 +85,15 @@ func (h *NcpdpHeader[V]) BuildNcpdpHeader() error {
 	headerType := reflect.TypeOf(h.Value)
 	objectRef := reflect.ValueOf(h.Value)
 
+	tagName := resolveLayoutTagName(getStructVersion(objectRef))
+
 	// Compile list of fields by order
 	mappedFields := make(map[int]fieldLayout)
 
 	for i := 0; i < headerType.NumField(); i++ {
 		field := headerType.Field(i)
 
-		tag := field.Tag.Get(layoutTag)
+		tag := resolveFieldTag(field, tagName)
 		if tag != Empty {
 			layout, err := getLayoutFromTag(tag)
 			if err != nil {
@@ -136,13 +143,15 @@ func (h *NcpdpHeader[V]) ParseNcpdpHeader() error {
 	headerType := reflect.TypeOf(item)
 	objectRef := reflect.ValueOf(item)
 
+	tagName := resolveLayoutTagName(detectVersionFromRaw(h.RawValue))
+
 	//Set fields with layout tags
 	for i := 0; i < headerType.Elem().NumField(); i++ {
 		field := headerType.Elem().Field(i)
 		prop := objectRef.Elem().FieldByName(field.Name)
 
 		if prop.CanSet() {
-			tag := field.Tag.Get(layoutTag)
+			tag := resolveFieldTag(field, tagName)
 
 			if tag != Empty {
 				layout, err := getLayoutFromTag(tag)
@@ -195,4 +204,46 @@ func getLayoutFromTag(tag string) (Layout, error) {
 	}
 
 	return layout, nil
+}
+
+// resolveLayoutTagName returns the struct tag name to use for the given NCPDP version.
+func resolveLayoutTagName(version string) string {
+	if strings.HasPrefix(version, "F") {
+		return layoutF6Tag
+	}
+	return layoutTag
+}
+
+// resolveFieldTag returns the tag value for the requested tag name, falling back to the default layout tag if absent.
+func resolveFieldTag(field reflect.StructField, tagName string) string {
+	if tagName != layoutTag {
+		if tag := field.Tag.Get(tagName); tag != Empty {
+			return tag
+		}
+	}
+	return field.Tag.Get(layoutTag)
+}
+
+// detectVersionFromRaw inspects the first bytes of the raw header to determine the NCPDP version.
+// Returns the version prefix (e.g., "F6") or empty string if it cannot be determined.
+func detectVersionFromRaw(raw string) string {
+	if len(raw) >= 2 && raw[0] == 'F' {
+		return raw[:2]
+	}
+	return Empty
+}
+
+// getStructVersion reads the Version field from a header struct value if present.
+func getStructVersion(v reflect.Value) string {
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return Empty
+	}
+	vf := v.FieldByName("Version")
+	if !vf.IsValid() || vf.Kind() != reflect.String {
+		return Empty
+	}
+	return vf.String()
 }

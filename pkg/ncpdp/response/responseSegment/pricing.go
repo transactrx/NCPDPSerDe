@@ -36,17 +36,44 @@ type Pricing struct {
 	CoinsuranceAmount                                            *float64 `field:"code=4U,decimalPlaces=2,overpunch=true,order=32"`
 	BenefitStageCount                                            *int     `field:"code=MU,order=34"`
 	BenefitStageAmounts                                          []BenefitStage
-	EstimatedGenericSavings                                      *float64                `field:"code=G3,decimalPlaces=2,overpunch=true,order=37"`
-	SpendingAccountAmountRemaining                               *float64                `field:"code=UC,decimalPlaces=2,overpunch=true,order=38"`
-	HealthPlanFundedAssistanceAmount                             *float64                `field:"code=UD,decimalPlaces=2,overpunch=true,order=39"`
-	AmountAttributedToNetworkSelection                           *float64                `field:"code=UJ,decimalPlaces=2,overpunch=true,order=40"`
-	AmountAttributedToBrandProductSelection                      *float64                `field:"code=UK,decimalPlaces=2,overpunch=true,order=41"`
-	AmountAttributedToNonPreferredFormularyProductSelection      *float64                `field:"code=UM,decimalPlaces=2,overpunch=true,order=42"`
-	AmountAttributedToBrandNonPreferredFormularyProductSelection *float64                `field:"code=UN,decimalPlaces=2,overpunch=true,order=43"`
-	AmountAttributedToCoverageGap                                *float64                `field:"code=UP,decimalPlaces=2,overpunch=true,order=44"`
-	IngredientCostContractedReimbursableAmount                   *float64                `field:"code=U8,decimalPlaces=2,overpunch=true,order=45"`
-	DispensingFeeContractedReimbursableAmount                    *float64                `field:"code=U9,decimalPlaces=2,overpunch=true,order=46"`
-	DynamicFields                                                []dynamic.DynamicStruct `field:"code=dynamic"`
+	EstimatedGenericSavings                                      *float64 `field:"code=G3,decimalPlaces=2,overpunch=true,order=37"`
+	SpendingAccountAmountRemaining                               *float64 `field:"code=UC,decimalPlaces=2,overpunch=true,order=38"`
+	HealthPlanFundedAssistanceAmount                             *float64 `field:"code=UD,decimalPlaces=2,overpunch=true,order=39"`
+	AmountAttributedToNetworkSelection                           *float64 `field:"code=UJ,decimalPlaces=2,overpunch=true,order=40"`
+	AmountAttributedToBrandProductSelection                      *float64 `field:"code=UK,decimalPlaces=2,overpunch=true,order=41"`
+	AmountAttributedToNonPreferredFormularyProductSelection      *float64 `field:"code=UM,decimalPlaces=2,overpunch=true,order=42"`
+	AmountAttributedToBrandNonPreferredFormularyProductSelection *float64 `field:"code=UN,decimalPlaces=2,overpunch=true,order=43"`
+	AmountAttributedToCoverageGap                                *float64 `field:"code=UP,decimalPlaces=2,overpunch=true,order=44"`
+	IngredientCostContractedReimbursableAmount                   *float64 `field:"code=U8,decimalPlaces=2,overpunch=true,order=45"`
+	DispensingFeeContractedReimbursableAmount                    *float64 `field:"code=U9,decimalPlaces=2,overpunch=true,order=46"`
+
+	PatientPayComponentCount *int `field:"code=KP,order=47"`
+	PatientPayComponents     []PatientPayComponent
+
+	RegulatoryFeeCount *int `field:"code=RK,order=50"`
+	RegulatoryFees     []RegulatoryFee
+
+	BenefitStageIndicatorCount *int `field:"code=9W,order=53"`
+	BenefitStageIndicators     []BenefitStageIndicator
+
+	PatientRegulatoryFeeAmount                         *float64 `field:"code=RS,decimalPlaces=2,overpunch=true,order=55"`
+	ProfessionalServiceFeeContractedReimbursableAmount *float64 `field:"code=6G,decimalPlaces=2,overpunch=true,order=56"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
+}
+
+type PatientPayComponent struct {
+	Qualifier *string  `field:"code=KQ,order=48"`
+	Amount    *float64 `field:"code=KN,decimalPlaces=2,overpunch=true,order=49"`
+}
+
+type RegulatoryFee struct {
+	TypeCode        *string `field:"code=RL,order=51"`
+	ExemptIndicator *string `field:"code=RM,order=52"`
+}
+
+type BenefitStageIndicator struct {
+	Indicator *string `field:"code=9X,order=54"`
 }
 
 type OtherAmountPaid struct {

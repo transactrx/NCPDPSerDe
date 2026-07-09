@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp/request"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp/response"
 )
@@ -499,5 +500,372 @@ func Test_CanParseUndefinedReversalSegments(t *testing.T) {
 		}
 
 		fmt.Print(string(bytes))
+	}
+}
+
+// F6 request header is 58 bytes: version(2) tranCode(2) IIN(8) PCN(10) recordCount(1) SPIQ(2) SPI(15) DOS(8) vendorCertId(10)
+const F6_REQUEST_B1_HEADER = "F6B100880151TEST      1011234567893     20260611SVCID     "
+
+// Raw test constants embed invisible separator bytes, so the F6 sample is
+// built programmatically. F6 (vEB+) has no group separators; the single
+// transaction's segments directly follow the shared segments.
+func buildF6BillingRequest() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_REQUEST_B1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C1TESTGROUP" + fs + "C61" +
+		ss + fs + "AM01" + fs + "RR2" + fs + "CX01" + fs + "CY111111111" + fs + "CX02" + fs + "CY222222222" + fs + "C419341231" + fs + "C51" + fs + "CAJOHN" + fs + "0CQUINCY" + fs + "CBDOE" +
+		ss + fs + "AM07" + fs + "EM1" + fs + "D26000001" + fs + "E103" + fs + "D700172240780" + fs + "E70000001000" + fs + "D300" + fs + "D530" + fs + "D61" + fs + "D80" + fs + "DE20260611" + fs + "U701" +
+		ss + fs + "AM19" + fs + "8G1" + fs + "8H01" + fs + "8KQQ" + fs + "8MINTERMEDIARY01"
+}
+
+// F6 response header layout is identical to D0 (31 bytes).
+const F6_RESPONSE_B1_HEADER = "F6B11A011234567893     20260611"
+
+func buildF6BillingResponse() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_RESPONSE_B1_HEADER +
+		ss + fs + "AM25" + fs + "C1TESTGROUP" + fs + "KR2" + fs + "J701" + fs + "J8PAYER001" + fs + "J702" + fs + "J8PAYER002" + fs + "C2CARD123" +
+		ss + fs + "AM21" + fs + "ANA" +
+		ss + fs + "AM22" + fs + "EM1" + fs + "D26000001"
+}
+
+func Test_CanParseF6BillingRequest(t *testing.T) {
+	i, err := Deserialize(buildF6BillingRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj, ok := i.(request.Billing)
+	if !ok {
+		t.Fatalf("expected request.Billing, got: %T", i)
+	}
+
+	header := obj.Header.Value
+	assertValue(t, "Version", header.Version, ncpdp.F6)
+	assertValue(t, "Bin/IIN", header.Bin, "00880151")
+	assertValue(t, "TransactionCode", header.TransactionCode, "B1")
+	assertValue(t, "Pcn", header.Pcn, "TEST")
+	assertValue(t, "RecordCount", header.RecordCount, 1)
+	assertValue(t, "Header size", obj.Header.Size, 58)
+
+	assertString(t, "Patient first name", obj.Patient.FirstName, "JOHN")
+	assertString(t, "Patient middle name (F6 field 0C)", obj.Patient.MiddleName, "QUINCY")
+
+	// Repeating patient ID (F6): scalars keep one occurrence for backward
+	// compatibility, the Ids slice captures every occurrence.
+	assertInt(t, "Patient id count (F6 field RR)", obj.Patient.IdCount, 2)
+	if obj.Patient.Id == nil || obj.Patient.IdQualifier == nil {
+		t.Error("Patient scalar Id/IdQualifier not populated")
+	}
+	if len(obj.Patient.Ids) != 2 {
+		t.Fatalf("Patient ids count mismatch. Wanted: 2   Got: %v", len(obj.Patient.Ids))
+	}
+	for i, want := range []struct{ qualifier, id string }{{"01", "111111111"}, {"02", "222222222"}} {
+		assertString(t, fmt.Sprintf("Patient ids[%d] qualifier", i), obj.Patient.Ids[i].Qualifier, want.qualifier)
+		assertString(t, fmt.Sprintf("Patient ids[%d] id", i), obj.Patient.Ids[i].Id, want.id)
+	}
+
+	if len(obj.Claims) != 1 {
+		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
+	}
+
+	intermediary := obj.Claims[0].Intermediary
+	assertInt(t, "Intermediary id count (F6 field 8G)", intermediary.IdCount, 1)
+	if len(intermediary.Ids) != 1 {
+		t.Fatalf("Intermediary ids (F6 segment AM19) count mismatch. Wanted: 1   Got: %v", len(intermediary.Ids))
+	}
+	assertString(t, "Intermediary id qualifier (F6 field 8K)", intermediary.Ids[0].Qualifier, "QQ")
+	assertString(t, "Intermediary id (F6 field 8M)", intermediary.Ids[0].Id, "INTERMEDIARY01")
+}
+
+func Test_CanParseF6BillingResponse(t *testing.T) {
+	i, err := Deserialize(buildF6BillingResponse())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj, ok := i.(response.Billing)
+	if !ok {
+		t.Fatalf("expected response.Billing, got: %T", i)
+	}
+
+	if obj.Header.Value.Version != ncpdp.F6 {
+		t.Errorf("Version mismatch. Wanted: F6   Got: %q", obj.Header.Value.Version)
+	}
+
+	// Repeating payer ID (F6): the singular Payer keeps one occurrence for
+	// backward compatibility, the Payers slice captures every occurrence.
+	insurance := obj.Insurance
+	if insurance.PayerIdCount == nil || *insurance.PayerIdCount != 2 {
+		t.Errorf("Payer id count (F6 field KR) mismatch. Wanted: 2   Got: %v", insurance.PayerIdCount)
+	}
+	if insurance.Payer.Id == nil || insurance.Payer.Qualifier == nil {
+		t.Error("Singular Payer not populated")
+	}
+	if len(insurance.Payers) != 2 {
+		t.Fatalf("Payers count mismatch. Wanted: 2   Got: %v", len(insurance.Payers))
+	}
+	for i, want := range []struct{ qualifier, id string }{{"01", "PAYER001"}, {"02", "PAYER002"}} {
+		got := insurance.Payers[i]
+		if got.Qualifier == nil || *got.Qualifier != want.qualifier || got.Id == nil || *got.Id != want.id {
+			t.Errorf("Payers[%d] mismatch. Wanted: %s/%s   Got: %v/%v", i, want.qualifier, want.id, got.Qualifier, got.Id)
+		}
+	}
+
+	if len(obj.Claims) != 1 {
+		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
+	}
+}
+
+const F6_REQUEST_FULL_HEADER = "F6B188015600PCN12345671011234567893     20260611VENDORCERT"
+
+// Built from the raw F6 sample (RawSample_F6.txt) with CRLF line breaks
+// removed. F6 has no group separator: AM11 follows the shared segments
+// directly and is assigned to the single claim group by segment ID.
+func buildF6FullBillingRequest() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_REQUEST_FULL_HEADER +
+		ss + fs + "AM04" + fs + "C2CARDID" + fs + "CCCARDFIRST" + fs + "CDCARDLAST" + fs + "FOPLANID" + fs + "C90" + fs + "C1D0PAID" + fs + "C3001" + fs + "C61" + fs + "2AMEDIGAPID" + fs + "2BSC" + fs + "2DN" + fs + "N5MEDICAIDIDNUMBER" +
+		ss + fs + "AM01" + fs + "RR1" + fs + "CX99" + fs + "CYPATIENTID" + fs + "C419850601" + fs + "C51" + fs + "CAFIRSTNAME" + fs + "CBLASTNAME" + fs + "7A1234 FIRST ADDRESS LINE" + fs + "7B7890 SECOND ADDRESS LINE" + fs + "CNROEBUCK" + fs + "COSC" + fs + "CP293764444" + fs + "1KUS" + fs + "CQ8645555555" + fs + "C701" + fs + "CZEMPLOYERID" + fs + "2C1" + fs + "HNEMAIL@DOMAIN.COM" + fs + "4X1" + fs + "S8337915000" +
+		ss + fs + "AM11" + fs + "D91234567H" + fs + "DC250{" + fs + "BE200{" + fs + "DX" + fs + "E350{" + fs + "H71" + fs + "H801" + fs + "H975E" + fs + "RK1" + fs + "RLAB" + fs + "HA43B" + fs + "GE12345G" + fs + "HE10000" + fs + "JE02" + fs + "DQ1345670{" + fs + "DU1247532B" + fs + "DN01"
+}
+
+func assertValue[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Errorf("%s mismatch. Wanted: %v   Got: %v", name, want, got)
+	}
+}
+
+func assertInt(t *testing.T, name string, got *int, want int) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %v   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %v   Got: %v", name, want, *got)
+	}
+}
+
+func assertString(t *testing.T, name string, got *string, want string) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %q   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %q   Got: %q", name, want, *got)
+	}
+}
+
+func assertFloat(t *testing.T, name string, got *float64, want float64) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s mismatch. Wanted: %v   Got: nil", name, want)
+	} else if *got != want {
+		t.Errorf("%s mismatch. Wanted: %v   Got: %v", name, want, *got)
+	}
+}
+
+func Test_CanParseF6FullFieldSample(t *testing.T) {
+	i, err := Deserialize(buildF6FullBillingRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj, ok := i.(request.Billing)
+	if !ok {
+		t.Fatalf("expected request.Billing, got: %T", i)
+	}
+
+	assertF6FullSampleHeader(t, obj)
+	assertF6FullSampleInsurance(t, obj)
+	assertF6FullSamplePatient(t, obj)
+
+	if len(obj.Claims) != 1 {
+		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
+	}
+
+	assertF6FullSamplePricing(t, obj)
+}
+
+func assertF6FullSampleHeader(t *testing.T, obj request.Billing) {
+	t.Helper()
+
+	header := obj.Header.Value
+	assertValue(t, "Version", header.Version, ncpdp.F6)
+	assertValue(t, "Bin/IIN", header.Bin, "88015600")
+	assertValue(t, "TransactionCode", header.TransactionCode, "B1")
+	assertValue(t, "Pcn", header.Pcn, "PCN1234567")
+	assertValue(t, "RecordCount", header.RecordCount, 1)
+	assertValue(t, "ServiceProviderIdQualifier", header.ServiceProviderIdQualifier, "01")
+	assertValue(t, "ServiceProviderId", header.ServiceProviderId, "1234567893")
+	assertValue(t, "DateOfService", header.DateOfService, "20260611")
+	assertValue(t, "SoftwareVendorCertificationId", header.SoftwareVendorCertificationId, "VENDORCERT")
+	assertValue(t, "Header size", obj.Header.Size, 58)
+}
+
+func assertF6FullSampleInsurance(t *testing.T, obj request.Billing) {
+	t.Helper()
+
+	insurance := obj.Insurance
+	assertString(t, "Insurance cardholder id (C2)", insurance.Cardholder.Id, "CARDID")
+	assertString(t, "Insurance cardholder first name (CC)", insurance.Cardholder.FirstName, "CARDFIRST")
+	assertString(t, "Insurance cardholder last name (CD)", insurance.Cardholder.LastName, "CARDLAST")
+	assertString(t, "Insurance plan id (FO)", insurance.PlanId, "PLANID")
+	assertString(t, "Insurance eligibility clarification code (C9)", insurance.EligbilityClarificationCode, "0")
+	assertString(t, "Insurance group id (C1)", insurance.GroupId, "D0PAID")
+	assertString(t, "Insurance person code (C3)", insurance.PersonCode, "001")
+	assertString(t, "Insurance patient relationship code (C6)", insurance.PatientRelationshipCode, "1")
+	assertString(t, "Insurance medigap id (2A)", insurance.MedigapId, "MEDIGAPID")
+	assertString(t, "Insurance medicaid indicator (2B)", insurance.Medicaid.Indicator, "SC")
+	assertString(t, "Insurance provider accept assignment (2D)", insurance.ProviderAcceptAssignment, "N")
+	assertString(t, "Insurance medicaid id (N5)", insurance.Medicaid.Id, "MEDICAIDIDNUMBER")
+	if len(insurance.DynamicFields) != 0 {
+		t.Errorf("Insurance dynamic field spillover. Wanted: 0   Got: %v", len(insurance.DynamicFields))
+	}
+}
+
+func assertF6FullSamplePatient(t *testing.T, obj request.Billing) {
+	t.Helper()
+
+	patient := obj.Patient
+	assertInt(t, "Patient id count (RR)", patient.IdCount, 1)
+	assertString(t, "Patient id qualifier (CX)", patient.IdQualifier, "99")
+	assertString(t, "Patient id (CY)", patient.Id, "PATIENTID")
+	if len(patient.Ids) != 1 {
+		t.Errorf("Patient Ids count mismatch. Wanted: 1   Got: %v", len(patient.Ids))
+	} else {
+		assertString(t, "Patient Ids[0] qualifier", patient.Ids[0].Qualifier, "99")
+		assertString(t, "Patient Ids[0] id", patient.Ids[0].Id, "PATIENTID")
+	}
+	if patient.BirthDate == nil || patient.BirthDate.Format("20060102") != "19850601" {
+		t.Errorf("Patient birth date (C4) mismatch. Wanted: 19850601   Got: %v", patient.BirthDate)
+	}
+	assertString(t, "Patient gender code (C5)", patient.GenderCode, "1")
+	assertString(t, "Patient first name (CA)", patient.FirstName, "FIRSTNAME")
+	assertString(t, "Patient last name (CB)", patient.LastName, "LASTNAME")
+	assertString(t, "Patient address street line 1 (F6 field 7A)", patient.Address.StreetLine1, "1234 FIRST ADDRESS LINE")
+	assertString(t, "Patient address street line 2 (F6 field 7B)", patient.Address.StreetLine2, "7890 SECOND ADDRESS LINE")
+	assertString(t, "Patient address city (CN)", patient.Address.City, "ROEBUCK")
+	assertString(t, "Patient address state (CO)", patient.Address.State, "SC")
+	assertString(t, "Patient address zip (CP)", patient.Address.Zip, "293764444")
+	assertString(t, "Patient address country code (F6 field 1K)", patient.Address.CountryCode, "US")
+	assertString(t, "Patient phone (CQ)", patient.Phone, "8645555555")
+	assertString(t, "Patient place of service (C7)", patient.PlaceOfService, "01")
+	assertString(t, "Patient employer id (CZ)", patient.EmployerId, "EMPLOYERID")
+	assertString(t, "Patient pregnant (2C)", patient.Pregnant, "1")
+	assertString(t, "Patient email (HN)", patient.Email, "EMAIL@DOMAIN.COM")
+	assertString(t, "Patient residence (4X)", patient.Residence, "1")
+	assertString(t, "Patient species (F6 field S8)", patient.Species, "337915000")
+	if len(patient.DynamicFields) != 0 {
+		t.Errorf("Patient dynamic field spillover. Wanted: 0   Got: %v", len(patient.DynamicFields))
+	}
+}
+
+func assertF6FullSamplePricing(t *testing.T, obj request.Billing) {
+	t.Helper()
+
+	pricing := obj.Claims[0].Pricing
+	assertFloat(t, "Pricing ingredient cost (D9)", pricing.IngredientCostSubmitted, 123456.78)
+	assertFloat(t, "Pricing dispensing fee (DC)", pricing.DispensingFeeSubmitted, 25.00)
+	assertFloat(t, "Pricing professional service fee (BE)", pricing.ProfessionalServiceFeeSubmitted, 20.00)
+	// DX is present but empty in the raw sample; the deserializer allocates the
+	// pointer and leaves the zero value.
+	assertFloat(t, "Pricing patient paid amount (DX, empty)", pricing.PatientPaidAmountSubmitted, 0)
+	assertFloat(t, "Pricing incentive amount (E3)", pricing.IncentiveAmountSubmitted, 5.00)
+	if pricing.OtherAmountClaimSubmittedCount == nil || *pricing.OtherAmountClaimSubmittedCount != 1 {
+		t.Errorf("Pricing other amount count (H7) mismatch. Wanted: 1   Got: %v", pricing.OtherAmountClaimSubmittedCount)
+	}
+	if len(pricing.OtherAmountClaimSubmitted) != 1 {
+		t.Errorf("Pricing other amounts count mismatch. Wanted: 1   Got: %v", len(pricing.OtherAmountClaimSubmitted))
+	} else {
+		assertString(t, "Pricing other amount qualifier (H8)", pricing.OtherAmountClaimSubmitted[0].Qualifier, "01")
+		assertFloat(t, "Pricing other amount (H9)", pricing.OtherAmountClaimSubmitted[0].AmountSubmitted, 7.55)
+	}
+	if pricing.RegulatoryFeeCount == nil || *pricing.RegulatoryFeeCount != 1 {
+		t.Errorf("Pricing regulatory fee count (F6 field RK) mismatch. Wanted: 1   Got: %v", pricing.RegulatoryFeeCount)
+	}
+	if len(pricing.RegulatoryFees) != 1 {
+		t.Errorf("Pricing regulatory fees count mismatch. Wanted: 1   Got: %v", len(pricing.RegulatoryFees))
+	} else {
+		assertString(t, "Pricing regulatory fee type (F6 field RL)", pricing.RegulatoryFees[0].TypeCode, "AB")
+	}
+	assertFloat(t, "Pricing flat sales tax (HA)", pricing.FlatSalesTaxAmountSubmitted, 4.32)
+	assertFloat(t, "Pricing percentage sales tax amount (GE)", pricing.PercentageSalesTaxAmountSubmitted, 1234.57)
+	assertFloat(t, "Pricing percentage sales tax rate (HE)", pricing.PercentageSalesTaxRateSubmitted, 1.0000)
+	assertString(t, "Pricing percentage sales tax basis (JE)", pricing.PercentageSalesTaxBasisSubmitted, "02")
+	assertFloat(t, "Pricing usual and customary charge (DQ)", pricing.UsualAndCustmaryCharge, 134567.00)
+	assertFloat(t, "Pricing gross amount due (DU)", pricing.GrossAmountDue, 124753.22)
+	assertString(t, "Pricing basis of cost determination (DN)", pricing.BasisOfCostDetermination, "01")
+	if len(pricing.DynamicFields) != 0 {
+		t.Errorf("Pricing dynamic field spillover. Wanted: 0   Got: %v", len(pricing.DynamicFields))
+	}
+}
+
+// An F6 transmission with only shared segments must parse without error and
+// without inventing a claim group.
+func Test_CanParseF6RequestWithoutTransactionSegments(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	rawData := F6_REQUEST_B1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C61" +
+		ss + fs + "AM01" + fs + "CX99" + fs + "CYPATIENTID" + fs + "CAJOHN" + fs + "CBDOE"
+
+	obj := request.Billing{}
+	err := DeserializeType(rawData, &obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if obj.Insurance.Cardholder.Id == nil || *obj.Insurance.Cardholder.Id != "POLICY123" {
+		t.Errorf("Insurance cardholder id mismatch. Wanted: POLICY123   Got: %v", obj.Insurance.Cardholder.Id)
+	}
+	if obj.Patient.LastName == nil || *obj.Patient.LastName != "DOE" {
+		t.Errorf("Patient last name mismatch. Wanted: DOE   Got: %v", obj.Patient.LastName)
+	}
+	if len(obj.Claims) != 0 {
+		t.Errorf("Group count mismatch. Wanted: 0   Got: %v", len(obj.Claims))
+	}
+}
+
+// Without group separators the claim group starts at the first segment whose
+// ID belongs to the group struct. Unknown segments before that boundary stay
+// in the shared DynamicSegments; unknown segments after it belong to the claim.
+func Test_F6UnknownSegmentsRespectGroupBoundary(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	rawData := F6_REQUEST_B1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C61" +
+		ss + fs + "AM98" + fs + "A11" + fs + "A2BB" +
+		ss + fs + "AM07" + fs + "EM1" + fs + "D26000001" +
+		ss + fs + "AM99" + fs + "B3CC" + fs + "B41"
+
+	obj := request.Billing{}
+	err := DeserializeType(rawData, &obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(obj.DynamicSegments) != 1 {
+		t.Errorf("Shared dynamic segment count mismatch. Wanted: 1 (AM98)   Got: %v", len(obj.DynamicSegments))
+	}
+
+	if len(obj.Claims) != 1 {
+		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
+	}
+
+	claim := obj.Claims[0]
+	rxNumber := claim.Claim.PrescriptionServiceReference.Number
+	if rxNumber == nil || *rxNumber != "6000001" {
+		t.Errorf("Prescription number (D2) mismatch. Wanted: 6000001   Got: %v", rxNumber)
+	}
+	if len(claim.DynamicSegments) != 1 {
+		t.Errorf("Claim dynamic segment count mismatch. Wanted: 1 (AM99)   Got: %v", len(claim.DynamicSegments))
 	}
 }

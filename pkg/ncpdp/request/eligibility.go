@@ -16,6 +16,7 @@ type Eligibility struct {
 	Pharmacy                requestsegment.PharmacyProvider        `segment:"code=AM02,order=3"`
 	Prescriber              requestsegment.Prescriber              `segment:"code=AM03,order=4"`
 	AdditionalDocumentation requestsegment.AdditionalDocumentation `segment:"code=AM14,order=5"`
+	LastKnown4Rx            requestsegment.LastKnown4Rx            `segment:"code=AM37,order=6"`
 	DataCollection          requestsegment.DataCollection          `segment:"code=AMXX,order=99"`
 	DynamicSegments         []dynamic.DynamicStruct                `segment:"code=dynamic,order=100"`
 }

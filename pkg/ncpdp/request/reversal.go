@@ -12,7 +12,7 @@ type Reversal struct {
 
 	//Shared Segments
 	Insurance       requestsegment.Insurance `segment:"code=AM04,order=1"`
-	DynamicSegments []dynamic.DynamicStruct  `segment:"code=dynamic,order=100"`	
+	DynamicSegments []dynamic.DynamicStruct  `segment:"code=dynamic,order=100"`
 
 	//Claim Groups
 	Claims []ReversalRecord `group:"max=4"`
