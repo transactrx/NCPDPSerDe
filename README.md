@@ -109,6 +109,9 @@ for i := 0; i < tran.RecordCount(); i++ {
     seg := tran.FindSegmentInRecord(i, ncpdp.CLAIM_SEGMENT_ID)
     ...
 }
+
+// FindFirstField and InsertField apply the same fallback for record index >= 0
+rxField := tran.FindFirstField(ncpdp.CLAIM_SEGMENT_ID, ncpdp.PRESCRIPTION_SERVICE_REFERENCE_NO_FIELD_ID, 0)
 ```
 
 ### Response Helpers

@@ -276,6 +276,16 @@ func TestParsingF6RequestBody(t *testing.T) {
 	if tran.FindSegmentInRecord(1, CLAIM_SEGMENT_ID) != nil {
 		t.Error("FindSegmentInRecord(1, AM07) should be nil when transaction has no records")
 	}
+
+	// FindFirstField with record index 0 must fall back to transaction-level segments on F6
+	rxField = tran.FindFirstField(CLAIM_SEGMENT_ID, PRESCRIPTION_SERVICE_REFERENCE_NO_FIELD_ID, 0)
+	if rxField == nil || rxField.Value != "6000001" {
+		t.Errorf("FindFirstField(AM07, D2, 0) mismatch. Wanted: %q   Got: %v", "6000001", rxField)
+	}
+
+	if tran.FindFirstField(CLAIM_SEGMENT_ID, PRESCRIPTION_SERVICE_REFERENCE_NO_FIELD_ID, 1) != nil {
+		t.Error("FindFirstField(AM07, D2, 1) should be nil when transaction has no records")
+	}
 }
 
 func TestRecordHelpersWithD0Batch(t *testing.T) {

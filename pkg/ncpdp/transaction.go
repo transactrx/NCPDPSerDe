@@ -186,7 +186,8 @@ func (tran *NcpdpTransaction[V]) FindSegment(id string) *NcpdpSegment {
 }
 
 // Find segment for the specified ID.
-// Record index of -1 will search shared segments.
+// Record index of -1 will search shared segments. When the transaction has no
+// records (F6), record index 0 searches the transaction-level segments instead.
 func (tran *NcpdpTransaction[V]) FindFirstField(segmentId, fieldId string, recordIndex int) *NcpdpField {
 	if tran == nil {
 		return nil
@@ -197,9 +198,9 @@ func (tran *NcpdpTransaction[V]) FindFirstField(segmentId, fieldId string, recor
 	if recordIndex < 0 {
 		// Shared segment
 		segment = tran.FindSegment(segmentId)
-	} else if recordIndex < len(tran.Records) {
+	} else {
 		// Non-shared segment
-		segment = tran.Records[recordIndex].FindSegment(segmentId)
+		segment = tran.FindSegmentInRecord(recordIndex, segmentId)
 	}
 
 	if segment == nil {
@@ -272,9 +273,9 @@ func (tran *NcpdpTransaction[V]) InsertField(recordIndex int, spec *NcpdpSegment
 	if recordIndex < 0 {
 		// Shared segment
 		segment = tran.FindSegment(spec.SegmentCode)
-	} else if recordIndex < len(tran.Records) {
+	} else {
 		// Non-shared segment
-		segment = tran.Records[recordIndex].FindSegment(spec.SegmentCode)
+		segment = tran.FindSegmentInRecord(recordIndex, spec.SegmentCode)
 	}
 
 	if segment == nil {
