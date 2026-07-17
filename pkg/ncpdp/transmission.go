@@ -53,7 +53,7 @@ func (td *TransmissionData) GetRequestHash(recordIndex int) string {
 		return Empty
 	}
 
-	if recordIndex >= len(td.Request.Records) {
+	if recordIndex >= td.Request.RecordCount() {
 		return Empty
 	}
 
