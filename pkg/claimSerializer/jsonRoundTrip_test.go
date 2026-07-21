@@ -36,6 +36,16 @@ func serializeConcrete(i any) (string, error) {
 	}
 }
 
+// unmarshalAndSerialize unmarshals a claim's JSON into a fresh struct of the
+// given concrete type and serializes the result.
+func unmarshalAndSerialize[V any](jsonBytes []byte) (string, error) {
+	fresh := new(V)
+	if err := json.Unmarshal(jsonBytes, fresh); err != nil {
+		return "", err
+	}
+	return Serialize(fresh)
+}
+
 // jsonRoundTripSerialize marshals a deserialized claim to JSON, unmarshals it
 // into a fresh struct of the same concrete type, and serializes the result.
 func jsonRoundTripSerialize(i any) (string, error) {
@@ -46,53 +56,21 @@ func jsonRoundTripSerialize(i any) (string, error) {
 
 	switch i.(type) {
 	case request.Billing:
-		fresh := request.Billing{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[request.Billing](jsonBytes)
 	case request.Reversal:
-		fresh := request.Reversal{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[request.Reversal](jsonBytes)
 	case request.Rebill:
-		fresh := request.Rebill{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[request.Rebill](jsonBytes)
 	case request.Eligibility:
-		fresh := request.Eligibility{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[request.Eligibility](jsonBytes)
 	case response.Billing:
-		fresh := response.Billing{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[response.Billing](jsonBytes)
 	case response.Reversal:
-		fresh := response.Reversal{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[response.Reversal](jsonBytes)
 	case response.Rebill:
-		fresh := response.Rebill{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[response.Rebill](jsonBytes)
 	case response.Eligibility:
-		fresh := response.Eligibility{}
-		if err := json.Unmarshal(jsonBytes, &fresh); err != nil {
-			return "", err
-		}
-		return Serialize(&fresh)
+		return unmarshalAndSerialize[response.Eligibility](jsonBytes)
 	default:
 		return "", fmt.Errorf("unknown type %T", i)
 	}
