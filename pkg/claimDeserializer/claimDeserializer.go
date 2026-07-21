@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
@@ -540,8 +541,12 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 			sliceLen := f.Len()
 			sliceItemType := f.Type().Elem()
 
-			// Create new slice element
-			if sliceLen <= repeatingFieldIndex {
+			// Create new slice element. Only grow this slice when the element
+			// type owns the field code directly; a repeating code that lives in
+			// a deeper nested slice (e.g. a second 6E reject within a single
+			// other payer) must repeat inside the last element instead of
+			// splitting it into a new occurrence of this slice.
+			if sliceLen <= repeatingFieldIndex && (sliceLen == 0 || isDynamic || typeOwnsCode(sliceItemType, codeTag)) {
 				sliceItem := reflect.New(sliceItemType).Elem()
 
 				// Initialize element
@@ -588,6 +593,58 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 	}
 
 	return setCount
+}
+
+type typeCodeKey struct {
+	structType reflect.Type
+	code       string
+}
+
+var typeOwnsCodeCache sync.Map
+
+// typeOwnsCode reports whether a struct type has a field with the given code
+// tag on the type itself (including embedded structs), excluding fields that
+// belong to nested slice element types.
+func typeOwnsCode(structType reflect.Type, codeTag string) bool {
+	if structType.Kind() != reflect.Struct {
+		return false
+	}
+
+	key := typeCodeKey{structType: structType, code: codeTag}
+	if cached, ok := typeOwnsCodeCache.Load(key); ok {
+		return cached.(bool)
+	}
+
+	owns := false
+
+	for i := 0; i < structType.NumField(); i++ {
+		ft := structType.Field(i)
+
+		switch ft.Type.Kind() {
+		case reflect.Struct:
+			owns = typeOwnsCode(ft.Type, codeTag)
+
+		case reflect.Slice:
+			// Nested slice fields are owned by their own element type.
+
+		default:
+			tag := ft.Tag.Get(serde.FieldTag)
+			if tag != serde.Empty {
+				attr, err := serde.GetFieldAttribute(tag)
+				if err == nil && attr.Code == codeTag {
+					owns = true
+				}
+			}
+		}
+
+		if owns {
+			break
+		}
+	}
+
+	typeOwnsCodeCache.Store(key, owns)
+
+	return owns
 }
 
 // Set base field by data type.
