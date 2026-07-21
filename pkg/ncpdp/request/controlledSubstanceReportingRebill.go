@@ -19,7 +19,7 @@ type ControlledSubstanceReportingRebill struct {
 }
 
 type ControlledSubstanceReportingRebillRecord struct {
-	Raw             string                          `field:"code=rawgroup"`
+	Raw             string                          `field:"code=rawgroup" json:"-"`
 	Claim           requestsegment.Claim            `segment:"code=AM07,order=1"`
 	Pharmacy        requestsegment.PharmacyProvider `segment:"code=AM02,order=2"`
 	Prescriber      requestsegment.Prescriber       `segment:"code=AM03,order=3"`

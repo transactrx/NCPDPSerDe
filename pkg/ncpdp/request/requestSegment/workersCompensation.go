@@ -8,8 +8,8 @@ import (
 )
 
 type WorkersCompensation struct {
-	SegmentId                  ncpdp.SegmentId
-	InjuryDate                 *time.Time `field:"code=DY,format=YYYYMMdd,order=2"`
+	SegmentId                  ncpdp.SegmentId `json:"-"`
+	InjuryDate                 *time.Time      `field:"code=DY,format=YYYYMMdd,order=2"`
 	Employer                   Employer
 	CarrierId                  *string `field:"code=CR,order=10"`
 	ClaimReferenceId           *string `field:"code=DZ,order=11"`

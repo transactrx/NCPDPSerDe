@@ -6,7 +6,7 @@ import (
 )
 
 type LastKnown4Rx struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
 	IinNumber              *string `field:"code=3E,order=2"`
 	ProcessorControlNumber *string `field:"code=3F,order=3"`

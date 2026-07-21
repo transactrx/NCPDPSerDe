@@ -6,7 +6,7 @@ import (
 )
 
 type Dur struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
 	Items []DurItem
 
@@ -19,7 +19,7 @@ type DurCoAgent struct {
 }
 
 type DurItem struct {
-	Counter                 *int    `field:"code=7E,order=2"`
+	Counter                 *int    `field:"code=7E,order=2,countfor=index"`
 	ReasonForServiceCode    *string `field:"code=E4,order=3"`
 	ProfessionalServiceCode *string `field:"code=E5,order=4"`
 	ResultOfServiceCode     *string `field:"code=E6,order=5"`

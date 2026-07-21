@@ -1,6 +1,6 @@
-# NCPDP D.0 JSON Schemas
+# NCPDP D.0/F6 JSON Schemas
 
-This directory contains JSON Schema definitions for NCPDP Telecommunication Standard Version D.0 transactions. These schemas can be used by external users to:
+This directory contains JSON Schema definitions for NCPDP Telecommunication Standard Version D.0 and F6 transactions (the version is auto-detected from the header). These schemas can be used by external users to:
 
 1. Understand the data structure of NCPDP transactions
 2. Validate JSON payloads before serialization
@@ -64,12 +64,15 @@ schemas/
 
 ### Header
 Every transaction has a Header containing:
-- **Bin**: Bank Identification Number (6 chars)
-- **Version**: Always "D0" for this specification
+- **Bin**: Bank Identification Number (D.0, 6 chars) or IIN (F6, 8 chars)
+- **Version**: "D0" or "F6"
 - **TransactionCode**: Identifies the transaction type (B1, B2, etc.)
-- **RecordCount**: Number of claims in the transaction (1-4)
+- **RecordCount**: Number of claims in the transaction (D.0 allows 1-4; F6 allows exactly 1)
 - **ServiceProviderId**: Pharmacy NPI or other identifier
 - **DateOfService**: Date in CCYYMMDD format
+
+### D.0 / F6 Versions
+Every D.0 field is unchanged in F6 (full backward compatibility). Fields and segments that only exist in F6 are suffixed `- F6` in their schema descriptions and are optional — D.0 transactions simply omit them. Schema constraints use the largest value across versions (e.g. `Bin` is `maxLength: 8` for the F6 IIN even though D.0 BINs are 6 characters). F6 permits exactly one claim per transmission; the serializer rejects F6 transactions with more than one claim group.
 
 ### Segments
 Transactions consist of segments identified by codes (AM01, AM04, etc.):
@@ -102,6 +105,12 @@ Transactions consist of segments identified by codes (AM01, AM04, etc.):
 
 ### Field Codes
 Each field within a segment has a 2-character code (e.g., C2=Cardholder ID, D2=Rx Number). These codes correspond to NCPDP field identifiers.
+
+### Internal Fields
+The Go structs contain internal bookkeeping fields (`SegmentId`, header `RawValue`/`Size`, and `Raw` group captures) that are excluded from JSON in both directions: they are not accepted as input (segment identifiers are populated automatically during serialization) and are not emitted as output. They are intentionally absent from these schemas.
+
+### Counter Fields
+Repeating-group count fields (e.g. `Count` 4C in Coordination of Benefits, `RejectCodeCount` FA) and per-item counters (e.g. DUR `Counter` 7E) are derived automatically during serialization: counts are set to the array length (correcting any supplied value) and per-item counters are numbered 1..N. Supply a count yourself only when using the D0 scalar form instead of the repeating array (e.g. `Patient.IdCount` alongside the single `IdQualifier`/`Id` fields).
 
 ### Nullable Fields
 Most fields are nullable (can be omitted or set to null). Only required fields in the schema must be provided.
@@ -201,6 +210,16 @@ See NCPDP External Code List (ECL) for complete reject code definitions. Common 
 ## Monetary Amounts
 
 All monetary amounts are represented as numbers with 2 decimal places. Values may be positive or negative (overpunch representation in raw NCPDP format is handled internally).
+
+## Documentation (Confluence)
+
+A Word reference document (`NCPDP-JSON-Schema-Reference.docx` in the repo root) is generated from these schemas for upload to Confluence. **After changing anything in this directory, regenerate it** from the repo root:
+
+```
+python scripts/gen_schema_docx.py
+```
+
+See [scripts/README.md](../../../scripts/README.md) for prerequisites, options, and Confluence upload steps. When adding fields, keep the NCPDP field code as a trailing parenthesized suffix in the `description` (e.g. `"Cardholder ID (C2)"`) — the generator extracts it into the documentation's field-code column.
 
 ## Questions?
 

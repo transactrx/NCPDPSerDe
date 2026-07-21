@@ -8,14 +8,14 @@ import (
 )
 
 type AdditionalDocumentation struct {
-	SegmentId                    ncpdp.SegmentId
-	TypeId                       *string `field:"code=2Q,order=2"`
+	SegmentId                    ncpdp.SegmentId `json:"-"`
+	TypeId                       *string         `field:"code=2Q,order=2"`
 	RequestPeriod                AdditionalDocumentationRequestPeriod
 	LengthOfNeed                 AdditionalDocumentationLengthOfNeed
 	PrescriberSupplierDateSigned *time.Time `field:"code=2T,format=YYYYMMdd,order=8"`
 	SupportingDocumentation      *string    `field:"code=2X,order=9"`
 
-	QuestionCount *int `field:"code=2Z,order=10"`
+	QuestionCount *int `field:"code=2Z,order=10,countfor=Questions"`
 	Questions     []AdditionalDocumentationQuestion
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`

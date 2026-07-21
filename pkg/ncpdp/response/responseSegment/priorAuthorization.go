@@ -8,7 +8,7 @@ import (
 )
 
 type PriorAuthorization struct {
-	SegmentId           ncpdp.SegmentId
+	SegmentId           ncpdp.SegmentId         `json:"-"`
 	ProcessedDate       *time.Time              `field:"code=PR,format=YYYYMMdd,order=2"`
 	EffectiveDate       *time.Time              `field:"code=PS,format=YYYYMMdd,order=3"`
 	ExpirationDate      *time.Time              `field:"code=PT,format=YYYYMMdd,order=4"`

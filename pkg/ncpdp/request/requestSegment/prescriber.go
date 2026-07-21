@@ -6,12 +6,12 @@ import (
 )
 
 type Prescriber struct {
-	SegmentId           ncpdp.SegmentId
-	IdQualifier         *string `field:"code=EZ,order=2"`
-	Id                  *string `field:"code=DB,order=3"`
-	LastName            *string `field:"code=DR,order=4"`
-	FirstName           *string `field:"code=2J,order=9"`
-	Phone               *string `field:"code=PM,order=5"`
+	SegmentId           ncpdp.SegmentId `json:"-"`
+	IdQualifier         *string         `field:"code=EZ,order=2"`
+	Id                  *string         `field:"code=DB,order=3"`
+	LastName            *string         `field:"code=DR,order=4"`
+	FirstName           *string         `field:"code=2J,order=9"`
+	Phone               *string         `field:"code=PM,order=5"`
 	Address             PrescriberAddress
 	PrimaryCareProvider PrimaryCareProvider
 	IdAssociatedState   *string `field:"code=ZK,order=14"`

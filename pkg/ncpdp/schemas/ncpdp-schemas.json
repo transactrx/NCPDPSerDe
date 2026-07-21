@@ -9,8 +9,6 @@
       "type": "object",
       "description": "NCPDP Request Header",
       "properties": {
-        "RawValue": { "type": "string", "description": "Raw header string" },
-        "Size": { "type": "integer", "description": "Header size in characters" },
         "Value": {
           "type": "object",
           "properties": {
@@ -18,7 +16,7 @@
             "Version": { "type": "string", "maxLength": 2, "description": "Version/Release Number (D0 or F6)" },
             "TransactionCode": { "type": "string", "maxLength": 2, "description": "Transaction Code (B1, B2, B3, E1, N1, N2, P1, P2, P3, P4, S1, S2, S3, C1, C2, C3)" },
             "Pcn": { "type": "string", "maxLength": 10, "description": "Processor Control Number" },
-            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Transaction Count (1-4)" },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Transaction Count (D.0 allows 1-4 claims per transmission; F6 allows exactly 1)" },
             "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2, "description": "Service Provider ID Qualifier (01=NPI, 05=Medicaid, etc.)" },
             "ServiceProviderId": { "type": "string", "maxLength": 15, "description": "Service Provider ID" },
             "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$", "description": "Date of Service (CCYYMMDD)" },
@@ -33,8 +31,6 @@
       "type": "object",
       "description": "NCPDP Response Header",
       "properties": {
-        "RawValue": { "type": "string", "description": "Raw header string" },
-        "Size": { "type": "integer", "description": "Header size in characters" },
         "Value": {
           "type": "object",
           "properties": {
@@ -51,15 +47,6 @@
       }
     },
 
-    "SegmentId": {
-      "type": "object",
-      "description": "Segment Identifier",
-      "properties": {
-        "Raw": { "type": ["string", "null"], "description": "Raw segment identifier" },
-        "Id": { "type": ["string", "null"], "maxLength": 2, "description": "Segment code (e.g., 01, 04, 07)" }
-      }
-    },
-
     "DynamicStruct": {
       "type": "object",
       "description": "Dynamic/extension field for non-standard data",
@@ -70,7 +57,6 @@
       "type": "object",
       "description": "Insurance Segment (AM04) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "Cardholder": {
           "type": "object",
           "properties": {
@@ -113,7 +99,6 @@
       "type": "object",
       "description": "Patient Segment (AM01) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IdCount": { "type": ["integer", "null"], "description": "Patient ID Count (RR) - F6" },
         "IdQualifier": { "type": ["string", "null"], "description": "Patient ID Qualifier (CX)" },
         "Id": { "type": ["string", "null"], "description": "Patient ID (CY)" },
@@ -166,7 +151,6 @@
       "type": "object",
       "description": "Claim Segment (AM07) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "PrescriptionServiceReference": {
           "type": "object",
           "properties": {
@@ -297,7 +281,6 @@
       "type": "object",
       "description": "Pricing Segment (AM11) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IngredientCostSubmitted": { "type": ["number", "null"], "description": "Ingredient Cost Submitted (D9)" },
         "DispensingFeeSubmitted": { "type": ["number", "null"], "description": "Dispensing Fee Submitted (DC)" },
         "ProfessionalServiceFeeSubmitted": { "type": ["number", "null"], "description": "Professional Service Fee Submitted (BE)" },
@@ -342,7 +325,6 @@
       "type": "object",
       "description": "Pharmacy Provider Segment (AM02) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IdQualifier": { "type": ["string", "null"], "description": "Pharmacy Provider ID Qualifier (EY)" },
         "Id": { "type": ["string", "null"], "description": "Pharmacy Provider ID (E9)" },
         "FirstName": { "type": ["string", "null"], "description": "Provider First Name (4A) - F6" },
@@ -355,7 +337,6 @@
       "type": "object",
       "description": "Prescriber Segment (AM03) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IdQualifier": { "type": ["string", "null"], "description": "Prescriber ID Qualifier (EZ)" },
         "Id": { "type": ["string", "null"], "description": "Prescriber ID (DB)" },
         "LastName": { "type": ["string", "null"], "description": "Prescriber Last Name (DR)" },
@@ -404,7 +385,6 @@
       "type": "object",
       "description": "Coordination of Benefits Segment (AM05) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "Count": { "type": ["integer", "null"], "description": "Other Payer Count (4C)" },
         "OtherPayer": {
           "type": "array",
@@ -494,7 +474,6 @@
       "type": "object",
       "description": "Workers Compensation Segment (AM06) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "InjuryDate": { "type": ["string", "null"], "format": "date", "description": "Date of Injury (DY)" },
         "Employer": {
           "type": "object",
@@ -557,7 +536,6 @@
       "type": "object",
       "description": "DUR/PPS Segment (AM08) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "Items": {
           "type": "array",
           "items": {
@@ -586,7 +564,6 @@
       "type": "object",
       "description": "Coupon Segment (AM09) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "Type": { "type": ["string", "null"], "description": "Coupon Type (KE)" },
         "Number": { "type": ["string", "null"], "description": "Coupon Number (ME)" },
         "Amount": { "type": ["number", "null"], "description": "Coupon Value Amount (NE)" },
@@ -598,7 +575,6 @@
       "type": "object",
       "description": "Compound Segment (AM10) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "DosageFormDescriptionCode": { "type": ["string", "null"], "description": "Compound Dosage Form Description Code (EF)" },
         "DispensingUnitFormIndicator": { "type": ["string", "null"], "description": "Compound Dispensing Unit Form Indicator (EG)" },
         "LevelOfComplexity": { "type": ["string", "null"], "description": "Compound Level of Complexity (AG) - F6" },
@@ -639,7 +615,6 @@
       "type": "object",
       "description": "Clinical Segment (AM13) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "DiagnosisCount": { "type": ["integer", "null"], "description": "Diagnosis Code Count (VE)" },
         "Diagnoses": {
           "type": "array",
@@ -673,7 +648,6 @@
       "type": "object",
       "description": "Additional Documentation Segment (AM14) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "TypeId": { "type": ["string", "null"], "description": "Additional Documentation Type ID (2Q)" },
         "RequestPeriod": {
           "type": "object",
@@ -715,7 +689,6 @@
       "type": "object",
       "description": "Facility Segment (AM15) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IdQualifier": { "type": ["string", "null"], "description": "Facility ID Qualifier (3Z) - F6" },
         "Id": { "type": ["string", "null"], "description": "Facility ID (8C)" },
         "Name": { "type": ["string", "null"], "description": "Facility Name (3Q)" },
@@ -739,7 +712,6 @@
       "type": "object",
       "description": "Narrative Segment (AM16) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "Message": { "type": ["string", "null"], "description": "Narrative Message (BM)" },
         "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
       }
@@ -749,7 +721,6 @@
       "type": "object",
       "description": "Prior Authorization Request and Billing Segment (AM12) - Request",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "RequestType": { "type": ["string", "null"], "description": "Prior Authorization Request Type (PA)" },
         "RequestPeriodBeginDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Request Period Begin Date (PB)" },
         "RequestPeriodEndDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Request Period End Date (PC)" },
@@ -784,7 +755,6 @@
       "type": "object",
       "description": "Intermediary Segment (AM19) - Request - F6",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IdCount": { "type": ["integer", "null"], "description": "Intermediary ID Count (8G)" },
         "Ids": {
           "type": "array",
@@ -808,7 +778,6 @@
       "type": "object",
       "description": "Last Known 4Rx Segment (AM37) - Request - F6",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IinNumber": { "type": ["string", "null"], "description": "Last Known IIN Number (3E)" },
         "ProcessorControlNumber": { "type": ["string", "null"], "description": "Last Known Processor Control Number (3F)" },
         "GroupId": { "type": ["string", "null"], "description": "Last Known Group ID (3G)" },
@@ -823,7 +792,6 @@
       "type": "object",
       "description": "N Transaction Payer Identification Segment (AM38) - Request - F6",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "PayerIin": { "type": ["string", "null"], "description": "Payer IIN (9Y)" },
         "PayerProcessorControlNumber": { "type": ["string", "null"], "description": "Payer Processor Control Number (9Z)" },
         "PayerCardholderId": { "type": ["string", "null"], "description": "Payer Cardholder ID (AA)" },
@@ -840,7 +808,6 @@
       "type": "object",
       "description": "Data Collection Segment (AMXX) - Request - Internal/Vendor-specific",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "InventoryCategoryCode": { "type": ["string", "null"] },
         "PatientId": { "type": ["string", "null"] },
         "PayerSequence": { "type": ["string", "null"] },
@@ -915,7 +882,6 @@
       "type": "object",
       "description": "Message Segment (AM20) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "Message": { "type": ["string", "null"], "description": "Message (F4)" },
         "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
       }
@@ -925,7 +891,6 @@
       "type": "object",
       "description": "Insurance Segment (AM25) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "GroupId": { "type": ["string", "null"], "description": "Group ID (C1)" },
         "PlanId": { "type": ["string", "null"], "description": "Plan ID (FO)" },
         "NetworkReimbursementId": { "type": ["string", "null"], "description": "Network Reimbursement ID (2F)" },
@@ -964,7 +929,6 @@
       "type": "object",
       "description": "Insurance Additional Information Segment (AM27) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "MedicarePartD": {
           "type": "object",
           "properties": {
@@ -986,7 +950,6 @@
       "type": "object",
       "description": "Patient Segment (AM29) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "IdCount": { "type": ["integer", "null"], "description": "Patient ID Count (RR) - F6" },
         "Ids": {
           "type": "array",
@@ -1009,7 +972,6 @@
       "type": "object",
       "description": "Response Status Segment (AM21) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "ResponseStatusCode": { "type": ["string", "null"], "description": "Response Status (AN) - A=Approved, C=Captured, D=DUR, P=Paid, R=Rejected" },
         "AuthorizationNumber": { "type": ["string", "null"], "description": "Authorization Number (F3)" },
         "RejectCodeCount": { "type": ["integer", "null"], "description": "Reject Count (FA)" },
@@ -1089,7 +1051,6 @@
       "type": "object",
       "description": "Response Claim Segment (AM22) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "PrescriptionServiceReference": {
           "type": "object",
           "properties": {
@@ -1173,7 +1134,6 @@
       "type": "object",
       "description": "Response Pricing Segment (AM23) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "PatientPayAmount": { "type": ["number", "null"], "description": "Patient Pay Amount (F5)" },
         "IngredientCostPaid": { "type": ["number", "null"], "description": "Ingredient Cost Paid (F6)" },
         "DispensingFeePaid": { "type": ["number", "null"], "description": "Dispensing Fee Paid (F7)" },
@@ -1282,7 +1242,6 @@
       "type": "object",
       "description": "Response DUR/PPS Segment (AM24) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "Items": {
           "type": "array",
           "items": {
@@ -1327,7 +1286,6 @@
       "type": "object",
       "description": "Response Prior Authorization Segment (AM26) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "ProcessedDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Processed Date (PR)" },
         "EffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Effective Date (PS)" },
         "ExpirationDate": { "type": ["string", "null"], "format": "date", "description": "Prior Authorization Expiration Date (PT)" },
@@ -1344,7 +1302,6 @@
       "type": "object",
       "description": "Response Coordination of Benefits Segment (AM28) - Response",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "OtherPayerCount": { "type": ["integer", "null"], "description": "Other Payer ID Count (NT)" },
         "OtherPayers": {
           "type": "array",
@@ -1378,7 +1335,6 @@
       "type": "object",
       "description": "Intermediary Segment (AM36) - Response - F6",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "AuthorizationCount": { "type": ["integer", "null"], "description": "Intermediary Authorization Count (8R)" },
         "Authorizations": {
           "type": "array",
@@ -1430,7 +1386,6 @@
       "type": "object",
       "description": "Other Related Benefit Detail Segment (AM39) - Response - F6",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "PlanType": { "type": ["string", "null"], "description": "Plan Type (KS)" },
         "LisLevel": { "type": ["string", "null"], "description": "LIS Level (KF)" },
         "LisEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "LIS Effective Date (KD)" },
@@ -1486,7 +1441,6 @@
       "type": "object",
       "description": "Provider Segment (AM40) - Response - F6",
       "properties": {
-        "SegmentId": { "$ref": "#/$defs/SegmentId" },
         "DataSourceOfInvalidProviderDetermination": { "type": ["string", "null"], "description": "Data Source of Invalid Provider Determination (ZV)" },
         "StateCodeForDataSourceOfInvalidProviderDetermination": { "type": ["string", "null"], "description": "State Code for Data Source of Invalid Provider Determination (ZZ)" },
         "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }

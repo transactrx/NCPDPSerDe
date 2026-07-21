@@ -13,7 +13,6 @@
     }
   },
   "Insurance": {
-    "SegmentId": { "Id": "04" },
     "Cardholder": {
       "Id": "12345678901",
       "FirstName": "JOHN",
@@ -24,7 +23,6 @@
     "PatientRelationshipCode": "1"
   },
   "Patient": {
-    "SegmentId": { "Id": "01" },
     "IdQualifier": "01",
     "Id": "12345678901",
     "BirthDate": "1980-05-15",
@@ -43,7 +41,6 @@
   "Claims": [
     {
       "Claim": {
-        "SegmentId": { "Id": "07" },
         "PrescriptionServiceReference": {
           "Qualifier": "1",
           "Number": "1234567890"
@@ -52,7 +49,7 @@
           "Qualifier": "03",
           "Id": "00000123456"
         },
-        "QuantityDispensed": 30.000,
+        "QuantityDispensed": 30.0,
         "FillNumber": "00",
         "DaysSupply": 30,
         "CompoundCode": "1",
@@ -63,20 +60,17 @@
         "OtherCoverageCode": "0"
       },
       "Pricing": {
-        "SegmentId": { "Id": "11" },
-        "IngredientCostSubmitted": 100.00,
-        "DispensingFeeSubmitted": 2.50,
-        "GrossAmountDue": 102.50,
-        "UsualAndCustmaryCharge": 102.50,
+        "IngredientCostSubmitted": 100.0,
+        "DispensingFeeSubmitted": 2.5,
+        "GrossAmountDue": 102.5,
+        "UsualAndCustmaryCharge": 102.5,
         "BasisOfCostDetermination": "01"
       },
       "Pharmacy": {
-        "SegmentId": { "Id": "02" },
         "IdQualifier": "01",
         "Id": "1234567890"
       },
       "Prescriber": {
-        "SegmentId": { "Id": "03" },
         "IdQualifier": "01",
         "Id": "1234567890",
         "LastName": "SMITH",

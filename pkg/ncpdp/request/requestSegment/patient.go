@@ -8,10 +8,10 @@ import (
 )
 
 type Patient struct {
-	SegmentId   ncpdp.SegmentId
-	IdCount     *int    `field:"code=RR,order=2"`
-	IdQualifier *string `field:"code=CX,order=3"`
-	Id          *string `field:"code=CY,order=4"`
+	SegmentId   ncpdp.SegmentId `json:"-"`
+	IdCount     *int            `field:"code=RR,order=2,countfor=Ids"`
+	IdQualifier *string         `field:"code=CX,order=3"`
+	Id          *string         `field:"code=CY,order=4"`
 	// Ids captures every CX/CY occurrence when the F6 patient ID repeats; the
 	// scalar IdQualifier/Id fields are kept for D0 backward compatibility.
 	Ids                    []PatientId

@@ -15,9 +15,11 @@ const (
 	layoutF6Tag = "layoutF6"
 )
 
+// RawValue and Size are internal bookkeeping populated during
+// deserialization/serialization; they are excluded from JSON.
 type NcpdpHeader[V RequestHeader | ResponseHeader | FinancialRequestHeader | FinancialResponseHeader] struct {
-	RawValue string
-	Size     int
+	RawValue string `json:"-"`
+	Size     int    `json:"-"`
 	Value    V
 }
 

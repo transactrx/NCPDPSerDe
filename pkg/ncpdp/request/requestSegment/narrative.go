@@ -6,7 +6,7 @@ import (
 )
 
 type Narrative struct {
-	SegmentId     ncpdp.SegmentId
+	SegmentId     ncpdp.SegmentId         `json:"-"`
 	Message       *string                 `field:"code=BM,order=2"`
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

@@ -29,6 +29,12 @@ type FieldAttribute struct {
 	Overpunch     bool
 	Order         int
 	Dynamic       bool
+
+	// CountFor marks a counter field that is derived automatically during
+	// serialization: either the name of a sibling slice field whose length
+	// this field reports, or CountForIndex for a 1-based position counter
+	// inside a repeating item.
+	CountFor string
 }
 
 type SegmentAttribute struct {
@@ -102,7 +108,12 @@ const (
 	rawFieldTag     = "rawField"
 	OrderTag        = "order"
 	dynamicTag      = "dynamic"
+	countForTag     = "countfor"
 )
+
+// CountForIndex is the reserved countfor tag value marking a per-item
+// counter (1-based position within the repeating slice).
+const CountForIndex = "index"
 
 var transactionTypeRegistry = map[string]reflect.Type{}
 var registerOnce sync.Once
@@ -125,6 +136,19 @@ func getRegisteredType(key string) (reflect.Type, error) {
 
 func GetRequestType(tranCode string) (reflect.Type, error) {
 	return getRegisteredType(tranCode + "|request")
+}
+
+// TransactionTypes returns a copy of the registered transaction type map,
+// keyed by "<transactionCode>|request" or "<transactionCode>|response".
+func TransactionTypes() map[string]reflect.Type {
+	RegisterTypes()
+
+	types := make(map[string]reflect.Type, len(transactionTypeRegistry))
+	for k, v := range transactionTypeRegistry {
+		types[k] = v
+	}
+
+	return types
 }
 
 func GetResponseType(tranCode string) (reflect.Type, error) {
@@ -244,25 +268,25 @@ func GetFieldAttribute(tag string) (FieldAttribute, error) {
 	tagFields := strings.Split(tag, ",")
 
 	for _, tagField := range tagFields {
-		if strings.HasPrefix(tagField, CodeTag) {
-			code := parseTag(tagField, CodeTag)
-			attribute.Code = code
+		key, value, found := strings.Cut(tagField, "=")
+		if !found {
+			continue
+		}
 
-			if code == dynamicTag {
-				attribute.Dynamic = true
-			}
-		}
-		if strings.HasPrefix(tagField, formatTag) {
-			attribute.Format = inferFormat(parseTag(tagField, formatTag))
-		}
-		if strings.HasPrefix(tagField, decimalTag) {
-			attribute.DecimalPlaces, _ = strconv.Atoi(parseTag(tagField, decimalTag))
-		}
-		if strings.HasPrefix(tagField, OrderTag) {
-			attribute.Order, _ = strconv.Atoi(parseTag(tagField, OrderTag))
-		}
-		if strings.HasPrefix(tagField, overpunchTag) {
-			attribute.Overpunch, _ = strconv.ParseBool(parseTag(tagField, overpunchTag))
+		switch key {
+		case CodeTag:
+			attribute.Code = value
+			attribute.Dynamic = value == dynamicTag
+		case formatTag:
+			attribute.Format = inferFormat(value)
+		case decimalTag:
+			attribute.DecimalPlaces, _ = strconv.Atoi(value)
+		case OrderTag:
+			attribute.Order, _ = strconv.Atoi(value)
+		case overpunchTag:
+			attribute.Overpunch, _ = strconv.ParseBool(value)
+		case countForTag:
+			attribute.CountFor = value
 		}
 	}
 

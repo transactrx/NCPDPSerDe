@@ -8,11 +8,11 @@ import (
 )
 
 type Claim struct {
-	SegmentId                          ncpdp.SegmentId
+	SegmentId                          ncpdp.SegmentId `json:"-"`
 	PrescriptionServiceReference       PrescriptionServiceReference
 	ProductService                     ProductService
 	AssociatedPrescriptionService      AssociatedPrescriptionService
-	ProcedureModifierCodeCount         *int `field:"code=SE,order=8"`
+	ProcedureModifierCodeCount         *int `field:"code=SE,order=8,countfor=ProcedureModifierCodes"`
 	ProcedureModifierCodes             []ProcedureModifierCode
 	QuantityDispensed                  *float64   `field:"code=E7,decimalPlaces=3,order=10"`
 	FillNumber                         *string    `field:"code=D3,order=11"`
@@ -22,7 +22,7 @@ type Claim struct {
 	DateWritten                        *time.Time `field:"code=DE,format=YYYYMMdd,order=15"`
 	RefillsAuthorized                  *int       `field:"code=DF,order=16"`
 	OriginCode                         *string    `field:"code=DJ,order=17"`
-	SubmissionClarificationCodeCount   *int       `field:"code=NX,order=18"`
+	SubmissionClarificationCodeCount   *int       `field:"code=NX,order=18,countfor=SubmissionClarificationCodes"`
 	SubmissionClarificationCodes       []SubmissionClarificationCode
 	QuantityPrescribed                 *float64 `field:"code=ET,decimalPlaces=3,order=20"`
 	OtherCoverageCode                  *string  `field:"code=C8,order=21"`
@@ -45,7 +45,7 @@ type Claim struct {
 	MedicaidSubrogationControlNumber   *string  `field:"code=N4,order=42"`
 	PharmacyServiceType                *string  `field:"code=U7,order=43"`
 	ReconciliationId                   *string  `field:"code=34,order=44"`
-	SubmissionTypeCodeCount            *int     `field:"code=KZ,order=49"`
+	SubmissionTypeCodeCount            *int     `field:"code=KZ,order=49,countfor=SubmissionTypeCodes"`
 	SubmissionTypeCodes                []SubmissionTypeCode
 	MultipleOrderGroupId               *string  `field:"code=M3,order=51"`
 	MultipleOrderGroupReasonCode       *string  `field:"code=M4,order=52"`

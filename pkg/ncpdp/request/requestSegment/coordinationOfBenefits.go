@@ -8,9 +8,9 @@ import (
 )
 
 type CoordinationOfBenefits struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
-	Count      *int `field:"code=4C,order=2"`
+	Count      *int `field:"code=4C,order=2,countfor=OtherPayer"`
 	OtherPayer []OtherPayer
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
@@ -23,26 +23,26 @@ type OtherPayer struct {
 	Date          *time.Time `field:"code=E8,format=YYYYMMdd,order=6"`
 	ControlNumber *string    `field:"code=A7,order=7"`
 
-	OtherPayerAmountPaidCount *int `field:"code=HB,order=8"`
+	OtherPayerAmountPaidCount *int `field:"code=HB,order=8,countfor=OtherPayerAmountsPaid"`
 	OtherPayerAmountsPaid     []OtherPayerAmountPaid
 
-	OtherPayerRejectCount *int `field:"code=5E,order=11"`
+	OtherPayerRejectCount *int `field:"code=5E,order=11,countfor=OtherPayerRejects"`
 	OtherPayerRejects     []OtherPayerReject
 
-	OtherPayerPatientResponsibilityAmountCount *int `field:"code=NR,order=13"`
+	OtherPayerPatientResponsibilityAmountCount *int `field:"code=NR,order=13,countfor=OtherPayerPatientResponsibilityAmounts"`
 	OtherPayerPatientResponsibilityAmounts     []OtherPayerPatientResponsibility
 
-	BenefitStageCount   *int `field:"code=MU,order=16"`
+	BenefitStageCount   *int `field:"code=MU,order=16,countfor=BenefitStageAmounts"`
 	BenefitStageAmounts []BenefitStage
 
 	AdjudicatedProgramType       *string `field:"code=9T,order=19"`
 	ReconciliationId             *string `field:"code=9V,order=20"`
 	PercentageTaxExemptIndicator *string `field:"code=P7,order=21"`
 
-	RegulatoryFeeTypeCount *int `field:"code=P9,order=22"`
+	RegulatoryFeeTypeCount *int `field:"code=P9,order=22,countfor=RegulatoryFees"`
 	RegulatoryFees         []OtherPayerRegulatoryFee
 
-	BenefitStageIndicatorCount *int `field:"code=9W,order=25"`
+	BenefitStageIndicatorCount *int `field:"code=9W,order=25,countfor=BenefitStageIndicators"`
 	BenefitStageIndicators     []BenefitStageIndicator
 }
 

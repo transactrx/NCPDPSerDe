@@ -8,8 +8,8 @@ import (
 )
 
 type CoordinationOfBenefits struct {
-	SegmentId       ncpdp.SegmentId
-	OtherPayerCount *int `field:"code=NT,order=2"`
+	SegmentId       ncpdp.SegmentId `json:"-"`
+	OtherPayerCount *int            `field:"code=NT,order=2,countfor=OtherPayers"`
 	OtherPayers     []OtherPayer
 	DynamicFields   []dynamic.DynamicStruct `field:"code=dynamic"`
 }
