@@ -145,7 +145,7 @@ func addType(meta *Metadata, structType reflect.Type, kind string) (string, erro
 // Build the description of a single struct field, or nil when the field
 // does not participate in serialization.
 func buildFieldMeta(meta *Metadata, field reflect.StructField) (*Field, error) {
-	if tag := field.Tag.Get(headerTagName); tag != "" {
+	if field.Tag.Get(headerTagName) != "" {
 		return buildHeaderFieldMeta(meta, field)
 	}
 

@@ -273,31 +273,7 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes m
 	rawFieldMap := make(map[int]string)
 
 	for i := 0; i < baseType.NumField(); i++ {
-		field := baseType.Field(i)
-		fieldVal := baseVal.FieldByName(field.Name)
-
-		tag := field.Tag.Get(serde.FieldTag)
-		fieldAttribute, err := serde.GetFieldAttribute(tag)
-		if err != nil {
-			return rawFieldMap, err
-		}
-
-		if fieldAttribute.CountFor != serde.Empty {
-			if count, ok := derivedCount(baseVal, &fieldAttribute, itemIndex); ok {
-				if !skipCodes[fieldAttribute.Code] {
-					rawField, err := buildField(fieldAttribute, reflect.ValueOf(count))
-					if err != nil {
-						return rawFieldMap, err
-					}
-					rawFieldMap[fieldAttribute.Order] = rawField
-				}
-				continue
-			}
-			// No derivable count (empty slice, or a per-item counter outside a
-			// slice): fall through and serialize any supplied value as usual.
-		}
-
-		fieldResult, err := buildStructField(field.Type, fieldVal, &fieldAttribute, skipCodes, itemIndex)
+		fieldResult, err := buildFieldMapEntries(baseType.Field(i), baseVal, skipCodes, itemIndex)
 		if err != nil {
 			return rawFieldMap, err
 		}
@@ -308,6 +284,40 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes m
 	}
 
 	return rawFieldMap, nil
+}
+
+// buildFieldMapEntries serializes a single struct field into raw field map
+// entries, deriving countfor-tagged counter values automatically.
+func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skipCodes map[string]bool, itemIndex int) (map[int]string, error) {
+	fieldAttribute, err := serde.GetFieldAttribute(field.Tag.Get(serde.FieldTag))
+	if err != nil {
+		return nil, err
+	}
+
+	if fieldAttribute.CountFor != serde.Empty {
+		if count, ok := derivedCount(baseVal, &fieldAttribute, itemIndex); ok {
+			return buildCountField(fieldAttribute, count, skipCodes)
+		}
+		// No derivable count (empty slice, or a per-item counter outside a
+		// slice): fall through and serialize any supplied value as usual.
+	}
+
+	return buildStructField(field.Type, baseVal.FieldByName(field.Name), &fieldAttribute, skipCodes, itemIndex)
+}
+
+// buildCountField renders a derived counter value as a raw field map entry,
+// honoring skipCodes like any other field.
+func buildCountField(fieldAttribute serde.FieldAttribute, count int, skipCodes map[string]bool) (map[int]string, error) {
+	if skipCodes[fieldAttribute.Code] {
+		return nil, nil
+	}
+
+	rawField, err := buildField(fieldAttribute, reflect.ValueOf(count))
+	if err != nil {
+		return nil, err
+	}
+
+	return map[int]string{fieldAttribute.Order: rawField}, nil
 }
 
 // derivedCount resolves the automatic value for a countfor-tagged field:

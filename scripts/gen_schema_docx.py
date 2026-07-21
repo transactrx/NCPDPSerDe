@@ -77,14 +77,19 @@ def ordered_files(directory):
     return result
 
 
+def base_type(schema):
+    """Schema 'type' with nullable ['x', 'null'] lists collapsed to 'x'."""
+    t = schema.get("type")
+    if isinstance(t, list):
+        return next((x for x in t if x != "null"), "null")
+    return t
+
+
 def type_display(schema):
     """Human-readable type for a schema node."""
     if "$ref" in schema:
         return schema["$ref"].rsplit("/", 1)[-1]
-    t = schema.get("type")
-    if isinstance(t, list):
-        base = [x for x in t if x != "null"]
-        t = base[0] if base else "null"
+    t = base_type(schema)
     if t == "array":
         items = schema.get("items", {})
         return f"array of {type_display(items)}" if items else "array"
@@ -113,7 +118,10 @@ def constraints_display(schema):
 
 
 CODE_RE = re.compile(r"\(([A-Z0-9]{2})\)\s*$")
-F6_RE = re.compile(r"\s*-\s*F6\s*$")
+# No leading \s* — re.search would retry it at every offset of an all-space
+# suffix (super-linear); any whitespace left before the '-' is stripped by the
+# callers anyway.
+F6_RE = re.compile(r"-\s*F6\s*$")
 
 
 def parse_desc(description):
@@ -137,43 +145,45 @@ def split_code(description):
     return code, desc
 
 
+def field_row(path, sub, type_str=None, fallback_desc=""):
+    """(path, code, version, type, constraints, desc) table row for a field."""
+    code, desc, is_f6 = parse_desc(sub.get("description", ""))
+    return (path, code, "F6" if is_f6 else "", type_str or type_display(sub),
+            constraints_display(sub), desc or fallback_desc)
+
+
 def walk_fields(properties, prefix, rows):
     """Flatten nested object properties into
     (path, code, version, type, constraints, desc) rows. The version column
     holds 'F6' for F6-only fields and is blank for fields available in both
     D.0 and F6."""
     for name, sub in properties.items():
-        path = f"{prefix}{name}"
-        if "$ref" in sub:
-            ref = sub["$ref"].rsplit("/", 1)[-1]
-            rows.append((path, "", "", ref, "", f"See shared definition: {ref}"))
-            continue
-        t = sub.get("type")
-        if isinstance(t, list):
-            t = next((x for x in t if x != "null"), t[0])
-        if t == "object" and "properties" in sub:
-            walk_fields(visible_properties(sub), path + ".", rows)
-        elif t == "array":
-            items = sub.get("items", {})
-            if "$ref" in items:
-                code, desc, is_f6 = parse_desc(sub.get("description", ""))
-                ref = items["$ref"].rsplit("/", 1)[-1]
-                rows.append((path, code, "F6" if is_f6 else "", f"array of {ref}",
-                             constraints_display(sub),
-                             desc or f"See shared definition: {ref}"))
-            elif items.get("type") == "object" and "properties" in items:
-                code, desc, is_f6 = parse_desc(sub.get("description", ""))
-                rows.append((path, code, "F6" if is_f6 else "",
-                             "array (repeating group)", constraints_display(sub), desc))
-                walk_fields(items["properties"], path + "[]. ".rstrip() , rows)
-            else:
-                code, desc, is_f6 = parse_desc(sub.get("description", ""))
-                rows.append((path, code, "F6" if is_f6 else "", type_display(sub),
-                             constraints_display(sub), desc))
-        else:
-            code, desc, is_f6 = parse_desc(sub.get("description", ""))
-            rows.append((path, code, "F6" if is_f6 else "", type_display(sub),
-                         constraints_display(sub), desc))
+        walk_field(f"{prefix}{name}", sub, rows)
+
+
+def walk_field(path, sub, rows):
+    if "$ref" in sub:
+        ref = sub["$ref"].rsplit("/", 1)[-1]
+        rows.append((path, "", "", ref, "", f"See shared definition: {ref}"))
+    elif base_type(sub) == "object" and "properties" in sub:
+        walk_fields(visible_properties(sub), path + ".", rows)
+    elif base_type(sub) == "array":
+        walk_array_field(path, sub, rows)
+    else:
+        rows.append(field_row(path, sub))
+
+
+def walk_array_field(path, sub, rows):
+    items = sub.get("items", {})
+    if "$ref" in items:
+        ref = items["$ref"].rsplit("/", 1)[-1]
+        rows.append(field_row(path, sub, type_str=f"array of {ref}",
+                              fallback_desc=f"See shared definition: {ref}"))
+    elif items.get("type") == "object" and "properties" in items:
+        rows.append(field_row(path, sub, type_str="array (repeating group)"))
+        walk_fields(items["properties"], path + "[].", rows)
+    else:
+        rows.append(field_row(path, sub))
 
 
 def leaf_placeholder(schema):
@@ -181,9 +191,7 @@ def leaf_placeholder(schema):
     e.g. 'string (C2, max 20)' or '\"B1\" (constant)'."""
     if "const" in schema:
         return f'"{schema["const"]}" (constant)'
-    t = schema.get("type")
-    if isinstance(t, list):
-        t = next((x for x in t if x != "null"), t[0])
+    t = base_type(schema)
     parts = []
     code, _, is_f6 = parse_desc(schema.get("description", ""))
     if code:
@@ -211,9 +219,7 @@ def json_skeleton(schema, defs, expand_refs=False, _depth=0):
         if expand_refs and ref in defs and _depth < 20:
             return json_skeleton(defs[ref], defs, expand_refs, _depth + 1)
         return f"{{...}} see: {ref}"
-    t = schema.get("type")
-    if isinstance(t, list):
-        t = next((x for x in t if x != "null"), t[0])
+    t = base_type(schema)
     if t == "object" and "properties" in schema:
         return {
             name: json_skeleton(sub, defs, expand_refs, _depth + 1)
@@ -273,11 +279,11 @@ def add_code_block(doc, text, font_size=8):
     run.font.name = "Consolas"
     run.font.size = Pt(font_size)
     # shade the paragraph background light gray
-    pPr = p._p.get_or_add_pPr()
+    p_pr = p._p.get_or_add_pPr()
     shd = OxmlElement("w:shd")
     shd.set(qn("w:val"), "clear")
     shd.set(qn("w:fill"), "F2F2F2")
-    pPr.append(shd)
+    p_pr.append(shd)
     return p
 
 
@@ -293,63 +299,78 @@ def field_table(doc, def_schema):
         )
 
 
-def transaction_section(doc, schema, defs):
-    doc.add_heading(schema.get("title", "Transaction"), level=2)
-    if schema.get("description"):
-        doc.add_paragraph(schema["description"])
-    required = set(schema.get("required", []))
+def is_claims_array(sub):
+    """A transaction's repeating claim-record array (inline object items)."""
+    return sub.get("type") == "array" and "properties" in sub.get("items", {})
 
-    # Top-level structure table
-    rows = []
-    claims_schema = None
-    claims_name = None
-    for name, sub in schema.get("properties", {}).items():
-        req = "Yes" if name in required else "No"
-        if "$ref" in sub:
-            ref = sub["$ref"].rsplit("/", 1)[-1]
-            desc = defs.get(ref, {}).get("description", "")
-            rows.append((name, ref, req, desc))
-        elif sub.get("type") == "array" and "properties" in sub.get("items", {}):
-            claims_schema, claims_name = sub, name
-            rows.append((name, "array of claim records", req, sub.get("description", "")))
-        elif sub.get("type") == "array" and "$ref" in sub.get("items", {}):
-            ref = sub["items"]["$ref"].rsplit("/", 1)[-1]
-            rows.append((name, f"array of {ref}", req, sub.get("description", "")))
-        else:
-            rows.append((name, type_display(sub), req, sub.get("description", "")))
+
+def structure_row(name, sub, req, defs):
+    """(property, type, required, description) row for the structure table."""
+    if "$ref" in sub:
+        ref = sub["$ref"].rsplit("/", 1)[-1]
+        return (name, ref, req, defs.get(ref, {}).get("description", ""))
+    if is_claims_array(sub):
+        return (name, "array of claim records", req, sub.get("description", ""))
+    if sub.get("type") == "array" and "$ref" in sub.get("items", {}):
+        ref = sub["items"]["$ref"].rsplit("/", 1)[-1]
+        return (name, f"array of {ref}", req, sub.get("description", ""))
+    return (name, type_display(sub), req, sub.get("description", ""))
+
+
+def add_structure_table(doc, schema, defs):
+    required = set(schema.get("required", []))
+    rows = [structure_row(name, sub, "Yes" if name in required else "No", defs)
+            for name, sub in schema.get("properties", {}).items()]
     doc.add_heading("Structure", level=3)
     add_table(doc, ["Property", "Type", "Required", "Description"], rows,
               widths=[1.4, 1.9, 0.7, 3.4])
 
-    # Header field detail
+
+def add_header_fields(doc, schema):
     header = schema.get("properties", {}).get("Header", {})
     value = header.get("properties", {}).get("Value", {})
-    if value.get("properties"):
-        doc.add_heading("Header Fields (Header.Value)", level=3)
-        hreq = set(value.get("required", []))
-        rows = []
-        for name, sub in value["properties"].items():
-            code, desc = split_code(sub.get("description", ""))
-            rows.append((name, type_display(sub), "Yes" if name in hreq else "No",
-                         constraints_display(sub), desc))
-        add_table(doc, ["Field", "Type", "Required", "Constraints", "Description"],
-                  rows, widths=[1.9, 0.8, 0.7, 1.6, 2.4])
+    if not value.get("properties"):
+        return
+    doc.add_heading("Header Fields (Header.Value)", level=3)
+    hreq = set(value.get("required", []))
+    rows = []
+    for name, sub in value["properties"].items():
+        _, desc = split_code(sub.get("description", ""))
+        rows.append((name, type_display(sub), "Yes" if name in hreq else "No",
+                     constraints_display(sub), desc))
+    add_table(doc, ["Field", "Type", "Required", "Constraints", "Description"],
+              rows, widths=[1.9, 0.8, 0.7, 1.6, 2.4])
 
-    # Per-claim segment list
-    if claims_schema is not None:
+
+def claim_segment_row(name, sub, defs):
+    if "$ref" in sub:
+        ref = sub["$ref"].rsplit("/", 1)[-1]
+        return (name, ref, defs.get(ref, {}).get("description", ""))
+    if sub.get("type") == "array" and "$ref" in sub.get("items", {}):
+        ref = sub["items"]["$ref"].rsplit("/", 1)[-1]
+        return (name, f"array of {ref}", sub.get("description", ""))
+    return (name, type_display(sub), sub.get("description", ""))
+
+
+def add_claim_segments(doc, schema, defs):
+    claims = [(name, sub) for name, sub in schema.get("properties", {}).items()
+              if is_claims_array(sub)]
+    for claims_name, claims_schema in claims:
         doc.add_heading(f"Per-Claim Segments ({claims_name}[])", level=3)
-        rows = []
-        for name, sub in visible_properties(claims_schema["items"]).items():
-            if "$ref" in sub:
-                ref = sub["$ref"].rsplit("/", 1)[-1]
-                rows.append((name, ref, defs.get(ref, {}).get("description", "")))
-            elif sub.get("type") == "array" and "$ref" in sub.get("items", {}):
-                ref = sub["items"]["$ref"].rsplit("/", 1)[-1]
-                rows.append((name, f"array of {ref}", sub.get("description", "")))
-            else:
-                rows.append((name, type_display(sub), sub.get("description", "")))
+        rows = [claim_segment_row(name, sub, defs)
+                for name, sub in visible_properties(claims_schema["items"]).items()]
         add_table(doc, ["Property", "Type", "Description"], rows,
                   widths=[1.9, 2.2, 3.3])
+
+
+def transaction_section(doc, schema, defs):
+    doc.add_heading(schema.get("title", "Transaction"), level=2)
+    if schema.get("description"):
+        doc.add_paragraph(schema["description"])
+
+    add_structure_table(doc, schema, defs)
+    add_header_fields(doc, schema)
+    add_claim_segments(doc, schema, defs)
 
     # Full JSON layout skeleton (segment refs point to the shared definitions,
     # whose own full layouts appear in the Segment and Type Definitions section)

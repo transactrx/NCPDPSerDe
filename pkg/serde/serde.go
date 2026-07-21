@@ -268,28 +268,25 @@ func GetFieldAttribute(tag string) (FieldAttribute, error) {
 	tagFields := strings.Split(tag, ",")
 
 	for _, tagField := range tagFields {
-		if strings.HasPrefix(tagField, CodeTag) {
-			code := parseTag(tagField, CodeTag)
-			attribute.Code = code
+		key, value, found := strings.Cut(tagField, "=")
+		if !found {
+			continue
+		}
 
-			if code == dynamicTag {
-				attribute.Dynamic = true
-			}
-		}
-		if strings.HasPrefix(tagField, formatTag) {
-			attribute.Format = inferFormat(parseTag(tagField, formatTag))
-		}
-		if strings.HasPrefix(tagField, decimalTag) {
-			attribute.DecimalPlaces, _ = strconv.Atoi(parseTag(tagField, decimalTag))
-		}
-		if strings.HasPrefix(tagField, OrderTag) {
-			attribute.Order, _ = strconv.Atoi(parseTag(tagField, OrderTag))
-		}
-		if strings.HasPrefix(tagField, overpunchTag) {
-			attribute.Overpunch, _ = strconv.ParseBool(parseTag(tagField, overpunchTag))
-		}
-		if strings.HasPrefix(tagField, countForTag) {
-			attribute.CountFor = parseTag(tagField, countForTag)
+		switch key {
+		case CodeTag:
+			attribute.Code = value
+			attribute.Dynamic = value == dynamicTag
+		case formatTag:
+			attribute.Format = inferFormat(value)
+		case decimalTag:
+			attribute.DecimalPlaces, _ = strconv.Atoi(value)
+		case OrderTag:
+			attribute.Order, _ = strconv.Atoi(value)
+		case overpunchTag:
+			attribute.Overpunch, _ = strconv.ParseBool(value)
+		case countForTag:
+			attribute.CountFor = value
 		}
 	}
 
