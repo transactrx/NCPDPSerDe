@@ -19,7 +19,7 @@ type ServiceReversal struct {
 }
 
 type ServiceReversalRecord struct {
-	Raw                    string                                `field:"code=rawgroup"`
+	Raw                    string                                `field:"code=rawgroup" json:"-"`
 	Claim                  requestsegment.Claim                  `segment:"code=AM07,order=1"`
 	CoordinationOfBenefits requestsegment.CoordinationOfBenefits `segment:"code=AM05,order=2"`
 	DataCollection         requestsegment.DataCollection         `segment:"code=AMXX,order=99"`

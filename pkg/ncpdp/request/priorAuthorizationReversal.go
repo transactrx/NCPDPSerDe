@@ -19,7 +19,7 @@ type PriorAuthorizationReversal struct {
 }
 
 type PriorAuthorizationReversalRecord struct {
-	Raw             string                                             `field:"code=rawgroup"`
+	Raw             string                                             `field:"code=rawgroup" json:"-"`
 	Authorization   requestsegment.PriorAuthorizationRequestAndBilling `segment:"code=AM12,order=1"`
 	DataCollection  requestsegment.DataCollection                      `segment:"code=AMXX,order=99"`
 	DynamicSegments []dynamic.DynamicStruct                            `segment:"code=dynamic,order=100"`

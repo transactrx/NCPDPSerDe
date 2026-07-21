@@ -8,16 +8,14 @@
     "Header": {
       "type": "object",
       "properties": {
-        "RawValue": { "type": "string" },
-        "Size": { "type": "integer" },
         "Value": {
           "type": "object",
           "properties": {
-            "Bin": { "type": "string", "maxLength": 6 },
-            "Version": { "type": "string", "maxLength": 2 },
+            "Bin": { "type": "string", "maxLength": 8, "description": "BIN Number (D.0, 6 characters) or IIN (F6, 8 characters)" },
+            "Version": { "type": "string", "maxLength": 2, "description": "Version/Release Number (D0 or F6)" },
             "TransactionCode": { "type": "string", "const": "P1" },
             "Pcn": { "type": "string", "maxLength": 10 },
-            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Transaction Count (D.0 allows 1-4 claims per transmission; F6 allows exactly 1)" },
             "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
             "ServiceProviderId": { "type": "string", "maxLength": 15 },
             "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" },
@@ -35,7 +33,6 @@
       "items": {
         "type": "object",
         "properties": {
-          "Raw": { "type": "string" },
           "Claim": { "$ref": "../ncpdp-schemas.json#/$defs/request.Claim" },
           "Pricing": { "$ref": "../ncpdp-schemas.json#/$defs/request.Pricing" },
           "Authorization": { "$ref": "../ncpdp-schemas.json#/$defs/request.PriorAuthorizationRequestAndBilling" },
@@ -50,6 +47,7 @@
           "Facility": { "$ref": "../ncpdp-schemas.json#/$defs/request.Facility" },
           "Narrative": { "$ref": "../ncpdp-schemas.json#/$defs/request.Narrative" },
           "DataCollection": { "$ref": "../ncpdp-schemas.json#/$defs/request.DataCollection" },
+          "Intermediary": { "$ref": "../ncpdp-schemas.json#/$defs/request.Intermediary" },
           "DynamicSegments": { "type": "array", "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" } }
         }
       }

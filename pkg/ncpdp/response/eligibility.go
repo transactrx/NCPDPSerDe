@@ -21,7 +21,7 @@ type Eligibility struct {
 }
 
 type EligibilityRecord struct {
-	Raw                       string                                    `field:"code=rawgroup"`
+	Raw                       string                                    `field:"code=rawgroup" json:"-"`
 	Status                    responsesegment.Status                    `segment:"code=AM21,order=1"`
 	CoordinationOfBenefits    responsesegment.CoordinationOfBenefits    `segment:"code=AM28,order=2"`
 	OtherRelatedBenefitDetail responsesegment.OtherRelatedBenefitDetail `segment:"code=AM39,order=3"`

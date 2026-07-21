@@ -8,7 +8,7 @@ import (
 )
 
 type DataCollection struct {
-	SegmentId                                   ncpdp.SegmentId
+	SegmentId                                   ncpdp.SegmentId         `json:"-"`
 	InventoryCategoryCode                       *string                 `field:"code=&A,order=2"`
 	PatientId                                   *string                 `field:"code=&B,order=3"` //Not de-identified
 	PayerSequence                               *string                 `field:"code=&C,order=4"`

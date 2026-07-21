@@ -6,9 +6,9 @@ import (
 )
 
 type Intermediary struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
-	IdCount *int `field:"code=8G,order=2"`
+	IdCount *int `field:"code=8G,order=2,countfor=Ids"`
 	Ids     []IntermediaryId
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`

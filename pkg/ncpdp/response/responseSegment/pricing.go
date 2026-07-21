@@ -6,18 +6,18 @@ import (
 )
 
 type Pricing struct {
-	SegmentId                                                    ncpdp.SegmentId
-	PatientPayAmount                                             *float64 `field:"code=F5,decimalPlaces=2,overpunch=true,order=2"`
-	IngredientCostPaid                                           *float64 `field:"code=F6,decimalPlaces=2,overpunch=true,order=3"`
-	DispensingFeePaid                                            *float64 `field:"code=F7,decimalPlaces=2,overpunch=true,order=4"`
-	TaxExemptIndicator                                           *string  `field:"code=AV,order=5"`
-	FlatSalesTaxAmountPaid                                       *float64 `field:"code=AW,decimalPlaces=2,overpunch=true,order=6"`
-	PercentageSalesTaxAmountPaid                                 *float64 `field:"code=AX,decimalPlaces=2,overpunch=true,order=7"`
-	PercentageSalesTaxRatePaid                                   *float64 `field:"code=AY,decimalPlaces=4,overpunch=true,order=8"`
-	PercentageSalesTaxBasisPaid                                  *string  `field:"code=AZ,order=9"`
-	IncentiveAmountPaid                                          *float64 `field:"code=FL,decimalPlaces=2,overpunch=true,order=10"`
-	ProfessionalServiceFeePaid                                   *float64 `field:"code=J1,decimalPlaces=2,overpunch=true,order=11"`
-	OtherAmountPaidCount                                         *int     `field:"code=J2,order=12"`
+	SegmentId                                                    ncpdp.SegmentId `json:"-"`
+	PatientPayAmount                                             *float64        `field:"code=F5,decimalPlaces=2,overpunch=true,order=2"`
+	IngredientCostPaid                                           *float64        `field:"code=F6,decimalPlaces=2,overpunch=true,order=3"`
+	DispensingFeePaid                                            *float64        `field:"code=F7,decimalPlaces=2,overpunch=true,order=4"`
+	TaxExemptIndicator                                           *string         `field:"code=AV,order=5"`
+	FlatSalesTaxAmountPaid                                       *float64        `field:"code=AW,decimalPlaces=2,overpunch=true,order=6"`
+	PercentageSalesTaxAmountPaid                                 *float64        `field:"code=AX,decimalPlaces=2,overpunch=true,order=7"`
+	PercentageSalesTaxRatePaid                                   *float64        `field:"code=AY,decimalPlaces=4,overpunch=true,order=8"`
+	PercentageSalesTaxBasisPaid                                  *string         `field:"code=AZ,order=9"`
+	IncentiveAmountPaid                                          *float64        `field:"code=FL,decimalPlaces=2,overpunch=true,order=10"`
+	ProfessionalServiceFeePaid                                   *float64        `field:"code=J1,decimalPlaces=2,overpunch=true,order=11"`
+	OtherAmountPaidCount                                         *int            `field:"code=J2,order=12,countfor=OtherAmountsPaid"`
 	OtherAmountsPaid                                             []OtherAmountPaid
 	OtherPayerAmountRecognized                                   *float64 `field:"code=J5,decimalPlaces=2,overpunch=true,order=15"`
 	TotalAmountPaid                                              *float64 `field:"code=F9,decimalPlaces=2,overpunch=true,order=16"`
@@ -34,7 +34,7 @@ type Pricing struct {
 	PatientSalesTaxAmount                                        *float64 `field:"code=EQ,decimalPlaces=2,overpunch=true,order=30"`
 	PlanSalesTaxAmount                                           *float64 `field:"code=2Y,decimalPlaces=2,overpunch=true,order=31"`
 	CoinsuranceAmount                                            *float64 `field:"code=4U,decimalPlaces=2,overpunch=true,order=32"`
-	BenefitStageCount                                            *int     `field:"code=MU,order=34"`
+	BenefitStageCount                                            *int     `field:"code=MU,order=34,countfor=BenefitStageAmounts"`
 	BenefitStageAmounts                                          []BenefitStage
 	EstimatedGenericSavings                                      *float64 `field:"code=G3,decimalPlaces=2,overpunch=true,order=37"`
 	SpendingAccountAmountRemaining                               *float64 `field:"code=UC,decimalPlaces=2,overpunch=true,order=38"`
@@ -47,13 +47,13 @@ type Pricing struct {
 	IngredientCostContractedReimbursableAmount                   *float64 `field:"code=U8,decimalPlaces=2,overpunch=true,order=45"`
 	DispensingFeeContractedReimbursableAmount                    *float64 `field:"code=U9,decimalPlaces=2,overpunch=true,order=46"`
 
-	PatientPayComponentCount *int `field:"code=KP,order=47"`
+	PatientPayComponentCount *int `field:"code=KP,order=47,countfor=PatientPayComponents"`
 	PatientPayComponents     []PatientPayComponent
 
-	RegulatoryFeeCount *int `field:"code=RK,order=50"`
+	RegulatoryFeeCount *int `field:"code=RK,order=50,countfor=RegulatoryFees"`
 	RegulatoryFees     []RegulatoryFee
 
-	BenefitStageIndicatorCount *int `field:"code=9W,order=53"`
+	BenefitStageIndicatorCount *int `field:"code=9W,order=53,countfor=BenefitStageIndicators"`
 	BenefitStageIndicators     []BenefitStageIndicator
 
 	PatientRegulatoryFeeAmount                         *float64 `field:"code=RS,decimalPlaces=2,overpunch=true,order=55"`

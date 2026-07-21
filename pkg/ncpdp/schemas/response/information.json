@@ -8,14 +8,12 @@
     "Header": {
       "type": "object",
       "properties": {
-        "RawValue": { "type": "string" },
-        "Size": { "type": "integer" },
         "Value": {
           "type": "object",
           "properties": {
-            "Version": { "type": "string", "maxLength": 2 },
+            "Version": { "type": "string", "maxLength": 2, "description": "Version/Release Number (D0 or F6)" },
             "TransactionCode": { "type": "string", "const": "N1" },
-            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Transaction Count (D.0 allows 1-4 claims per transmission; F6 allows exactly 1)" },
             "Status": { "type": "string", "maxLength": 1 },
             "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
             "ServiceProviderId": { "type": "string", "maxLength": 15 },
@@ -34,7 +32,6 @@
       "items": {
         "type": "object",
         "properties": {
-          "Raw": { "type": "string" },
           "Status": { "$ref": "../ncpdp-schemas.json#/$defs/response.Status" },
           "Claim": { "$ref": "../ncpdp-schemas.json#/$defs/response.Claim" },
           "Dur": { "$ref": "../ncpdp-schemas.json#/$defs/response.Dur" },

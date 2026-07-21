@@ -20,7 +20,7 @@ type PriorAuthorization struct {
 }
 
 type PriorAuthorizationRecord struct {
-	Raw                     string                                             `field:"code=rawgroup"`
+	Raw                     string                                             `field:"code=rawgroup" json:"-"`
 	Claim                   requestsegment.Claim                               `segment:"code=AM07,order=1"`
 	Pricing                 requestsegment.Pricing                             `segment:"code=AM11,order=2"`
 	Authorization           requestsegment.PriorAuthorizationRequestAndBilling `segment:"code=AM12,order=3"`

@@ -8,7 +8,7 @@ import (
 )
 
 type Dur struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
 	Items []DurItem
 
@@ -16,7 +16,7 @@ type Dur struct {
 }
 
 type DurItem struct {
-	Counter                  *int       `field:"code=J6,order=2"`
+	Counter                  *int       `field:"code=J6,order=2,countfor=index"`
 	ReasonForServiceCode     *string    `field:"code=E4,order=3"`
 	ClinicalSignificanceCode *string    `field:"code=FS,order=4"`
 	OtherPharmacyIndicator   *string    `field:"code=FT,order=5"`

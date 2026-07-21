@@ -20,7 +20,7 @@ type InformationReversal struct {
 }
 
 type InformationReversalRecord struct {
-	Raw                 string                                         `field:"code=rawgroup"`
+	Raw                 string                                         `field:"code=rawgroup" json:"-"`
 	Claim               requestsegment.Claim                           `segment:"code=AM07,order=1"`
 	PayerIdentification requestsegment.NTransactionPayerIdentification `segment:"code=AM38,order=2"`
 	DataCollection      requestsegment.DataCollection                  `segment:"code=AMXX,order=99"`

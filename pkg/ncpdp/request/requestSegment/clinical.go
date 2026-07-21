@@ -8,9 +8,9 @@ import (
 )
 
 type Clinical struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
-	DiagnosisCount *int `field:"code=VE,order=2"`
+	DiagnosisCount *int `field:"code=VE,order=2,countfor=Diagnoses"`
 	Diagnoses      []ClinicalDiagnosis
 
 	Measurements []ClinicalMeasurement
@@ -24,7 +24,7 @@ type ClinicalDiagnosis struct {
 }
 
 type ClinicalMeasurement struct {
-	Counter   *int       `field:"code=XE,order=5"`
+	Counter   *int       `field:"code=XE,order=5,countfor=index"`
 	Date      *time.Time `field:"code=ZE,format=YYYYMMdd,order=6"`
 	Time      *time.Time `field:"code=H1,format=HHmm,order=7"`
 	Dimension *string    `field:"code=H2,order=8"`

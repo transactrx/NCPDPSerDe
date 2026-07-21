@@ -17,14 +17,14 @@ const (
 )
 
 type Status struct {
-	SegmentId                  ncpdp.SegmentId
-	ResponseStatusCode         *string `field:"code=AN,order=2"`
-	AuthorizationNumber        *string `field:"code=F3,order=3"`
-	RejectCodeCount            *int    `field:"code=FA,order=4"`
+	SegmentId                  ncpdp.SegmentId `json:"-"`
+	ResponseStatusCode         *string         `field:"code=AN,order=2"`
+	AuthorizationNumber        *string         `field:"code=F3,order=3"`
+	RejectCodeCount            *int            `field:"code=FA,order=4,countfor=RejectCodes"`
 	RejectCodes                []RejectCode
-	ApprovalMessageCodeCount   *int `field:"code=5F,order=7"`
+	ApprovalMessageCodeCount   *int `field:"code=5F,order=7,countfor=ApprovalMessageCodes"`
 	ApprovalMessageCodes       []ApprovalMessageCode
-	AdditionalMessageCount     *int `field:"code=UF,order=9"`
+	AdditionalMessageCount     *int `field:"code=UF,order=9,countfor=AdditionalMessages"`
 	AdditionalMessages         []AdditionalMessage
 	HelpDeskPhoneNumber        HelpDeskPhoneNumber
 	TransactionReferenceNumber *string `field:"code=K5,order=15"`
@@ -33,10 +33,10 @@ type Status struct {
 
 	ReconciliationId *string `field:"code=34,order=18"`
 
-	HelpDeskSupportTypeCount *int `field:"code=BH,order=19"`
+	HelpDeskSupportTypeCount *int `field:"code=BH,order=19,countfor=HelpDeskSupportTypes"`
 	HelpDeskSupportTypes     []HelpDeskSupportType
 
-	HelpDeskBusinessUnitTypeCount *int `field:"code=BB,order=21"`
+	HelpDeskBusinessUnitTypeCount *int `field:"code=BB,order=21,countfor=HelpDeskBusinessUnits"`
 	HelpDeskBusinessUnits         []HelpDeskBusinessUnit
 
 	HelpDeskContactInformationExtension *string    `field:"code=BD,order=25"`

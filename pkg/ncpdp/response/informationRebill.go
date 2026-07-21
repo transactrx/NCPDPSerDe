@@ -21,7 +21,7 @@ type InformationRebill struct {
 }
 
 type InformationRebillRecord struct {
-	Raw             string                  `field:"code=rawgroup"`
+	Raw             string                  `field:"code=rawgroup" json:"-"`
 	Status          responsesegment.Status  `segment:"code=AM21,order=1"`
 	Claim           responsesegment.Claim   `segment:"code=AM22,order=2"`
 	Dur             responsesegment.Dur     `segment:"code=AM24,order=3"`

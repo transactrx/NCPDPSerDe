@@ -6,7 +6,7 @@ import (
 )
 
 type PharmacyProvider struct {
-	SegmentId     ncpdp.SegmentId
+	SegmentId     ncpdp.SegmentId         `json:"-"`
 	IdQualifier   *string                 `field:"code=EY,order=2"`
 	Id            *string                 `field:"code=E9,order=3"`
 	FirstName     *string                 `field:"code=4A,order=4"`

@@ -29,6 +29,12 @@ type FieldAttribute struct {
 	Overpunch     bool
 	Order         int
 	Dynamic       bool
+
+	// CountFor marks a counter field that is derived automatically during
+	// serialization: either the name of a sibling slice field whose length
+	// this field reports, or CountForIndex for a 1-based position counter
+	// inside a repeating item.
+	CountFor string
 }
 
 type SegmentAttribute struct {
@@ -102,7 +108,12 @@ const (
 	rawFieldTag     = "rawField"
 	OrderTag        = "order"
 	dynamicTag      = "dynamic"
+	countForTag     = "countfor"
 )
+
+// CountForIndex is the reserved countfor tag value marking a per-item
+// counter (1-based position within the repeating slice).
+const CountForIndex = "index"
 
 var transactionTypeRegistry = map[string]reflect.Type{}
 var registerOnce sync.Once
@@ -125,6 +136,19 @@ func getRegisteredType(key string) (reflect.Type, error) {
 
 func GetRequestType(tranCode string) (reflect.Type, error) {
 	return getRegisteredType(tranCode + "|request")
+}
+
+// TransactionTypes returns a copy of the registered transaction type map,
+// keyed by "<transactionCode>|request" or "<transactionCode>|response".
+func TransactionTypes() map[string]reflect.Type {
+	RegisterTypes()
+
+	types := make(map[string]reflect.Type, len(transactionTypeRegistry))
+	for k, v := range transactionTypeRegistry {
+		types[k] = v
+	}
+
+	return types
 }
 
 func GetResponseType(tranCode string) (reflect.Type, error) {
@@ -263,6 +287,9 @@ func GetFieldAttribute(tag string) (FieldAttribute, error) {
 		}
 		if strings.HasPrefix(tagField, overpunchTag) {
 			attribute.Overpunch, _ = strconv.ParseBool(parseTag(tagField, overpunchTag))
+		}
+		if strings.HasPrefix(tagField, countForTag) {
+			attribute.CountFor = parseTag(tagField, countForTag)
 		}
 	}
 

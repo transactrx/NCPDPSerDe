@@ -8,9 +8,9 @@ import (
 )
 
 type Patient struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
-	IdCount *int `field:"code=RR,order=2"`
+	IdCount *int `field:"code=RR,order=2,countfor=Ids"`
 	Ids     []PatientId
 
 	FirstName     *string                 `field:"code=CA,order=5"`
