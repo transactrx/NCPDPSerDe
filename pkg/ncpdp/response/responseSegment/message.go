@@ -6,7 +6,7 @@ import (
 )
 
 type Message struct {
-	SegmentId     ncpdp.SegmentId
+	SegmentId     ncpdp.SegmentId         `json:"-"`
 	Message       *string                 `field:"code=F4,order=2"`
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

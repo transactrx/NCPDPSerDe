@@ -6,10 +6,10 @@ import (
 )
 
 type Facility struct {
-	SegmentId     ncpdp.SegmentId
-	IdQualifier   *string `field:"code=3Z,order=2"`
-	Id            *string `field:"code=8C,order=3"`
-	Name          *string `field:"code=3Q,order=4"`
+	SegmentId     ncpdp.SegmentId `json:"-"`
+	IdQualifier   *string         `field:"code=3Z,order=2"`
+	Id            *string         `field:"code=8C,order=3"`
+	Name          *string         `field:"code=3Q,order=4"`
 	Address       FacilityAddress
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

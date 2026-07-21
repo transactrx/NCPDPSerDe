@@ -20,7 +20,7 @@ type ServiceBilling struct {
 }
 
 type ServiceBillingRecord struct {
-	Raw                     string                                 `field:"code=rawgroup"`
+	Raw                     string                                 `field:"code=rawgroup" json:"-"`
 	Claim                   requestsegment.Claim                   `segment:"code=AM07,order=1"`
 	Pricing                 requestsegment.Pricing                 `segment:"code=AM11,order=2"`
 	Pharmacy                requestsegment.PharmacyProvider        `segment:"code=AM02,order=3"`

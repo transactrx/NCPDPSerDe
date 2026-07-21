@@ -6,7 +6,7 @@ import (
 )
 
 type Insurance struct {
-	SegmentId                   ncpdp.SegmentId
+	SegmentId                   ncpdp.SegmentId `json:"-"`
 	Cardholder                  Cardholder
 	HomePlan                    *string `field:"code=CE,order=5"`
 	PlanId                      *string `field:"code=FO,order=6"`

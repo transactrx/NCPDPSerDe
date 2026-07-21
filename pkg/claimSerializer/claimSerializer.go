@@ -158,7 +158,7 @@ func buildSegments(structType reflect.Type, structVal reflect.Value) (string, er
 			for i := 0; i < segmentVal.Len(); i++ {
 				sliceItemVal := segmentVal.Index(i)
 
-				raw, err := buildSegment(sliceItemVal.Type(), sliceItemVal)
+				raw, err := buildSegment(sliceItemVal.Type(), sliceItemVal, segmentDef.Tag.Code)
 				if err != nil {
 					return serde.Empty, err
 				}
@@ -166,7 +166,7 @@ func buildSegments(structType reflect.Type, structVal reflect.Value) (string, er
 			}
 
 		default:
-			raw, err := buildSegment(segmentDef.Field.Type, segmentVal)
+			raw, err := buildSegment(segmentDef.Field.Type, segmentVal, segmentDef.Tag.Code)
 			if err != nil {
 				return serde.Empty, err
 			}
@@ -177,8 +177,10 @@ func buildSegments(structType reflect.Type, structVal reflect.Value) (string, er
 	return builder.String(), nil
 }
 
-// Build individual raw segment.
-func buildSegment(structType reflect.Type, structVal reflect.Value) (string, error) {
+// Build individual raw segment. segmentCode is the code from the struct's
+// segment tag (e.g. AM04); it is used to auto-populate the segment identifier
+// when the caller did not supply SegmentId.
+func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode string) (string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -193,9 +195,15 @@ func buildSegment(structType reflect.Type, structVal reflect.Value) (string, err
 	builder.WriteByte(ncpdp.SEGMENT)
 
 	// Build map of fields and contents
-	rawFieldMap, err := buildFieldMap(baseType, baseVal, nil)
+	rawFieldMap, err := buildFieldMap(baseType, baseVal, nil, noItemIndex)
 	if err != nil {
 		return builder.String(), err
+	}
+
+	// Inject the segment identifier when SegmentId.Id was not supplied. Field
+	// orders from tags are always > 0, so key 0 sorts first without clashing.
+	if strings.HasPrefix(segmentCode, ncpdp.SEGMENT_FIELD_ID) && segmentIdValue(baseVal) == nil {
+		rawFieldMap[0] = fmt.Sprintf("%c%v", ncpdp.FIELD, segmentCode)
 	}
 
 	// Sort keys by order
@@ -223,7 +231,30 @@ func buildSegment(structType reflect.Type, structVal reflect.Value) (string, err
 	return rawSegment, nil
 }
 
-func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes map[string]bool) (map[int]string, error) {
+// SegmentId.Id value of a segment struct, or nil when absent/not supplied.
+func segmentIdValue(baseVal reflect.Value) *string {
+	if baseVal.Kind() != reflect.Struct {
+		return nil
+	}
+
+	field := baseVal.FieldByName("SegmentId")
+	if !field.IsValid() {
+		return nil
+	}
+
+	segId, ok := field.Interface().(ncpdp.SegmentId)
+	if !ok {
+		return nil
+	}
+
+	return segId.Id
+}
+
+// noItemIndex indicates the struct being serialized is not an element of a
+// repeating slice, so per-item counters fall back to their supplied values.
+const noItemIndex = -1
+
+func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes map[string]bool, itemIndex int) (map[int]string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -242,16 +273,7 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes m
 	rawFieldMap := make(map[int]string)
 
 	for i := 0; i < baseType.NumField(); i++ {
-		field := baseType.Field(i)
-		fieldVal := baseVal.FieldByName(field.Name)
-
-		tag := field.Tag.Get(serde.FieldTag)
-		fieldAttribute, err := serde.GetFieldAttribute(tag)
-		if err != nil {
-			return rawFieldMap, err
-		}
-
-		fieldResult, err := buildStructField(field.Type, fieldVal, &fieldAttribute, skipCodes)
+		fieldResult, err := buildFieldMapEntries(baseType.Field(i), baseVal, skipCodes, itemIndex)
 		if err != nil {
 			return rawFieldMap, err
 		}
@@ -262,6 +284,61 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes m
 	}
 
 	return rawFieldMap, nil
+}
+
+// buildFieldMapEntries serializes a single struct field into raw field map
+// entries, deriving countfor-tagged counter values automatically.
+func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skipCodes map[string]bool, itemIndex int) (map[int]string, error) {
+	fieldAttribute, err := serde.GetFieldAttribute(field.Tag.Get(serde.FieldTag))
+	if err != nil {
+		return nil, err
+	}
+
+	if fieldAttribute.CountFor != serde.Empty {
+		if count, ok := derivedCount(baseVal, &fieldAttribute, itemIndex); ok {
+			return buildCountField(fieldAttribute, count, skipCodes)
+		}
+		// No derivable count (empty slice, or a per-item counter outside a
+		// slice): fall through and serialize any supplied value as usual.
+	}
+
+	return buildStructField(field.Type, baseVal.FieldByName(field.Name), &fieldAttribute, skipCodes, itemIndex)
+}
+
+// buildCountField renders a derived counter value as a raw field map entry,
+// honoring skipCodes like any other field.
+func buildCountField(fieldAttribute serde.FieldAttribute, count int, skipCodes map[string]bool) (map[int]string, error) {
+	if skipCodes[fieldAttribute.Code] {
+		return nil, nil
+	}
+
+	rawField, err := buildField(fieldAttribute, reflect.ValueOf(count))
+	if err != nil {
+		return nil, err
+	}
+
+	return map[int]string{fieldAttribute.Order: rawField}, nil
+}
+
+// derivedCount resolves the automatic value for a countfor-tagged field:
+// the length of the named sibling slice, or the element's 1-based position
+// for countfor=index. ok is false when no value can be derived, e.g. the
+// slice is empty (a supplied count may still be meaningful for dual-mapped
+// D0 scalar fields).
+func derivedCount(baseVal reflect.Value, fieldAttribute *serde.FieldAttribute, itemIndex int) (int, bool) {
+	if fieldAttribute.CountFor == serde.CountForIndex {
+		if itemIndex == noItemIndex {
+			return 0, false
+		}
+		return itemIndex + 1, true
+	}
+
+	sliceVal := baseVal.FieldByName(fieldAttribute.CountFor)
+	if !sliceVal.IsValid() || sliceVal.Kind() != reflect.Slice || sliceVal.Len() == 0 {
+		return 0, false
+	}
+
+	return sliceVal.Len(), true
 }
 
 // Union of skipCodes and the field codes contained in non-empty slice fields.
@@ -348,13 +425,13 @@ func collectFieldCodes(structType reflect.Type, codes map[string]bool) {
 	}
 }
 
-func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool, itemIndex int) (map[int]string, error) {
 	switch ft.Kind() {
 	case reflect.Struct:
-		return buildFieldMap(ft, fieldVal, skipCodes)
+		return buildFieldMap(ft, fieldVal, skipCodes, itemIndex)
 
 	case reflect.Pointer:
-		return buildPointerField(ft, fieldVal, fieldAttribute, skipCodes)
+		return buildPointerField(ft, fieldVal, fieldAttribute, skipCodes, itemIndex)
 
 	case reflect.Slice, reflect.Array:
 		return buildSliceField(fieldVal)
@@ -364,9 +441,9 @@ func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *s
 	}
 }
 
-func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool, itemIndex int) (map[int]string, error) {
 	if fieldAttribute == nil || fieldAttribute.Order <= 0 {
-		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute, skipCodes)
+		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute, skipCodes, itemIndex)
 	}
 
 	rawFieldMap := make(map[int]string)
@@ -394,7 +471,7 @@ func buildSliceField(fieldVal reflect.Value) (map[int]string, error) {
 	for i := 0; i < fieldVal.Len(); i++ {
 		element := fieldVal.Index(i)
 
-		fm, err := buildFieldMap(element.Type(), element, nil)
+		fm, err := buildFieldMap(element.Type(), element, nil, i)
 		if err != nil {
 			return rawFieldMap, err
 		}

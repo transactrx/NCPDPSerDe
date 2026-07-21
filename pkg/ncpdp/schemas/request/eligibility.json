@@ -8,16 +8,14 @@
     "Header": {
       "type": "object",
       "properties": {
-        "RawValue": { "type": "string" },
-        "Size": { "type": "integer" },
         "Value": {
           "type": "object",
           "properties": {
-            "Bin": { "type": "string", "maxLength": 6 },
-            "Version": { "type": "string", "maxLength": 2 },
+            "Bin": { "type": "string", "maxLength": 8, "description": "BIN Number (D.0, 6 characters) or IIN (F6, 8 characters)" },
+            "Version": { "type": "string", "maxLength": 2, "description": "Version/Release Number (D0 or F6)" },
             "TransactionCode": { "type": "string", "const": "E1" },
             "Pcn": { "type": "string", "maxLength": 10 },
-            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 1 },
+            "RecordCount": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Transaction Count (D.0 allows 1-4 claims per transmission; F6 allows exactly 1)" },
             "ServiceProviderIdQualifier": { "type": "string", "maxLength": 2 },
             "ServiceProviderId": { "type": "string", "maxLength": 15 },
             "DateOfService": { "type": "string", "pattern": "^[0-9]{8}$" },
@@ -33,6 +31,7 @@
     "Prescriber": { "$ref": "../ncpdp-schemas.json#/$defs/request.Prescriber" },
     "AdditionalDocumentation": { "$ref": "../ncpdp-schemas.json#/$defs/request.AdditionalDocumentation" },
     "DataCollection": { "$ref": "../ncpdp-schemas.json#/$defs/request.DataCollection" },
+    "LastKnown4Rx": { "$ref": "../ncpdp-schemas.json#/$defs/request.LastKnown4Rx" },
     "DynamicSegments": {
       "type": "array",
       "items": { "$ref": "../ncpdp-schemas.json#/$defs/DynamicStruct" }

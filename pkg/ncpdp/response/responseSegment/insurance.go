@@ -6,11 +6,11 @@ import (
 )
 
 type Insurance struct {
-	SegmentId              ncpdp.SegmentId
-	GroupId                *string `field:"code=C1,order=2"`
-	PlanId                 *string `field:"code=FO,order=3"`
-	NetworkReimbursementId *string `field:"code=2F,order=4"`
-	PayerIdCount           *int    `field:"code=KR,order=5"`
+	SegmentId              ncpdp.SegmentId `json:"-"`
+	GroupId                *string         `field:"code=C1,order=2"`
+	PlanId                 *string         `field:"code=FO,order=3"`
+	NetworkReimbursementId *string         `field:"code=2F,order=4"`
+	PayerIdCount           *int            `field:"code=KR,order=5,countfor=Payers"`
 	Payer                  Payer
 	// Payers captures every J7/J8 occurrence when the F6 payer ID repeats; the
 	// singular Payer struct is kept for D0 backward compatibility.

@@ -8,14 +8,14 @@ import (
 )
 
 type Claim struct {
-	SegmentId                                ncpdp.SegmentId
+	SegmentId                                ncpdp.SegmentId `json:"-"`
 	PrescriptionServiceReference             PrescriptionServiceReference
-	PreferredProductCount                    *int `field:"code=9F,order=4"`
+	PreferredProductCount                    *int `field:"code=9F,order=4,countfor=PreferredProducts"`
 	PreferredProducts                        []PreferredProduct
 	MedicaidSubrogationInternalControlNumber *string `field:"code=N4,order=10"`
 
 	PlanBenefitOverrideIndicator  *string `field:"code=RC,order=20"`
-	PlanBenefitOverrideValueCount *int    `field:"code=RD,order=21"`
+	PlanBenefitOverrideValueCount *int    `field:"code=RD,order=21,countfor=PlanBenefitOverrideValues"`
 	PlanBenefitOverrideValues     []PlanBenefitOverrideValue
 
 	MaximumAgeQualifier              *string    `field:"code=F8,order=23"`
@@ -33,7 +33,7 @@ type Claim struct {
 	RemainingAmountQualifier         *string    `field:"code=M7,order=35"`
 	RemainingAmount                  *float64   `field:"code=M6,decimalPlaces=3,order=36"`
 
-	BenefitTypeOpportunityCount *int `field:"code=AF,order=37"`
+	BenefitTypeOpportunityCount *int `field:"code=AF,order=37,countfor=BenefitTypeOpportunities"`
 	BenefitTypeOpportunities    []BenefitTypeOpportunity
 
 	SubrogationRequestorsReconciliationId *string `field:"code=KY,order=39"`
@@ -57,7 +57,7 @@ type PreferredProduct struct {
 	PlanBenefitTier *string    `field:"code=PV,order=12"`
 	ReasonCode      *string    `field:"code=PZ,order=13"`
 
-	RequiredTherapyIndicatorCount *int `field:"code=P0,order=14"`
+	RequiredTherapyIndicatorCount *int `field:"code=P0,order=14,countfor=RequiredTherapyIndicators"`
 	RequiredTherapyIndicators     []RequiredTherapyIndicator
 
 	RequiredTherapyTimePeriodQualifier *string    `field:"code=P2,order=16"`

@@ -8,7 +8,7 @@ import (
 )
 
 type OtherRelatedBenefitDetail struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
 	PlanType                     *string    `field:"code=KS,order=2"`
 	LisLevel                     *string    `field:"code=KF,order=3"`
@@ -27,10 +27,10 @@ type OtherRelatedBenefitDetail struct {
 	InstitutionalEffectiveDate   *time.Time `field:"code=BK,format=YYYYMMdd,order=16"`
 	InstitutionalTerminationDate *time.Time `field:"code=GD,format=YYYYMMdd,order=17"`
 
-	OtherBenefitCount *int `field:"code=M8,order=18"`
+	OtherBenefitCount *int `field:"code=M8,order=18,countfor=OtherBenefits"`
 	OtherBenefits     []OtherBenefit
 
-	OtherBenefitDetailInformationCount *int `field:"code=N8,order=26"`
+	OtherBenefitDetailInformationCount *int `field:"code=N8,order=26,countfor=OtherBenefitDetailInformation"`
 	OtherBenefitDetailInformation      []OtherBenefitDetailInformation
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`

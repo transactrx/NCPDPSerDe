@@ -8,11 +8,11 @@ import (
 )
 
 type PriorAuthorizationRequestAndBilling struct {
-	SegmentId                ncpdp.SegmentId
-	RequestType              *string    `field:"code=PA,order=2"`
-	RequestPeriodBeginDate   *time.Time `field:"code=PB,format=YYYYMMdd,order=3"`
-	RequestPeriodEndDate     *time.Time `field:"code=PC,format=YYYYMMdd,order=4"`
-	BasisOfRequest           *string    `field:"code=PD,order=5"`
+	SegmentId                ncpdp.SegmentId `json:"-"`
+	RequestType              *string         `field:"code=PA,order=2"`
+	RequestPeriodBeginDate   *time.Time      `field:"code=PB,format=YYYYMMdd,order=3"`
+	RequestPeriodEndDate     *time.Time      `field:"code=PC,format=YYYYMMdd,order=4"`
+	BasisOfRequest           *string         `field:"code=PD,order=5"`
 	AuthorizedRepresentative AuthorizedRepresentative
 	NumberAssigned           *string                 `field:"code=PY,order=12"`
 	Number                   *string                 `field:"code=F3,order=13"`

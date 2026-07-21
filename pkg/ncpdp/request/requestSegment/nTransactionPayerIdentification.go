@@ -6,7 +6,7 @@ import (
 )
 
 type NTransactionPayerIdentification struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
 	PayerIin                    *string `field:"code=9Y,order=2"`
 	PayerProcessorControlNumber *string `field:"code=9Z,order=3"`

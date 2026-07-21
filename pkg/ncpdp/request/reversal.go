@@ -19,7 +19,7 @@ type Reversal struct {
 }
 
 type ReversalRecord struct {
-	Raw                    string                                `field:"code=rawgroup"`
+	Raw                    string                                `field:"code=rawgroup" json:"-"`
 	Claim                  requestsegment.Claim                  `segment:"code=AM07,order=1"`
 	Pricing                requestsegment.Pricing                `segment:"code=AM11,order=3"`
 	CoordinationOfBenefits requestsegment.CoordinationOfBenefits `segment:"code=AM05,order=4"`

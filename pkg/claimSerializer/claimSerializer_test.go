@@ -7,6 +7,7 @@ import (
 	claimdeserializer "github.com/transactrx/NCPDPSerDe/pkg/claimDeserializer"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp/request"
+	requestsegment "github.com/transactrx/NCPDPSerDe/pkg/ncpdp/request/requestSegment"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp/response"
 	reflectionutils "github.com/transactrx/NCPDPSerDe/pkg/reflectionUtils"
 )
@@ -564,6 +565,159 @@ func Test_CanRoundTripF6PricingRegulatoryFees(t *testing.T) {
 // Test_D0DualMappedFieldsSerializeOnce guards the serializer skip logic for D0
 // data: a single CX/CY occurrence populates both the backward-compatible
 // scalars and the repeating Ids slice, but must serialize exactly once.
+// Test_AutoPopulatesSegmentId verifies the serializer injects each segment's
+// identifier (from the segment struct tag) when SegmentId is not supplied,
+// and does not duplicate it when SegmentId is supplied.
+func Test_AutoPopulatesSegmentId(t *testing.T) {
+	obj := request.Billing{
+		Header: ncpdp.NcpdpHeader[ncpdp.RequestHeader]{
+			Value: ncpdp.RequestHeader{
+				Bin:                        "610014",
+				Version:                    "D0",
+				TransactionCode:            "B1",
+				RecordCount:                1,
+				ServiceProviderIdQualifier: "01",
+				ServiceProviderId:          "1234567893",
+				DateOfService:              "20231219",
+			},
+		},
+		Insurance: requestsegment.Insurance{
+			Cardholder: requestsegment.Cardholder{Id: reflectionutils.ToPointer("CARD123")},
+		},
+		Patient: requestsegment.Patient{
+			FirstName: reflectionutils.ToPointer("JANE"),
+			LastName:  reflectionutils.ToPointer("DOE"),
+		},
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	assertFieldCount(t, serialized, "AM04", 1)
+	assertFieldCount(t, serialized, "AM01", 1)
+
+	// Supplying SegmentId explicitly must not duplicate the identifier.
+	segId, err := ncpdp.NewSegmentId("AM04")
+	if err != nil {
+		t.Fatalf("Failed to create segment id: %v", err)
+	}
+	obj.Insurance.SegmentId = *segId
+
+	serialized, err = Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize with explicit SegmentId: %v", err)
+	}
+
+	assertFieldCount(t, serialized, "AM04", 1)
+
+	// Round trip: the injected identifiers must deserialize as segment IDs.
+	obj2 := request.Billing{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+	assertString(t, "Insurance segment id", obj2.Insurance.SegmentId.Id, "04")
+	assertString(t, "Patient segment id", obj2.Patient.SegmentId.Id, "01")
+	assertString(t, "Cardholder id after round trip", obj2.Insurance.Cardholder.Id, "CARD123")
+}
+
+// Test_AutoPopulatesCounterFields verifies that countfor-tagged counter
+// fields are derived automatically during serialization: slice-count fields
+// are set/corrected from the slice length, per-item counters are numbered
+// 1..N, and supplied counts are preserved for D0 scalar (dual-mapped) usage
+// where the repeating slice is empty.
+func Test_AutoPopulatesCounterFields(t *testing.T) {
+	obj := request.Billing{
+		Header: ncpdp.NcpdpHeader[ncpdp.RequestHeader]{
+			Value: ncpdp.RequestHeader{
+				Bin:                        "610014",
+				Version:                    "D0",
+				TransactionCode:            "B1",
+				RecordCount:                1,
+				ServiceProviderIdQualifier: "01",
+				ServiceProviderId:          "1234567893",
+				DateOfService:              "20231219",
+			},
+		},
+		Insurance: requestsegment.Insurance{
+			Cardholder: requestsegment.Cardholder{Id: reflectionutils.ToPointer("CARD123")},
+		},
+		Patient: requestsegment.Patient{
+			// D0 scalar patient ID with a caller-supplied count and no Ids slice
+			IdCount:     reflectionutils.ToPointer(1),
+			IdQualifier: reflectionutils.ToPointer("99"),
+			Id:          reflectionutils.ToPointer("VERI"),
+		},
+		Claims: []request.BillingRecord{
+			{
+				Claim: requestsegment.Claim{
+					PrescriptionServiceReference: requestsegment.PrescriptionServiceReference{
+						Qualifier: reflectionutils.ToPointer("1"),
+						Number:    reflectionutils.ToPointer("6000001"),
+					},
+				},
+				CoordinationOfBenefits: requestsegment.CoordinationOfBenefits{
+					// Stale count: must be corrected to the slice length (2)
+					Count: reflectionutils.ToPointer(5),
+					OtherPayer: []requestsegment.OtherPayer{
+						{CoverageType: reflectionutils.ToPointer("01")},
+						{CoverageType: reflectionutils.ToPointer("02")},
+					},
+				},
+				Dur: requestsegment.Dur{
+					// Counters not supplied: must be numbered 1..N
+					Items: []requestsegment.DurItem{
+						{ReasonForServiceCode: reflectionutils.ToPointer("TD")},
+						{ReasonForServiceCode: reflectionutils.ToPointer("HD")},
+					},
+				},
+			},
+		},
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	fs := string(ncpdp.FIELD)
+
+	// COB count corrected from 5 to 2
+	assertFieldCount(t, serialized, "4C", 1)
+	if !strings.Contains(serialized, fs+"4C2") {
+		t.Errorf("Expected COB count 4C2 in output")
+	}
+
+	// DUR items numbered 1..2
+	if !strings.Contains(serialized, fs+"7E1") || !strings.Contains(serialized, fs+"7E2") {
+		t.Errorf("Expected DUR item counters 7E1 and 7E2 in output")
+	}
+
+	// D0 scalar patient ID count preserved (Ids slice empty)
+	if !strings.Contains(serialized, fs+"RR1") {
+		t.Errorf("Expected supplied patient ID count RR1 in output")
+	}
+
+	// Round trip: derived counters must deserialize back
+	obj2 := request.Billing{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	cob := obj2.Claims[0].CoordinationOfBenefits
+	if cob.Count == nil || *cob.Count != 2 {
+		t.Errorf("COB count after round trip. Wanted: 2   Got: %v", cob.Count)
+	}
+	items := obj2.Claims[0].Dur.Items
+	if len(items) != 2 || items[0].Counter == nil || *items[0].Counter != 1 ||
+		items[1].Counter == nil || *items[1].Counter != 2 {
+		t.Errorf("DUR counters after round trip mismatch: %+v", items)
+	}
+}
+
 func Test_D0DualMappedFieldsSerializeOnce(t *testing.T) {
 	obj := request.Billing{}
 	err := claimdeserializer.DeserializeType(REQUEST_B1, &obj)

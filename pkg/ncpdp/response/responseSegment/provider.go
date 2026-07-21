@@ -6,7 +6,7 @@ import (
 )
 
 type Provider struct {
-	SegmentId ncpdp.SegmentId
+	SegmentId ncpdp.SegmentId `json:"-"`
 
 	DataSourceOfInvalidProviderDetermination             *string `field:"code=ZV,order=2"`
 	StateCodeForDataSourceOfInvalidProviderDetermination *string `field:"code=ZZ,order=3"`

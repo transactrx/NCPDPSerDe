@@ -3,6 +3,7 @@ package claimdeserializer
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
@@ -286,6 +287,37 @@ func Test_CanParseBillingRequest(t *testing.T) {
 			t.Errorf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Claims))
 		}
 	}
+}
+
+// Test_JsonOutputExcludesInternalFields verifies that internal bookkeeping
+// fields (header RawValue/Size, SegmentId, and Raw group captures) are not
+// exposed when a deserialized claim is marshaled to JSON.
+func Test_JsonOutputExcludesInternalFields(t *testing.T) {
+	assertNoInternalFields := func(name string, obj any, err error) {
+		if err != nil {
+			t.Errorf("%v: deserialize error: %v", name, err)
+			return
+		}
+
+		bytes, err := json.Marshal(obj)
+		if err != nil {
+			t.Errorf("%v: json error: %v", name, err)
+			return
+		}
+
+		jsonStr := string(bytes)
+		for _, key := range []string{`"RawValue"`, `"Size"`, `"SegmentId"`, `"Raw"`} {
+			if strings.Contains(jsonStr, key) {
+				t.Errorf("%v: marshaled JSON must not contain internal field %v", name, key)
+			}
+		}
+	}
+
+	billingRequest := request.Billing{}
+	assertNoInternalFields("billing request", &billingRequest, DeserializeType(REQUEST_B1, &billingRequest))
+
+	billingResponse := response.Billing{}
+	assertNoInternalFields("billing response", &billingResponse, DeserializeType(RESPONSE_B1, &billingResponse))
 }
 
 func Test_CanParseReversalRequest(t *testing.T) {

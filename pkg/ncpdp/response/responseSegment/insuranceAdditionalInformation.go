@@ -8,7 +8,7 @@ import (
 )
 
 type InsuranceAdditionalInformation struct {
-	SegmentId      ncpdp.SegmentId
+	SegmentId      ncpdp.SegmentId `json:"-"`
 	MedicarePartD  MedicarePartD
 	ContractNumber *string `field:"code=U1,order=4"`
 	FormularyId    *string `field:"code=FF,order=5"`
