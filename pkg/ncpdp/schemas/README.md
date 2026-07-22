@@ -116,7 +116,7 @@ Repeating-group count fields (e.g. `Count` 4C in Coordination of Benefits, `Reje
 Most fields are nullable (can be omitted or set to null). Only required fields in the schema must be provided.
 
 ### DynamicFields
-Each segment includes a `DynamicFields` array for non-standard or vendor-specific fields.
+Each segment includes a `DynamicFields` array for non-standard or vendor-specific fields; transactions and claim groups likewise include a `DynamicSegments` array for segments not defined in the standard. Both marshal as objects of the form `{"Value": {...}}`, where each key of the inner object encodes the NCPDP field code and its position within the segment as `Field_<code>_<order>` (characters not valid in identifiers are replaced with words, e.g. `Field_ampersandB_25` for code `&B`). Dynamic segments also carry a `Raw` key holding the raw segment capture. These names are how dynamic data survives a JSON round-trip: unmarshaling reconstructs the underlying dynamic type from them, so a JSON payload containing dynamic fields or segments can be serialized back to NCPDP format. Keep the generated key names intact when editing such payloads.
 
 ## Usage Examples
 

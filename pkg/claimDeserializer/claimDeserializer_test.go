@@ -535,6 +535,45 @@ func Test_CanParseUndefinedReversalSegments(t *testing.T) {
 	}
 }
 
+// Repeating fields that belong to a nested slice (e.g. multiple 6E reject
+// codes for one other payer) must repeat within the same parent occurrence
+// instead of splitting the parent into additional occurrences. REQUEST_B1's
+// COB segment carries 4C1 (one payer) with 5E02/6E70/6EA5 (two rejects) and
+// HB1/HC/DV (one amount paid).
+func Test_NestedRepeatingFieldsStayInParentOccurrence(t *testing.T) {
+	obj := request.Billing{}
+	if err := DeserializeType(REQUEST_B1, &obj); err != nil {
+		t.Fatal(err)
+	}
+
+	cob := obj.Claims[0].CoordinationOfBenefits
+
+	if cob.Count == nil || *cob.Count != 1 {
+		t.Fatalf("COB count (4C) mismatch. Wanted: 1   Got: %v", cob.Count)
+	}
+
+	if len(cob.OtherPayer) != 1 {
+		t.Fatalf("OtherPayer count mismatch. Wanted: 1   Got: %v", len(cob.OtherPayer))
+	}
+
+	payer := cob.OtherPayer[0]
+
+	if len(payer.OtherPayerRejects) != 2 {
+		t.Fatalf("OtherPayerRejects count mismatch. Wanted: 2   Got: %v", len(payer.OtherPayerRejects))
+	}
+
+	for i, want := range []string{"70 ", "A5 "} {
+		got := payer.OtherPayerRejects[i].RejectCode
+		if got == nil || *got != want {
+			t.Errorf("Reject code %v mismatch. Wanted: %q   Got: %v", i, want, got)
+		}
+	}
+
+	if len(payer.OtherPayerAmountsPaid) != 1 {
+		t.Errorf("OtherPayerAmountsPaid count mismatch. Wanted: 1   Got: %v", len(payer.OtherPayerAmountsPaid))
+	}
+}
+
 // F6 request header is 58 bytes: version(2) tranCode(2) IIN(8) PCN(10) recordCount(1) SPIQ(2) SPI(15) DOS(8) vendorCertId(10)
 const F6_REQUEST_B1_HEADER = "F6B100880151TEST      1011234567893     20260611SVCID     "
 
