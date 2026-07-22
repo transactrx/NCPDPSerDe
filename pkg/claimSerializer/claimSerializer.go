@@ -187,6 +187,9 @@ func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode 
 	switch baseVal.Interface().(type) {
 	case dynamic.DynamicStruct:
 		ds, _ := baseVal.Interface().(dynamic.DynamicStruct)
+		if ds.DynamicType == nil || ds.Value == nil {
+			return serde.Empty, fmt.Errorf("dynamic segment is missing type information and cannot be serialized")
+		}
 		baseType = reflectionutils.GetElementType(ds.DynamicType)
 		baseVal = reflectionutils.GetElementValue(reflect.ValueOf(ds.Value))
 	}
@@ -261,6 +264,9 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes m
 	switch baseVal.Interface().(type) {
 	case dynamic.DynamicStruct:
 		ds, _ := baseVal.Interface().(dynamic.DynamicStruct)
+		if ds.DynamicType == nil || ds.Value == nil {
+			return nil, fmt.Errorf("dynamic field is missing type information and cannot be serialized")
+		}
 		baseType = reflectionutils.GetElementType(ds.DynamicType)
 		baseVal = reflectionutils.GetElementValue(reflect.ValueOf(ds.Value))
 	}

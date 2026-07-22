@@ -63,33 +63,6 @@ var Formats = map[string]string{
 	"HHmm":     "1504",
 }
 
-var illegalNamingRunes = map[rune]string{
-	'!':  "exclamation",
-	'"':  "quote",
-	'#':  "hash",
-	'$':  "dollar",
-	'&':  "ampersand",
-	'\'': "apostrophe",
-	'(':  "leftparenthesis",
-	')':  "rightparenthesis",
-	'*':  "asterisk",
-	',':  "comma",
-	':':  "colon",
-	';':  "semicolon",
-	'<':  "lessthan",
-	'=':  "equals",
-	'>':  "greaterthan",
-	'?':  "questionmark",
-	'[':  "leftbracket",
-	'\\': "backslash",
-	']':  "rightbracket",
-	'^':  "caret",
-	'`':  "backtick",
-	'{':  "leftbrace",
-	'|':  "pipe",
-	'}':  "rightbrace",
-}
-
 const (
 	Empty           = ""
 	FieldTag        = "field"
@@ -483,23 +456,7 @@ func GetDynamicSlice(tType reflect.Type, tagType string) (*reflect.StructField, 
 // Create dynamic field name. Handle repeating fields by
 // including the element index within the name.
 func DynamicFieldName(fieldCode string, order int) string {
-	return "Field_" + replaceIllegalCharacters(fieldCode) + "_" + strconv.Itoa(order)
-}
-
-// Replace illegal characters in field names.
-func replaceIllegalCharacters(str string) string {
-	builder := strings.Builder{}
-
-	for _, ch := range str {
-		val, found := illegalNamingRunes[ch]
-		if found {
-			builder.WriteString(val)
-		} else {
-			builder.WriteRune(ch)
-		}
-	}
-
-	return builder.String()
+	return dynamic.FieldName(fieldCode, order)
 }
 
 // Create dynamic segment type.
