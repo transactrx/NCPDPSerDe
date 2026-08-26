@@ -32,10 +32,11 @@ const (
 
 // Request Segment IDs
 const (
-	PATIENT_SEGMENT_ID   = "AM01"
-	INSURANCE_SEGMENT_ID = "AM04"
-	COB_SEGMENT_ID       = "AM05"
-	CLAIM_SEGMENT_ID     = "AM07"
+	PATIENT_SEGMENT_ID      = "AM01"
+	INSURANCE_SEGMENT_ID    = "AM04"
+	COB_SEGMENT_ID          = "AM05"
+	CLAIM_SEGMENT_ID        = "AM07"
+	INTERMEDIARY_SEGMENT_ID = "AM19"
 )
 
 // Response Segment IDs
@@ -53,6 +54,9 @@ const (
 	MEDIGAP_ID_FIELD_ID                                  = "2A"
 	NETWORK_REIMBURSEMENT_FIELD_ID                       = "2F"
 	PATIENT_RESIDENCE_FIELD_ID                           = "4X"
+	INTERMEDIARY_TYPE_CODE_FIELD_ID                      = "8H"
+	INTERMEDIARY_ID_QUALIFIER_FIELD_ID                   = "8K"
+	INTERMEDIARY_ID_FIELD_ID                             = "8M"
 	STATUS_FIELD_ID                                      = "AN"
 	FLAT_SALES_TAX_AMOUNT_PAID_FIELD_ID                  = "AW"
 	PERCENTAGE_SALES_TAX_AMOUNT_PAID_FIELD_ID            = "AX"
@@ -95,6 +99,13 @@ const (
 // Service/Provider ID Qualfiers
 const (
 	SERVICE_PROVIDER_QUALFIER_NDC = "03"
+)
+
+// Intermediary authorization values
+const (
+	INTERMEDIARY_AUTH_QUALIFIER_D0 = "01" // EW: EX carries an intermediary authorization ID
+	INTERMEDIARY_TYPE_CODE_F6      = "01" // 8H: entry identifies an intermediary
+	INTERMEDIARY_ID_QUALIFIER_F6   = "06" // 8K: 8M carries an intermediary-assigned ID
 )
 
 // Compound Codes
