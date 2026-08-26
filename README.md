@@ -162,3 +162,4 @@ F6 permits patient IDs (CX/CY) and insurance payers (J7/J8) to repeat. The stron
 
 - **Reading:** scalar holds the last occurrence; slice holds every occurrence. Read the slice when full F6 data matters.
 - **Writing:** when the slice is non-empty, the serializer skips the scalar's codes to prevent double-emit. Populate one or the other.
+- **Occurrence counts (`KR`, `RR`) are F6-only.** The `Payer/Health Plan ID Count` (KR) and `Patient ID Count` (RR) fields exist only in F6. On build they are derived automatically from the slice length, and they are **never emitted in a D0 transmission** — even if you set the count field explicitly — because D0 has no count for these groups.

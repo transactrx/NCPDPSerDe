@@ -35,6 +35,14 @@ type FieldAttribute struct {
 	// this field reports, or CountForIndex for a 1-based position counter
 	// inside a repeating item.
 	CountFor string
+
+	// SinceVersion scopes a field to NCPDP versions at or after the named
+	// version (e.g. "F6"). The serializer omits such a field when emitting an
+	// older transmission, so version-specific fields — notably the repeating
+	// group counters added in F6 (KR, RR) whose backing slices are dual-mapped
+	// from D0 scalars — never leak into a D0 message. Empty means the field
+	// applies to every version.
+	SinceVersion string
 }
 
 type SegmentAttribute struct {
@@ -76,6 +84,7 @@ const (
 	decimalTag      = "decimalPlaces"
 	overpunchTag    = "overpunch"
 	versionTag      = "version"
+	sinceVersionTag = "sinceVersion"
 	deserializerTag = "deserializer"
 	serializerTag   = "serializer"
 	rawFieldTag     = "rawField"
@@ -260,6 +269,8 @@ func GetFieldAttribute(tag string) (FieldAttribute, error) {
 			attribute.Overpunch, _ = strconv.ParseBool(value)
 		case countForTag:
 			attribute.CountFor = value
+		case sinceVersionTag:
+			attribute.SinceVersion = value
 		}
 	}
 
