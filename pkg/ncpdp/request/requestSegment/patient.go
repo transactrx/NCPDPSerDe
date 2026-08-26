@@ -9,7 +9,7 @@ import (
 
 type Patient struct {
 	SegmentId   ncpdp.SegmentId `json:"-"`
-	IdCount     *int            `field:"code=RR,order=2,countfor=Ids"`
+	IdCount     *int            `field:"code=RR,order=2,countfor=Ids,sinceVersion=F6"`
 	IdQualifier *string         `field:"code=CX,order=3"`
 	Id          *string         `field:"code=CY,order=4"`
 	// Ids captures every CX/CY occurrence when the F6 patient ID repeats; the

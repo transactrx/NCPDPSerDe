@@ -28,28 +28,48 @@ func Test_ParseTag(t *testing.T) {
 }
 
 func Test_GetFieldAttribute_ParsesAllKeys(t *testing.T) {
-	attr, err := GetFieldAttribute("code=D7,order=5,decimalPlaces=2,overpunch=true,format=YYYYMMdd")
+	attr, err := GetFieldAttribute("code=KR,order=5,countfor=Payers,sinceVersion=F6")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if attr.Code != "D7" {
-		t.Errorf("Code mismatch. Wanted: D7   Got: %q", attr.Code)
+	if attr.Code != "KR" {
+		t.Errorf("Code mismatch. Wanted: KR   Got: %q", attr.Code)
 	}
 	if attr.Order != 5 {
 		t.Errorf("Order mismatch. Wanted: 5   Got: %v", attr.Order)
 	}
-	if attr.DecimalPlaces != 2 {
-		t.Errorf("DecimalPlaces mismatch. Wanted: 2   Got: %v", attr.DecimalPlaces)
+	if attr.CountFor != "Payers" {
+		t.Errorf("CountFor mismatch. Wanted: Payers   Got: %q", attr.CountFor)
 	}
-	if !attr.Overpunch {
+	if attr.SinceVersion != "F6" {
+		t.Errorf("SinceVersion mismatch. Wanted: F6   Got: %q", attr.SinceVersion)
+	}
+
+	// Numeric/format keys still parse alongside the above.
+	attr2, err := GetFieldAttribute("code=D7,order=5,decimalPlaces=2,overpunch=true,format=YYYYMMdd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attr2.DecimalPlaces != 2 {
+		t.Errorf("DecimalPlaces mismatch. Wanted: 2   Got: %v", attr2.DecimalPlaces)
+	}
+	if !attr2.Overpunch {
 		t.Error("Overpunch mismatch. Wanted: true   Got: false")
 	}
-	if attr.Format != "20060102" {
-		t.Errorf("Format mismatch. Wanted: 20060102   Got: %q", attr.Format)
+	if attr2.Format != "20060102" {
+		t.Errorf("Format mismatch. Wanted: 20060102   Got: %q", attr2.Format)
 	}
-	if attr.Dynamic {
+	if attr2.Dynamic {
 		t.Error("Dynamic mismatch. Wanted: false   Got: true")
+	}
+
+	// CountFor and SinceVersion default to empty when the tag omits them.
+	if attr2.CountFor != "" {
+		t.Errorf("CountFor should default empty. Got: %q", attr2.CountFor)
+	}
+	if attr2.SinceVersion != "" {
+		t.Errorf("SinceVersion should default empty. Got: %q", attr2.SinceVersion)
 	}
 }
 

@@ -695,9 +695,15 @@ func Test_AutoPopulatesCounterFields(t *testing.T) {
 		t.Errorf("Expected DUR item counters 7E1 and 7E2 in output")
 	}
 
-	// D0 scalar patient ID count preserved (Ids slice empty)
-	if !strings.Contains(serialized, fs+"RR1") {
-		t.Errorf("Expected supplied patient ID count RR1 in output")
+	// The scalar patient ID (CX/CY) is emitted, but RR (Patient ID Count,
+	// 618-RR) is an F6-only field and must never appear in a D0 message — even
+	// when a caller supplies IdCount — because the dual-mapped scalar has no
+	// count in D0.
+	if !strings.Contains(serialized, fs+"CX99") || !strings.Contains(serialized, fs+"CYVERI") {
+		t.Errorf("Expected scalar patient ID CX99/CYVERI in D0 output")
+	}
+	if strings.Contains(serialized, fs+"RR") {
+		t.Errorf("D0 output must not contain the F6-only RR patient ID count")
 	}
 
 	// Round trip: derived counters must deserialize back

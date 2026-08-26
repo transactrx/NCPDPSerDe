@@ -10,7 +10,7 @@ import (
 type Patient struct {
 	SegmentId ncpdp.SegmentId `json:"-"`
 
-	IdCount *int `field:"code=RR,order=2,countfor=Ids"`
+	IdCount *int `field:"code=RR,order=2,countfor=Ids,sinceVersion=F6"`
 	Ids     []PatientId
 
 	FirstName     *string                 `field:"code=CA,order=5"`

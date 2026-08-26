@@ -61,6 +61,10 @@ F6 allows certain fields to repeat where D0 had a single occurrence. To preserve
 
 **Write semantics:** The serializer (`mergeSliceFieldCodes` in `claimSerializer.go`) suppresses the scalar's codes when the sibling slice is non-empty, so round-trips don't double-emit. Populate either form — don't populate both with the same value, or only the slice will be written.
 
+**Occurrence counts are F6-only and version-gated.** Each group has an F6-added counter — `KR` (Payer/Health Plan ID Count) on `response.Insurance`, `RR` (Patient ID Count) on `request.Patient` / `response.Patient` (AM29). These are `countfor`-derived: the serializer sets them from the slice length automatically (so an omitted or stale count is corrected on build). Because the backing slices are always populated for D0 scalar payloads (the scalar dual-maps into the slice), these counters carry the `sinceVersion=F6` field tag: the serializer omits them entirely for D0 output — even when the count field is set on the struct — since `KR`/`RR` do not exist in D0. For F6, the count is emitted as usual. This is what keeps a D0 deserialize→serialize round-trip from injecting a `KR`/`RR` field the payer never sent.
+
+The `sinceVersion` tag is the general mechanism for this: any field scoped to a newer version is skipped when serializing an older transmission (today the only distinction is D0 vs F6+, detected the same way the group-separator handling is).
+
 ## Strongly-typed path (`pkg/claimDeserializer`, `pkg/claimSerializer`)
 
 - `DeserializeRequest` infers the transaction code from byte 2 (F6) vs byte 8 (D0) automatically.
