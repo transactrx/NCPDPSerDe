@@ -872,3 +872,104 @@ func Test_PreservesTrailingWhitespaceFromRawInput(t *testing.T) {
 		}
 	}
 }
+
+// A blank-padded field at the very end of the message (e.g. an all-space DUR
+// co-agent ID) is field data sent by the pharmacy: it must survive a
+// deserialize/serialize round trip with its padding intact instead of being
+// emitted as a bare field ID with no value.
+func Test_TrailingBlankPaddedFieldRoundTrips(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	paddedTail := fs + "J9  " + fs + "H6                   "
+
+	cut := strings.Index(REQUEST_B1, fs+"J9")
+	if cut == -1 {
+		t.Fatal("sample claim is missing the J9 field")
+	}
+
+	i, err := claimdeserializer.Deserialize(REQUEST_B1[:cut] + paddedTail)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	item, ok := i.(request.Billing)
+	if !ok {
+		t.Fatalf("expected request.Billing.  Got: %T", i)
+	}
+
+	serialized, err := Serialize(&item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(serialized, paddedTail) {
+		t.Errorf("trailing blank-padded fields not preserved.\nWanted substring: %q\nGot: %q", paddedTail, serialized)
+	}
+}
+
+// Same guarantee on the response path: a blank-padded value on the last field
+// of a response must round-trip unchanged.
+func Test_ResponseTrailingBlankPaddedFieldRoundTrips(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	paddedTail := fs + "8F8008457558   "
+
+	cut := strings.Index(RESPONSE_B1, fs+"7F")
+	if cut == -1 {
+		t.Fatal("sample response is missing the 7F field")
+	}
+
+	i, err := claimdeserializer.Deserialize(RESPONSE_B1[:cut] + fs + "7F03" + paddedTail)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	item, ok := i.(response.Billing)
+	if !ok {
+		t.Fatalf("expected response.Billing.  Got: %T", i)
+	}
+
+	serialized, err := Serialize(&item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(serialized, paddedTail) {
+		t.Errorf("trailing blank-padded field not preserved.\nWanted substring: %q\nGot: %q", paddedTail, serialized)
+	}
+}
+
+// ETX framing bytes after a blank-padded field are stripped without taking the
+// padding with them (padded value + ETX + ETX is how these claims arrive off
+// the wire).
+func Test_TrailingPaddingBeforeEtxRoundTrips(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	etx := string(ncpdp.ETX)
+	paddedTail := fs + "J9  " + fs + "H6                   "
+
+	cut := strings.Index(REQUEST_B1, fs+"J9")
+	if cut == -1 {
+		t.Fatal("sample claim is missing the J9 field")
+	}
+
+	i, err := claimdeserializer.Deserialize(REQUEST_B1[:cut] + paddedTail + etx + etx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	item, ok := i.(request.Billing)
+	if !ok {
+		t.Fatalf("expected request.Billing.  Got: %T", i)
+	}
+
+	serialized, err := Serialize(&item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(serialized, paddedTail) {
+		t.Errorf("padding before ETX not preserved.\nWanted substring: %q\nGot: %q", paddedTail, serialized)
+	}
+
+	if strings.Contains(serialized, etx) {
+		t.Errorf("ETX framing bytes leaked into serialized output: %q", serialized)
+	}
+}
