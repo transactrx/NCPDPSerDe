@@ -32,8 +32,6 @@ const (
 func Deserialize(rawClaimString string) (interface{}, error) {
 	serde.RegisterTypes()
 
-	rawClaimString = strings.TrimSpace(rawClaimString)
-
 	// Determine type by first separator index
 	firstSeparatorIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.FIELD, ncpdp.SEGMENT, ncpdp.GROUP})
 	if firstSeparatorIndex == -1 {
@@ -58,8 +56,10 @@ func Deserialize(rawClaimString string) (interface{}, error) {
 func DeserializeRequest(rawClaimString string) (interface{}, error) {
 	serde.RegisterTypes()
 
-	// Determine transaction type by tran code
-	rawClaimString = strings.TrimSpace(rawClaimString)
+	// Determine transaction type by tran code. Trailing spaces are significant
+	// NCPDP data (they belong to the last field's value, e.g. a blank-padded
+	// H6) and must round-trip unchanged, so only the ETX framing byte is
+	// removed here.
 	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
 
 	if len(rawClaimString) < 10 {
@@ -91,8 +91,9 @@ func DeserializeRequest(rawClaimString string) (interface{}, error) {
 func DeserializeResponse(rawClaimString string) (interface{}, error) {
 	serde.RegisterTypes()
 
-	// Determine transaction type by tran code
-	rawClaimString = strings.TrimSpace(rawClaimString)
+	// Determine transaction type by tran code. Trailing spaces are significant
+	// NCPDP data and must round-trip unchanged, so only the ETX framing byte
+	// is removed here.
 	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
 
 	if len(rawClaimString) < 4 {
@@ -138,7 +139,9 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 		return nil, fmt.Errorf("NCPDP data is empty")
 	}
 
-	rawClaimString = strings.TrimSpace(strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), ""))
+	// Only the ETX framing byte is removed: trailing spaces belong to the last
+	// field's value and must round-trip unchanged.
+	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
 
 	firstSeparatorIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.FIELD, ncpdp.SEGMENT, ncpdp.GROUP})
 	if firstSeparatorIndex == -1 {
