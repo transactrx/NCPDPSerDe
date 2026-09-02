@@ -10,7 +10,7 @@ type Compound struct {
 
 	DosageFormDescriptionCode   *string `field:"code=EF,order=2"`
 	DispensingUnitFormIndicator *string `field:"code=EG,order=3"`
-	LevelOfComplexity           *string `field:"code=AG,order=12"`
+	LevelOfComplexity           *string `field:"code=AG,order=12,sinceVersion=F6"`
 
 	IngredientCount *int `field:"code=EC,order=4,countfor=Ingredients"`
 	Ingredients     []CompoundIngredient

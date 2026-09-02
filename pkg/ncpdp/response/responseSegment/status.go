@@ -31,29 +31,29 @@ type Status struct {
 	InternalControlNumber      *string `field:"code=A7,order=16"`
 	Url                        *string `field:"code=MA,order=17"`
 
-	ReconciliationId *string `field:"code=34,order=18"`
+	ReconciliationId *string `field:"code=34,order=18,sinceVersion=F6"`
 
-	HelpDeskSupportTypeCount *int `field:"code=BH,order=19,countfor=HelpDeskSupportTypes"`
+	HelpDeskSupportTypeCount *int `field:"code=BH,order=19,countfor=HelpDeskSupportTypes,sinceVersion=F6"`
 	HelpDeskSupportTypes     []HelpDeskSupportType
 
-	HelpDeskBusinessUnitTypeCount *int `field:"code=BB,order=21,countfor=HelpDeskBusinessUnits"`
+	HelpDeskBusinessUnitTypeCount *int `field:"code=BB,order=21,countfor=HelpDeskBusinessUnits,sinceVersion=F6"`
 	HelpDeskBusinessUnits         []HelpDeskBusinessUnit
 
-	HelpDeskContactInformationExtension *string    `field:"code=BD,order=25"`
-	AdjudicatedProgramType              *string    `field:"code=ZR,order=26"`
-	NextAvailableFillDate               *time.Time `field:"code=BT,format=YYYYMMdd,order=27"`
+	HelpDeskContactInformationExtension *string    `field:"code=BD,order=25,sinceVersion=F6"`
+	AdjudicatedProgramType              *string    `field:"code=ZR,order=26,sinceVersion=F6"`
+	NextAvailableFillDate               *time.Time `field:"code=BT,format=YYYYMMdd,order=27,sinceVersion=F6"`
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type HelpDeskSupportType struct {
-	Type *string `field:"code=BG,order=20"`
+	Type *string `field:"code=BG,order=20,sinceVersion=F6"`
 }
 
 type HelpDeskBusinessUnit struct {
-	Type                        *string `field:"code=BA,order=22"`
-	ContactInformationQualifier *string `field:"code=BF,order=23"`
-	ContactInformation          *string `field:"code=BC,order=24"`
+	Type                        *string `field:"code=BA,order=22,sinceVersion=F6"`
+	ContactInformationQualifier *string `field:"code=BF,order=23,sinceVersion=F6"`
+	ContactInformation          *string `field:"code=BC,order=24,sinceVersion=F6"`
 }
 
 type RejectCode struct {
