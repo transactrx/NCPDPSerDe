@@ -73,37 +73,51 @@ func collectSchemaFacts(t *testing.T, properties map[string]any, facts *schemaF6
 	t.Helper()
 
 	for name, raw := range properties {
-		prop, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		desc, _ := prop["description"].(string)
-		flagged := strings.HasSuffix(strings.TrimSpace(desc), "- F6")
-
-		code := ""
-		if m := fieldCodePattern.FindStringSubmatch(desc); m != nil {
-			code = m[1]
-		}
-
-		nested, _ := prop["properties"].(map[string]any)
-		if items, ok := prop["items"].(map[string]any); ok && nested == nil {
-			nested, _ = items["properties"].(map[string]any)
-		}
-
-		switch {
-		case nested != nil:
-			if flagged && code == "" {
-				facts.composites[name] = true
-			}
-			collectSchemaFacts(t, nested, facts)
-		case code != "":
-			if existing, seen := facts.leafF6[code]; seen && existing != flagged {
-				facts.ambiguous[code] = true
-			}
-			facts.leafF6[code] = flagged
+		if prop, ok := raw.(map[string]any); ok {
+			collectPropFacts(t, name, prop, facts)
 		}
 	}
+}
+
+func collectPropFacts(t *testing.T, name string, prop map[string]any, facts *schemaF6Facts) {
+	t.Helper()
+
+	desc, _ := prop["description"].(string)
+	flagged := strings.HasSuffix(strings.TrimSpace(desc), "- F6")
+
+	code := ""
+	if m := fieldCodePattern.FindStringSubmatch(desc); m != nil {
+		code = m[1]
+	}
+
+	switch nested := nestedProperties(prop); {
+	case nested != nil:
+		if flagged && code == "" {
+			facts.composites[name] = true
+		}
+		collectSchemaFacts(t, nested, facts)
+	case code != "":
+		facts.recordLeaf(code, flagged)
+	}
+}
+
+// nestedProperties returns the property map of an object property or of an
+// array property's items, or nil for a leaf.
+func nestedProperties(prop map[string]any) map[string]any {
+	if nested, ok := prop["properties"].(map[string]any); ok {
+		return nested
+	}
+
+	items, _ := prop["items"].(map[string]any)
+	nested, _ := items["properties"].(map[string]any)
+	return nested
+}
+
+func (facts *schemaF6Facts) recordLeaf(code string, flagged bool) {
+	if existing, seen := facts.leafF6[code]; seen && existing != flagged {
+		facts.ambiguous[code] = true
+	}
+	facts.leafF6[code] = flagged
 }
 
 // Codes with structural meaning that the schema does not describe as fields.
@@ -119,44 +133,64 @@ func checkStructTags(t *testing.T, defName string, structType reflect.Type, fact
 
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
+		checkFieldTag(t, defName, field, facts)
 
-		if tag, found := field.Tag.Lookup(serde.FieldTag); found {
-			attr, err := serde.GetFieldAttribute(tag)
-			if err != nil {
-				t.Errorf("%s.%s: bad field tag: %v", defName, field.Name, err)
-				continue
-			}
-
-			tagged := attr.SinceVersion != ""
-			if tagged && !ncpdp.KnownVersion(attr.SinceVersion) {
-				t.Errorf("%s.%s: sinceVersion=%q is not in ncpdp's version rank table — the serializer would omit it from every transmission",
-					defName, field.Name, attr.SinceVersion)
-			}
-			switch {
-			case skipCodes[attr.Code]:
-				// structural, not schema-described
-			case attr.Code != "":
-				want, known := facts.leafF6[attr.Code]
-				if known && !facts.ambiguous[attr.Code] && want != tagged {
-					t.Errorf("%s.%s (code %s): schema F6=%v but sinceVersion tag present=%v",
-						defName, field.Name, attr.Code, want, tagged)
-				}
-			case tagged:
-				if !facts.composites[field.Name] {
-					t.Errorf("%s.%s: code-less sinceVersion tag but schema does not flag it as an F6 composite",
-						defName, field.Name)
-				}
-			}
-		}
-
-		elem := field.Type
-		for elem.Kind() == reflect.Pointer || elem.Kind() == reflect.Slice {
-			elem = elem.Elem()
-		}
-		if elem.Kind() == reflect.Struct {
+		if elem := elementStructType(field.Type); elem != nil {
 			checkStructTags(t, defName, elem, facts, visited)
 		}
 	}
+}
+
+// checkFieldTag verifies one struct field's sinceVersion state against the
+// schema's F6 markings.
+func checkFieldTag(t *testing.T, defName string, field reflect.StructField, facts *schemaF6Facts) {
+	t.Helper()
+
+	tag, found := field.Tag.Lookup(serde.FieldTag)
+	if !found {
+		return
+	}
+
+	attr, err := serde.GetFieldAttribute(tag)
+	if err != nil {
+		t.Errorf("%s.%s: bad field tag: %v", defName, field.Name, err)
+		return
+	}
+
+	tagged := attr.SinceVersion != ""
+	if tagged && !ncpdp.KnownVersion(attr.SinceVersion) {
+		t.Errorf("%s.%s: sinceVersion=%q is not in ncpdp's version rank table — the serializer would omit it from every transmission",
+			defName, field.Name, attr.SinceVersion)
+	}
+
+	switch {
+	case skipCodes[attr.Code]:
+		// structural, not schema-described
+	case attr.Code != "":
+		want, known := facts.leafF6[attr.Code]
+		if known && !facts.ambiguous[attr.Code] && want != tagged {
+			t.Errorf("%s.%s (code %s): schema F6=%v but sinceVersion tag present=%v",
+				defName, field.Name, attr.Code, want, tagged)
+		}
+	case tagged:
+		if !facts.composites[field.Name] {
+			t.Errorf("%s.%s: code-less sinceVersion tag but schema does not flag it as an F6 composite",
+				defName, field.Name)
+		}
+	}
+}
+
+// elementStructType unwraps pointers and slices and returns the underlying
+// struct type, or nil when the field does not lead to a struct.
+func elementStructType(fieldType reflect.Type) reflect.Type {
+	for fieldType.Kind() == reflect.Pointer || fieldType.Kind() == reflect.Slice {
+		fieldType = fieldType.Elem()
+	}
+
+	if fieldType.Kind() == reflect.Struct {
+		return fieldType
+	}
+	return nil
 }
 
 func TestSinceVersionTagsMatchSchema(t *testing.T) {
