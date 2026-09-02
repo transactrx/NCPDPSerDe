@@ -57,6 +57,16 @@ type Field struct {
 	// position counter within a repeating item. Serializers should compute
 	// these rather than require them as input.
 	CountFor string `json:"countFor,omitempty"`
+
+	// SinceVersion scopes a field to NCPDP versions at or after the named
+	// version (e.g. "F6"). Serializers must OMIT a code-bearing field (role
+	// "field") from transmissions of an older version even when it is
+	// populated — notably the auto-derived counters (KR, RR), whose backing
+	// slices are dual-mapped from D0 scalars and therefore always non-empty.
+	// On a composite (role "struct"/"repeating") the value is informational
+	// only and must NOT suppress serialization: dual-mapped repeating groups
+	// carry the D0 scalar's data.
+	SinceVersion string `json:"sinceVersion,omitempty"`
 }
 
 // Type describes one struct participating in the claim model.
@@ -157,8 +167,16 @@ func buildFieldMeta(meta *Metadata, field reflect.StructField) (*Field, error) {
 		return buildGroupFieldMeta(meta, field, tag)
 	}
 
+	sinceVersion := ""
 	if tag := field.Tag.Get(fieldTagName); tag != "" {
-		return buildLeafFieldMeta(meta, field, tag)
+		// A code-less field tag on a struct or slice (e.g. sinceVersion=F6 on a
+		// repeating group) only version-scopes the field; it still flattens or
+		// repeats like an untagged composite rather than acting as a leaf.
+		attr, err := serde.GetFieldAttribute(tag)
+		if err != nil || attr.Code != "" || !isCompositeKind(baseType(field.Type).Kind()) {
+			return buildLeafFieldMeta(meta, field, tag)
+		}
+		sinceVersion = attr.SinceVersion
 	}
 
 	// Untagged fields: nested structs flatten into the parent, slices repeat.
@@ -168,18 +186,22 @@ func buildFieldMeta(meta *Metadata, field reflect.StructField) (*Field, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &Field{Name: field.Name, Role: "struct", Type: name}, nil
+		return &Field{Name: field.Name, Role: "struct", Type: name, SinceVersion: sinceVersion}, nil
 
 	case reflect.Slice:
 		name, err := addType(meta, baseType(field.Type).Elem(), "struct")
 		if err != nil {
 			return nil, err
 		}
-		return &Field{Name: field.Name, Role: "repeating", Type: name}, nil
+		return &Field{Name: field.Name, Role: "repeating", Type: name, SinceVersion: sinceVersion}, nil
 	}
 
 	// Untagged scalars are not serialized.
 	return nil, nil
+}
+
+func isCompositeKind(kind reflect.Kind) bool {
+	return kind == reflect.Struct || kind == reflect.Slice
 }
 
 func buildHeaderFieldMeta(meta *Metadata, field reflect.StructField) (*Field, error) {
@@ -268,8 +290,9 @@ func buildLeafFieldMeta(meta *Metadata, field reflect.StructField, tag string) (
 		Overpunch:     attr.Overpunch,
 		// serde.GetFieldAttribute converts the format to a Go time layout;
 		// export the readable tag value (e.g. YYYYMMdd) instead.
-		Format:   rawTagValue(tag, "format"),
-		CountFor: attr.CountFor,
+		Format:       rawTagValue(tag, "format"),
+		CountFor:     attr.CountFor,
+		SinceVersion: attr.SinceVersion,
 	}, nil
 }
 

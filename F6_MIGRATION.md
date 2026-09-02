@@ -63,7 +63,12 @@ F6 allows certain fields to repeat where D0 had a single occurrence. To preserve
 
 **Occurrence counts are F6-only and version-gated.** Each group has an F6-added counter — `KR` (Payer/Health Plan ID Count) on `response.Insurance`, `RR` (Patient ID Count) on `request.Patient` / `response.Patient` (AM29). These are `countfor`-derived: the serializer sets them from the slice length automatically (so an omitted or stale count is corrected on build). Because the backing slices are always populated for D0 scalar payloads (the scalar dual-maps into the slice), these counters carry the `sinceVersion=F6` field tag: the serializer omits them entirely for D0 output — even when the count field is set on the struct — since `KR`/`RR` do not exist in D0. For F6, the count is emitted as usual. This is what keeps a D0 deserialize→serialize round-trip from injecting a `KR`/`RR` field the payer never sent.
 
-The `sinceVersion` tag is the general mechanism for this: any field scoped to a newer version is skipped when serializing an older transmission (today the only distinction is D0 vs F6+, detected the same way the group-separator handling is).
+The `sinceVersion` tag is the general mechanism for this: any field scoped to a newer version is skipped when serializing an older transmission. Version ordering lives in one place — the rank table in `pkg/ncpdp/version.go` (`VersionAtLeast`, `OmitsGroupSeparator`, `HeaderLeadsWithVersion`) — so a field scoped to F6 is emitted for F6 and every later version. Supporting a future NCPDP version means adding one rank entry there (plus header layout tags and any new `sinceVersion` scoping).
+
+**Every F6-only field now carries the tag.** All fields marked `" - F6"` in the JSON schema have `sinceVersion=F6` in their `field` tag, so consumers that reflect over the structs (rule engines, field catalogs, doc generators) can distinguish D0 fields from F6 additions programmatically, and a hand-populated F6-only field can never leak into D0 output. Two tag placements exist:
+
+- **Code-bearing fields** (leaves and `countfor` counters): the serializer omits them from D0 output entirely.
+- **Code-less tags on repeating-group slices** (`request.Patient.Ids`, `request.Pricing.RegulatoryFees`, `response.Insurance.Payers` — i.e. `field:"sinceVersion=F6"` with no `code=`): metadata only. The serializer does NOT skip these for D0, because dual-mapped groups carry D0 data — the scalar's codes (CX/CY, J7/J8) are written from the slice. F6-only leaves inside such groups carry their own leaf tag.
 
 ## Strongly-typed path (`pkg/claimDeserializer`, `pkg/claimSerializer`)
 

@@ -7,7 +7,7 @@ import (
 
 type Facility struct {
 	SegmentId     ncpdp.SegmentId `json:"-"`
-	IdQualifier   *string         `field:"code=3Z,order=2"`
+	IdQualifier   *string         `field:"code=3Z,order=2,sinceVersion=F6"`
 	Id            *string         `field:"code=8C,order=3"`
 	Name          *string         `field:"code=3Q,order=4"`
 	Address       FacilityAddress
@@ -16,10 +16,10 @@ type Facility struct {
 
 type FacilityAddress struct {
 	Street      *string `field:"code=3U,order=5"`
-	StreetLine1 *string `field:"code=7M,order=6"`
-	StreetLine2 *string `field:"code=7N,order=7"`
+	StreetLine1 *string `field:"code=7M,order=6,sinceVersion=F6"`
+	StreetLine2 *string `field:"code=7N,order=7,sinceVersion=F6"`
 	City        *string `field:"code=5J,order=8"`
 	State       *string `field:"code=3V,order=9"`
 	Zip         *string `field:"code=6D,order=10"`
-	CountryCode *string `field:"code=1X,order=11"`
+	CountryCode *string `field:"code=1X,order=11,sinceVersion=F6"`
 }

@@ -88,7 +88,7 @@ func (tran *NcpdpTransaction[V]) Version() string {
 // useGroupSeparator reports whether records are delimited by a group separator.
 // F6 limits a transmission to a single transaction and removed the group separator.
 func useGroupSeparator(version string) bool {
-	return !strings.HasPrefix(version, "F")
+	return !OmitsGroupSeparator(version)
 }
 
 // Build raw value for segments.
