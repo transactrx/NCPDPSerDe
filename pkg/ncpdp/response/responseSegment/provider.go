@@ -8,8 +8,8 @@ import (
 type Provider struct {
 	SegmentId ncpdp.SegmentId `json:"-"`
 
-	DataSourceOfInvalidProviderDetermination             *string `field:"code=ZV,order=2"`
-	StateCodeForDataSourceOfInvalidProviderDetermination *string `field:"code=ZZ,order=3"`
+	DataSourceOfInvalidProviderDetermination             *string `field:"code=ZV,order=2,sinceVersion=F6"`
+	StateCodeForDataSourceOfInvalidProviderDetermination *string `field:"code=ZZ,order=3,sinceVersion=F6"`
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

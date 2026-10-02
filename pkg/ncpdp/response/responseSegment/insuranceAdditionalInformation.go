@@ -12,7 +12,7 @@ type InsuranceAdditionalInformation struct {
 	MedicarePartD  MedicarePartD
 	ContractNumber *string `field:"code=U1,order=4"`
 	FormularyId    *string `field:"code=FF,order=5"`
-	PlanName       *string `field:"code=96,order=9"`
+	PlanName       *string `field:"code=96,order=9,sinceVersion=F6"`
 }
 
 type MedicarePartD struct {

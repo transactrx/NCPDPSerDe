@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
@@ -27,10 +28,21 @@ const (
 	f6RequestLength     = 58
 )
 
+// trimClaimFrame removes transport framing from a raw claim: leading
+// whitespace (which would throw off header-offset detection) and trailing
+// CR/LF line endings. Trailing blanks are left intact — they belong to the
+// last field's value (e.g. a blank-padded H6) and must round-trip unchanged.
+func trimClaimFrame(raw string) string {
+	raw = strings.TrimLeftFunc(raw, unicode.IsSpace)
+	return strings.TrimRight(raw, "\r\n")
+}
+
 // Parse raw data.
 // Good if you don't know anything about the data.
 func Deserialize(rawClaimString string) (interface{}, error) {
 	serde.RegisterTypes()
+
+	rawClaimString = trimClaimFrame(rawClaimString)
 
 	// Determine type by first separator index
 	firstSeparatorIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.FIELD, ncpdp.SEGMENT, ncpdp.GROUP})
@@ -56,20 +68,20 @@ func Deserialize(rawClaimString string) (interface{}, error) {
 func DeserializeRequest(rawClaimString string) (interface{}, error) {
 	serde.RegisterTypes()
 
-	// Determine transaction type by tran code. Trailing spaces are significant
-	// NCPDP data (they belong to the last field's value, e.g. a blank-padded
-	// H6) and must round-trip unchanged, so only the ETX framing byte is
-	// removed here.
+	// Determine transaction type by tran code. Only framing is removed (ETX,
+	// leading whitespace, trailing CR/LF): trailing spaces are significant
+	// NCPDP data and must round-trip unchanged.
 	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
+	rawClaimString = trimClaimFrame(rawClaimString)
 
 	if len(rawClaimString) < 10 {
 		return nil, fmt.Errorf("unable to determine transaction type")
 	}
 
-	// D0 request headers lead with the BIN (digits); F6 headers lead with the
-	// version (e.g. "F6"), which moves the transaction code to bytes 2-4.
+	// D0 request headers lead with the BIN (digits); vEB+ headers (e.g. F6)
+	// lead with the version, which moves the transaction code to bytes 2-4.
 	tranCode := rawClaimString[8:10]
-	if rawClaimString[0] == 'F' {
+	if ncpdp.HeaderLeadsWithVersion(rawClaimString[:2]) {
 		tranCode = rawClaimString[2:4]
 	}
 
@@ -91,10 +103,11 @@ func DeserializeRequest(rawClaimString string) (interface{}, error) {
 func DeserializeResponse(rawClaimString string) (interface{}, error) {
 	serde.RegisterTypes()
 
-	// Determine transaction type by tran code. Trailing spaces are significant
-	// NCPDP data and must round-trip unchanged, so only the ETX framing byte
-	// is removed here.
+	// Determine transaction type by tran code. Only framing is removed (ETX,
+	// leading whitespace, trailing CR/LF): trailing spaces are significant
+	// NCPDP data and must round-trip unchanged.
 	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
+	rawClaimString = trimClaimFrame(rawClaimString)
 
 	if len(rawClaimString) < 4 {
 		return nil, fmt.Errorf("unable to determine transaction type")
@@ -139,9 +152,11 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 		return nil, fmt.Errorf("NCPDP data is empty")
 	}
 
-	// Only the ETX framing byte is removed: trailing spaces belong to the last
-	// field's value and must round-trip unchanged.
+	// Only framing is removed (ETX, leading whitespace, trailing CR/LF):
+	// trailing spaces belong to the last field's value and must round-trip
+	// unchanged.
 	rawClaimString = strings.ReplaceAll(rawClaimString, string(ncpdp.ETX), "")
+	rawClaimString = trimClaimFrame(rawClaimString)
 
 	firstSeparatorIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.FIELD, ncpdp.SEGMENT, ncpdp.GROUP})
 	if firstSeparatorIndex == -1 {
@@ -153,7 +168,7 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 
 	groupIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.GROUP})
 
-	if groupIndex < 0 && strings.HasPrefix(rawClaimString, "F") {
+	if groupIndex < 0 && ncpdp.OmitsGroupSeparator(ncpdp.DetectTransmissionVersion(rawClaimString)) {
 		// vEB+ (e.g. F6) eliminated the group separator and allows only a single
 		// transaction per transmission; the claim segments directly follow the
 		// shared segments and are located by segment ID instead.

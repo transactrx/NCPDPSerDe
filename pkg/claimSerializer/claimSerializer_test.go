@@ -973,3 +973,75 @@ func Test_TrailingPaddingBeforeEtxRoundTrips(t *testing.T) {
 		t.Errorf("ETX framing bytes leaked into serialized output: %q", serialized)
 	}
 }
+
+// Transport framing — leading whitespace and trailing CR/LF — must be stripped
+// before parsing, while trailing blank padding on the last field (significant
+// NCPDP data) survives the round trip.
+func Test_FramingTrimmedButTrailingBlanksKept(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	paddedTail := fs + "J9  " + fs + "H6         "
+
+	cut := strings.Index(REQUEST_B1, fs+"J9")
+	if cut == -1 {
+		t.Fatal("sample claim is missing the J9 field")
+	}
+	framed := "\r\n  \t" + REQUEST_B1[:cut] + paddedTail + "\r\n\r\n"
+
+	i, err := claimdeserializer.Deserialize(framed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	item, ok := i.(request.Billing)
+	if !ok {
+		t.Fatalf("expected request.Billing.  Got: %T", i)
+	}
+
+	serialized, err := Serialize(&item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.HasPrefix(serialized, REQUEST_B1[:20]) {
+		t.Errorf("leading framing whitespace not trimmed.\nGot: %q", serialized[:30])
+	}
+	if !strings.Contains(serialized, paddedTail) {
+		t.Errorf("trailing blank padding not preserved.\nWanted substring: %q\nGot: %q", paddedTail, serialized)
+	}
+	if strings.ContainsAny(serialized, "\r\n") {
+		t.Errorf("CR/LF framing leaked into serialized output: %q", serialized)
+	}
+}
+
+// D0 serialization must be a fixed point: raw wire data may normalize once
+// (numeric fields re-emit canonically, e.g. E70000001000 -> E71000), but a
+// second deserialize/serialize of the serializer's own output must be
+// byte-identical — no field injection (KR/RR), no padding loss, no dual-mapped
+// double emission, no drift of any kind. This is the broadest guard for the
+// D0 production path.
+func Test_D0BillingRequestSerializationIsStable(t *testing.T) {
+	roundTrip := func(raw string) string {
+		i, err := claimdeserializer.Deserialize(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		item, ok := i.(request.Billing)
+		if !ok {
+			t.Fatalf("expected request.Billing.  Got: %T", i)
+		}
+
+		serialized, err := Serialize(&item)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return serialized
+	}
+
+	normalized := roundTrip(REQUEST_B1)
+	stable := roundTrip(normalized)
+
+	if stable != normalized {
+		t.Errorf("D0 serialization is not a fixed point.\nFirst:  %q\nSecond: %q", normalized, stable)
+	}
+}

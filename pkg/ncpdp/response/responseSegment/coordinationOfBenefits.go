@@ -26,9 +26,9 @@ type OtherPayer struct {
 	PatientRelationshipCode *string    `field:"code=UW,order=11"`
 	BenefitEffectiveDate    *time.Time `field:"code=UX,format=YYYYMMdd,order=12"`
 	BenefitTerminationDate  *time.Time `field:"code=UY,format=YYYYMMdd,order=13"`
-	RelationshipType        *string    `field:"code=PQ,order=14"`
-	BenefitClassification   *string    `field:"code=P6,order=15"`
-	AdjudicatedProgramType  *string    `field:"code=9T,order=16"`
-	Name                    *string    `field:"code=M5,order=17"`
-	HelpDeskPhoneExtension  *string    `field:"code=7Q,order=18"`
+	RelationshipType        *string    `field:"code=PQ,order=14,sinceVersion=F6"`
+	BenefitClassification   *string    `field:"code=P6,order=15,sinceVersion=F6"`
+	AdjudicatedProgramType  *string    `field:"code=9T,order=16,sinceVersion=F6"`
+	Name                    *string    `field:"code=M5,order=17,sinceVersion=F6"`
+	HelpDeskPhoneExtension  *string    `field:"code=7Q,order=18,sinceVersion=F6"`
 }

@@ -35,24 +35,24 @@ type OtherPayer struct {
 	BenefitStageCount   *int `field:"code=MU,order=16,countfor=BenefitStageAmounts"`
 	BenefitStageAmounts []BenefitStage
 
-	AdjudicatedProgramType       *string `field:"code=9T,order=19"`
-	ReconciliationId             *string `field:"code=9V,order=20"`
-	PercentageTaxExemptIndicator *string `field:"code=P7,order=21"`
+	AdjudicatedProgramType       *string `field:"code=9T,order=19,sinceVersion=F6"`
+	ReconciliationId             *string `field:"code=9V,order=20,sinceVersion=F6"`
+	PercentageTaxExemptIndicator *string `field:"code=P7,order=21,sinceVersion=F6"`
 
-	RegulatoryFeeTypeCount *int `field:"code=P9,order=22,countfor=RegulatoryFees"`
+	RegulatoryFeeTypeCount *int `field:"code=P9,order=22,countfor=RegulatoryFees,sinceVersion=F6"`
 	RegulatoryFees         []OtherPayerRegulatoryFee
 
-	BenefitStageIndicatorCount *int `field:"code=9W,order=25,countfor=BenefitStageIndicators"`
+	BenefitStageIndicatorCount *int `field:"code=9W,order=25,countfor=BenefitStageIndicators,sinceVersion=F6"`
 	BenefitStageIndicators     []BenefitStageIndicator
 }
 
 type OtherPayerRegulatoryFee struct {
-	TypeCode        *string `field:"code=RN,order=23"`
-	ExemptIndicator *string `field:"code=P8,order=24"`
+	TypeCode        *string `field:"code=RN,order=23,sinceVersion=F6"`
+	ExemptIndicator *string `field:"code=P8,order=24,sinceVersion=F6"`
 }
 
 type BenefitStageIndicator struct {
-	Indicator *string `field:"code=9X,order=26"`
+	Indicator *string `field:"code=9X,order=26,sinceVersion=F6"`
 }
 
 type OtherPayerAmountPaid struct {

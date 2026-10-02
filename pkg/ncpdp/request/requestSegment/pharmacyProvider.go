@@ -9,7 +9,7 @@ type PharmacyProvider struct {
 	SegmentId     ncpdp.SegmentId         `json:"-"`
 	IdQualifier   *string                 `field:"code=EY,order=2"`
 	Id            *string                 `field:"code=E9,order=3"`
-	FirstName     *string                 `field:"code=4A,order=4"`
-	LastName      *string                 `field:"code=4M,order=5"`
+	FirstName     *string                 `field:"code=4A,order=4,sinceVersion=F6"`
+	LastName      *string                 `field:"code=4M,order=5,sinceVersion=F6"`
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

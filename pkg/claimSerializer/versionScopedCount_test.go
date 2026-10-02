@@ -133,6 +133,54 @@ func TestD0ResponsePatientOmitsRR(t *testing.T) {
 	}
 }
 
+// TestD0OmitsHandPopulatedF6OnlyLeaf covers the general sinceVersion gate on
+// leaf fields: an F6-only field set on the struct by application code must not
+// leak into a D0 transmission, where the field does not exist.
+func TestD0OmitsHandPopulatedF6OnlyLeaf(t *testing.T) {
+	rsp, err := claimdeserializer.DeserializeResponse(d0InsuranceResponse())
+	if err != nil {
+		t.Fatalf("deserialize: %v", err)
+	}
+	billing := rsp.(response.Billing)
+
+	recon := "RECON123"
+	billing.Claims[0].Status.ReconciliationId = &recon
+
+	out, err := claimserializer.Serialize(&billing)
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+
+	if strings.Contains(out, fs+"34RECON123") {
+		t.Errorf("D0 output must not contain the F6-only Reconciliation ID (34) field.\nout: %q", out)
+	}
+}
+
+// TestF6KeepsHandPopulatedF6OnlyLeaf proves the same field is emitted for F6.
+func TestF6KeepsHandPopulatedF6OnlyLeaf(t *testing.T) {
+	raw := "F6B11A011184739229     20260729" + seg +
+		fs + "AM25" + fs + "C1RXPB21" + fs + "2FMAG17CN2" + fs + "J703" + fs + "J8019363" + seg +
+		fs + "AM21" + fs + "ANP" + fs + "F3655380953234993582"
+
+	rsp, err := claimdeserializer.DeserializeResponse(raw)
+	if err != nil {
+		t.Fatalf("deserialize: %v", err)
+	}
+	billing := rsp.(response.Billing)
+
+	recon := "RECON123"
+	billing.Claims[0].Status.ReconciliationId = &recon
+
+	out, err := claimserializer.Serialize(&billing)
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+
+	if !strings.Contains(out, fs+"34RECON123") {
+		t.Errorf("F6 output must contain the Reconciliation ID (34) field.\nout: %q", out)
+	}
+}
+
 // TestF6ResponsePatientDerivesRR proves RR is still auto-derived for F6, where
 // the patient-ID group (CX/CY) genuinely repeats.
 func TestF6ResponsePatientDerivesRR(t *testing.T) {

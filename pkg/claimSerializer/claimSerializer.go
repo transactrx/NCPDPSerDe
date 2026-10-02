@@ -34,14 +34,13 @@ func Serialize[V any](claim *V) (string, error) {
 	}
 	builder.WriteString(rawHdr)
 
-	// vEB+ versions (e.g. F6) lead the header with the version value instead of
-	// the numeric BIN, eliminated the group separator, and added repeating
-	// groups. This single flag drives all three concerns: group-separator
-	// omission below and version-scoped field emission during segment building.
-	isF6 := strings.HasPrefix(rawHdr, "F")
+	// The transmission version drives group-separator omission below and
+	// version-scoped field emission during segment building. An unknown or
+	// blank version resolves to Empty, which ranks oldest (D0-era behavior).
+	version := ncpdp.DetectTransmissionVersion(rawHdr)
 
 	// Build shared segments
-	rawSegs, err := buildSegments(claimType, claimObjectRef, isF6)
+	rawSegs, err := buildSegments(claimType, claimObjectRef, version)
 	if err != nil {
 		return serde.Empty, err
 	}
@@ -49,7 +48,7 @@ func Serialize[V any](claim *V) (string, error) {
 
 	// Build groups. vEB+ versions (e.g. F6) eliminated the group separator and
 	// allow only a single transaction per transmission.
-	rawGrps, err := buildGroups(claimType, claimObjectRef, isF6)
+	rawGrps, err := buildGroups(claimType, claimObjectRef, version)
 	if err != nil {
 		return serde.Empty, err
 	}
@@ -92,9 +91,9 @@ func buildHeader(structType reflect.Type, structVal reflect.Value) (string, erro
 	return rawField.String(), nil
 }
 
-// Build raw groups. isF6 marks a vEB+ transmission, which omits group
+// Build raw groups. version marks a vEB+ transmission, which omits group
 // separators (and is threaded on to segment building for version-scoped fields).
-func buildGroups(structType reflect.Type, structVal reflect.Value, isF6 bool) (string, error) {
+func buildGroups(structType reflect.Type, structVal reflect.Value, version string) (string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -110,7 +109,7 @@ func buildGroups(structType reflect.Type, structVal reflect.Value, isF6 bool) (s
 
 	groupSlice := baseVal.FieldByName(groupField.Name)
 
-	if isF6 && groupSlice.Len() > 1 {
+	if ncpdp.OmitsGroupSeparator(version) && groupSlice.Len() > 1 {
 		return serde.Empty, fmt.Errorf("NCPDP versions without group separators (vEB and higher) allow a single transaction per transmission; found %d claim groups", groupSlice.Len())
 	}
 
@@ -119,12 +118,12 @@ func buildGroups(structType reflect.Type, structVal reflect.Value, isF6 bool) (s
 	for i := 0; i < groupSlice.Len(); i++ {
 		groupElement := groupSlice.Index(i)
 
-		rawSegs, err := buildSegments(groupElement.Type(), groupElement, isF6)
+		rawSegs, err := buildSegments(groupElement.Type(), groupElement, version)
 		if err != nil {
 			return serde.Empty, err
 		}
 
-		if !isF6 {
+		if !ncpdp.OmitsGroupSeparator(version) {
 			builder.WriteByte(ncpdp.GROUP)
 		}
 		builder.WriteString(rawSegs)
@@ -133,9 +132,9 @@ func buildGroups(structType reflect.Type, structVal reflect.Value, isF6 bool) (s
 	return builder.String(), nil
 }
 
-// Build raw segments. isF6 is threaded through so version-scoped fields
+// Build raw segments. version is threaded through so version-scoped fields
 // (sinceVersion tag) are omitted from older transmissions.
-func buildSegments(structType reflect.Type, structVal reflect.Value, isF6 bool) (string, error) {
+func buildSegments(structType reflect.Type, structVal reflect.Value, version string) (string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -164,7 +163,7 @@ func buildSegments(structType reflect.Type, structVal reflect.Value, isF6 bool) 
 			for i := 0; i < segmentVal.Len(); i++ {
 				sliceItemVal := segmentVal.Index(i)
 
-				raw, err := buildSegment(sliceItemVal.Type(), sliceItemVal, segmentDef.Tag.Code, isF6)
+				raw, err := buildSegment(sliceItemVal.Type(), sliceItemVal, segmentDef.Tag.Code, version)
 				if err != nil {
 					return serde.Empty, err
 				}
@@ -172,7 +171,7 @@ func buildSegments(structType reflect.Type, structVal reflect.Value, isF6 bool) 
 			}
 
 		default:
-			raw, err := buildSegment(segmentDef.Field.Type, segmentVal, segmentDef.Tag.Code, isF6)
+			raw, err := buildSegment(segmentDef.Field.Type, segmentVal, segmentDef.Tag.Code, version)
 			if err != nil {
 				return serde.Empty, err
 			}
@@ -186,7 +185,7 @@ func buildSegments(structType reflect.Type, structVal reflect.Value, isF6 bool) 
 // Build individual raw segment. segmentCode is the code from the struct's
 // segment tag (e.g. AM04); it is used to auto-populate the segment identifier
 // when the caller did not supply SegmentId.
-func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode string, isF6 bool) (string, error) {
+func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode string, version string) (string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -204,7 +203,7 @@ func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode 
 	builder.WriteByte(ncpdp.SEGMENT)
 
 	// Build map of fields and contents
-	rawFieldMap, err := buildFieldMap(baseType, baseVal, nil, noItemIndex, isF6)
+	rawFieldMap, err := buildFieldMap(baseType, baseVal, nil, noItemIndex, version)
 	if err != nil {
 		return builder.String(), err
 	}
@@ -263,7 +262,7 @@ func segmentIdValue(baseVal reflect.Value) *string {
 // repeating slice, so per-item counters fall back to their supplied values.
 const noItemIndex = -1
 
-func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes map[string]bool, itemIndex int, isF6 bool) (map[int]string, error) {
+func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes map[string]bool, itemIndex int, version string) (map[int]string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -285,7 +284,7 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes m
 	rawFieldMap := make(map[int]string)
 
 	for i := 0; i < baseType.NumField(); i++ {
-		fieldResult, err := buildFieldMapEntries(baseType.Field(i), baseVal, skipCodes, itemIndex, isF6)
+		fieldResult, err := buildFieldMapEntries(baseType.Field(i), baseVal, skipCodes, itemIndex, version)
 		if err != nil {
 			return rawFieldMap, err
 		}
@@ -300,7 +299,7 @@ func buildFieldMap(structType reflect.Type, structVal reflect.Value, skipCodes m
 
 // buildFieldMapEntries serializes a single struct field into raw field map
 // entries, deriving countfor-tagged counter values automatically.
-func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skipCodes map[string]bool, itemIndex int, isF6 bool) (map[int]string, error) {
+func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skipCodes map[string]bool, itemIndex int, version string) (map[int]string, error) {
 	fieldAttribute, err := serde.GetFieldAttribute(field.Tag.Get(serde.FieldTag))
 	if err != nil {
 		return nil, err
@@ -310,7 +309,7 @@ func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skip
 	// stops F6-only repeating-group counters (e.g. KR, RR) — whose backing
 	// slices are dual-mapped from D0 scalars and are therefore always non-empty
 	// — from being auto-derived into a D0 message.
-	if fieldOmittedForVersion(&fieldAttribute, isF6) {
+	if fieldOmittedForVersion(&fieldAttribute, version) {
 		return nil, nil
 	}
 
@@ -322,16 +321,22 @@ func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skip
 		// slice): fall through and serialize any supplied value as usual.
 	}
 
-	return buildStructField(field.Type, baseVal.FieldByName(field.Name), &fieldAttribute, skipCodes, itemIndex, isF6)
+	return buildStructField(field.Type, baseVal.FieldByName(field.Name), &fieldAttribute, skipCodes, itemIndex, version)
 }
 
 // fieldOmittedForVersion reports whether a field must be skipped because it is
-// scoped (via the sinceVersion tag) to a newer NCPDP version than the one being
-// serialized. Today the only versioned distinction is D0 vs F6+, matching the
-// group-separator detection used elsewhere in this package; any sinceVersion
-// value therefore means "F6 and later".
-func fieldOmittedForVersion(attr *serde.FieldAttribute, isF6 bool) bool {
-	return attr != nil && attr.SinceVersion != serde.Empty && !isF6
+// scoped (via the sinceVersion tag) to a newer NCPDP version than the one
+// being serialized. Version ordering comes from ncpdp.VersionAtLeast, so a
+// field scoped to F6 is emitted for F6 and every later version.
+//
+// Only code-bearing fields are gated. A code-less sinceVersion tag (used on
+// repeating-group slices like Patient.Ids) is metadata for reflection-based
+// consumers: dual-mapped groups carry D0 data — the scalar's codes are written
+// from the slice (see mergeSliceFieldCodes) — so skipping the slice would drop
+// D0 fields. F6-only leaves inside such groups carry their own tag.
+func fieldOmittedForVersion(attr *serde.FieldAttribute, version string) bool {
+	return attr != nil && attr.Code != serde.Empty && attr.SinceVersion != serde.Empty &&
+		!ncpdp.VersionAtLeast(version, attr.SinceVersion)
 }
 
 // buildCountField renders a derived counter value as a raw field map entry,
@@ -454,25 +459,25 @@ func collectFieldCodes(structType reflect.Type, codes map[string]bool) {
 	}
 }
 
-func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool, itemIndex int, isF6 bool) (map[int]string, error) {
+func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool, itemIndex int, version string) (map[int]string, error) {
 	switch ft.Kind() {
 	case reflect.Struct:
-		return buildFieldMap(ft, fieldVal, skipCodes, itemIndex, isF6)
+		return buildFieldMap(ft, fieldVal, skipCodes, itemIndex, version)
 
 	case reflect.Pointer:
-		return buildPointerField(ft, fieldVal, fieldAttribute, skipCodes, itemIndex, isF6)
+		return buildPointerField(ft, fieldVal, fieldAttribute, skipCodes, itemIndex, version)
 
 	case reflect.Slice, reflect.Array:
-		return buildSliceField(fieldVal, isF6)
+		return buildSliceField(fieldVal, version)
 
 	default:
 		return buildScalarField(fieldVal, fieldAttribute, skipCodes)
 	}
 }
 
-func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool, itemIndex int, isF6 bool) (map[int]string, error) {
+func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool, itemIndex int, version string) (map[int]string, error) {
 	if fieldAttribute == nil || fieldAttribute.Order <= 0 {
-		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute, skipCodes, itemIndex, isF6)
+		return buildStructField(ft.Elem(), fieldVal.Elem(), fieldAttribute, skipCodes, itemIndex, version)
 	}
 
 	rawFieldMap := make(map[int]string)
@@ -491,7 +496,7 @@ func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *
 	return rawFieldMap, nil
 }
 
-func buildSliceField(fieldVal reflect.Value, isF6 bool) (map[int]string, error) {
+func buildSliceField(fieldVal reflect.Value, version string) (map[int]string, error) {
 	rawFieldMap := make(map[int]string)
 
 	builder := strings.Builder{}
@@ -500,7 +505,7 @@ func buildSliceField(fieldVal reflect.Value, isF6 bool) (map[int]string, error) 
 	for i := 0; i < fieldVal.Len(); i++ {
 		element := fieldVal.Index(i)
 
-		fm, err := buildFieldMap(element.Type(), element, nil, i, isF6)
+		fm, err := buildFieldMap(element.Type(), element, nil, i, version)
 		if err != nil {
 			return rawFieldMap, err
 		}

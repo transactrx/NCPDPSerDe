@@ -22,14 +22,14 @@ type Pricing struct {
 	GrossAmountDue                    *float64 `field:"code=DU,decimalPlaces=2,overpunch=true,order=15"`
 	BasisOfCostDetermination          *string  `field:"code=DN,order=16"`
 	MedicaidPaidAmount                *float64 `field:"code=N3,decimalPlaces=2,overpunch=true,order=17"`
-	RegulatoryFeeCount                *int     `field:"code=RK,order=18,countfor=RegulatoryFees"`
-	RegulatoryFees                    []RegulatoryFeeType
-	SubrogationAmountRequested        *float64                `field:"code=KX,decimalPlaces=2,overpunch=true,order=20"`
+	RegulatoryFeeCount                *int     `field:"code=RK,order=18,countfor=RegulatoryFees,sinceVersion=F6"`
+	RegulatoryFees                    []RegulatoryFeeType `field:"sinceVersion=F6"`
+	SubrogationAmountRequested        *float64                `field:"code=KX,decimalPlaces=2,overpunch=true,order=20,sinceVersion=F6"`
 	DynamicFields                     []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type RegulatoryFeeType struct {
-	TypeCode *string `field:"code=RL,order=19"`
+	TypeCode *string `field:"code=RL,order=19,sinceVersion=F6"`
 }
 
 type OtherAmountClaimSubmitted struct {

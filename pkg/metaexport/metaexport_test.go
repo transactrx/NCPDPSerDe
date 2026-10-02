@@ -149,4 +149,43 @@ func TestNestedAndRepeatingFields(t *testing.T) {
 	if dynamicFields.Role != "dynamicFields" {
 		t.Errorf("DynamicFields exported as %+v", dynamicFields)
 	}
+
+	// A code-less sinceVersion field tag must not demote a repeating group to a
+	// leaf field.
+	patientIds := findField(t, meta, "requestsegment.Patient", "Ids")
+	if patientIds.Role != "repeating" || patientIds.Type != "requestsegment.PatientId" {
+		t.Errorf("Patient.Ids exported as %+v", patientIds)
+	}
+
+	payers := findField(t, meta, "responsesegment.Insurance", "Payers")
+	if payers.Role != "repeating" || payers.Type != "responsesegment.Payer" {
+		t.Errorf("Insurance.Payers exported as %+v", payers)
+	}
+}
+
+// Version scoping must reach non-Go consumers: an F6-only leaf, an F6-only
+// derived counter, and an F6 repeating group all export sinceVersion, while
+// D0 fields export nothing.
+func TestSinceVersionExported(t *testing.T) {
+	meta := buildOrFail(t)
+
+	species := findField(t, meta, "requestsegment.Patient", "Species")
+	if species.SinceVersion != "F6" {
+		t.Errorf("Species exported as %+v", species)
+	}
+
+	payerIdCount := findField(t, meta, "responsesegment.Insurance", "PayerIdCount")
+	if payerIdCount.SinceVersion != "F6" || payerIdCount.CountFor != "Payers" {
+		t.Errorf("PayerIdCount exported as %+v", payerIdCount)
+	}
+
+	patientIds := findField(t, meta, "requestsegment.Patient", "Ids")
+	if patientIds.SinceVersion != "F6" || patientIds.Role != "repeating" {
+		t.Errorf("Patient.Ids exported as %+v", patientIds)
+	}
+
+	firstName := findField(t, meta, "requestsegment.Patient", "FirstName")
+	if firstName.SinceVersion != "" {
+		t.Errorf("D0 field FirstName must not carry sinceVersion: %+v", firstName)
+	}
 }

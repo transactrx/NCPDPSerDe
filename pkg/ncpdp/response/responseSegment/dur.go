@@ -27,27 +27,27 @@ type DurItem struct {
 	FreeText                 *string    `field:"code=FY,order=10"`
 	AdditionalText           *string    `field:"code=NS,order=11"`
 
-	CoAgentIdQualifier *string `field:"code=J9,order=12"`
-	CoAgentId          *string `field:"code=H6,order=13"`
-	CoAgentDescription *string `field:"code=ZC,order=14"`
+	CoAgentIdQualifier *string `field:"code=J9,order=12,sinceVersion=F6"`
+	CoAgentId          *string `field:"code=H6,order=13,sinceVersion=F6"`
+	CoAgentDescription *string `field:"code=ZC,order=14,sinceVersion=F6"`
 
-	OtherPharmacyIdQualifier *string `field:"code=Z9,order=15"`
-	OtherPharmacyId          *string `field:"code=Z8,order=16"`
-	OtherPharmacyName        *string `field:"code=Z7,order=17"`
-	OtherPharmacyTelephone   *string `field:"code=Z6,order=18"`
+	OtherPharmacyIdQualifier *string `field:"code=Z9,order=15,sinceVersion=F6"`
+	OtherPharmacyId          *string `field:"code=Z8,order=16,sinceVersion=F6"`
+	OtherPharmacyName        *string `field:"code=Z7,order=17,sinceVersion=F6"`
+	OtherPharmacyTelephone   *string `field:"code=Z6,order=18,sinceVersion=F6"`
 
-	UnitOfMeasureForPreviousDispensedQuantity *string `field:"code=ZA,order=19"`
+	UnitOfMeasureForPreviousDispensedQuantity *string `field:"code=ZA,order=19,sinceVersion=F6"`
 
-	OtherPrescriberIdQualifier     *string `field:"code=Z4,order=20"`
-	OtherPrescriberId              *string `field:"code=Z3,order=21"`
-	OtherPrescriberLastName        *string `field:"code=Z5,order=22"`
-	OtherPrescriberTelephoneNumber *string `field:"code=Z2,order=23"`
+	OtherPrescriberIdQualifier     *string `field:"code=Z4,order=20,sinceVersion=F6"`
+	OtherPrescriberId              *string `field:"code=Z3,order=21,sinceVersion=F6"`
+	OtherPrescriberLastName        *string `field:"code=Z5,order=22,sinceVersion=F6"`
+	OtherPrescriberTelephoneNumber *string `field:"code=Z2,order=23,sinceVersion=F6"`
 
-	CompoundProductIdQualifier *string `field:"code=Z0,order=24"`
-	CompoundProductId          *string `field:"code=Z1,order=25"`
+	CompoundProductIdQualifier *string `field:"code=Z0,order=24,sinceVersion=F6"`
+	CompoundProductId          *string `field:"code=Z1,order=25,sinceVersion=F6"`
 
-	MaximumDailyDoseQuantity      *float64 `field:"code=YO,decimalPlaces=3,order=26"`
-	MaximumDailyDoseUnitOfMeasure *string  `field:"code=YL,order=27"`
-	MinimumDailyDoseQuantity      *float64 `field:"code=YJ,decimalPlaces=3,order=28"`
-	MinimumDailyDoseUnitOfMeasure *string  `field:"code=YI,order=29"`
+	MaximumDailyDoseQuantity      *float64 `field:"code=YO,decimalPlaces=3,order=26,sinceVersion=F6"`
+	MaximumDailyDoseUnitOfMeasure *string  `field:"code=YL,order=27,sinceVersion=F6"`
+	MinimumDailyDoseQuantity      *float64 `field:"code=YJ,decimalPlaces=3,order=28,sinceVersion=F6"`
+	MinimumDailyDoseUnitOfMeasure *string  `field:"code=YI,order=29,sinceVersion=F6"`
 }

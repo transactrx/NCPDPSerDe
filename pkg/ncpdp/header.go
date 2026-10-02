@@ -208,9 +208,11 @@ func getLayoutFromTag(tag string) (Layout, error) {
 	return layout, nil
 }
 
-// resolveLayoutTagName returns the struct tag name to use for the given NCPDP version.
+// resolveLayoutTagName returns the struct tag name to use for the given NCPDP
+// version. Each version with its own header layout needs a case here (and a
+// matching struct tag); everything else uses the default D0-era layout.
 func resolveLayoutTagName(version string) string {
-	if strings.HasPrefix(version, "F") {
+	if version == F6 {
 		return layoutF6Tag
 	}
 	return layoutTag
@@ -227,9 +229,9 @@ func resolveFieldTag(field reflect.StructField, tagName string) string {
 }
 
 // detectVersionFromRaw inspects the first bytes of the raw header to determine the NCPDP version.
-// Returns the version prefix (e.g., "F6") or empty string if it cannot be determined.
+// Returns the known version code found there (e.g., "F6") or empty string if it cannot be determined.
 func detectVersionFromRaw(raw string) string {
-	if len(raw) >= 2 && raw[0] == 'F' {
+	if len(raw) >= 2 && KnownVersion(raw[:2]) {
 		return raw[:2]
 	}
 	return Empty

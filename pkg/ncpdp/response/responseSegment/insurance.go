@@ -14,7 +14,7 @@ type Insurance struct {
 	Payer                  Payer
 	// Payers captures every J7/J8 occurrence when the F6 payer ID repeats; the
 	// singular Payer struct is kept for D0 backward compatibility.
-	Payers        []Payer
+	Payers        []Payer `field:"sinceVersion=F6"`
 	Medicaid      Medicaid
 	CardholderId  *string                 `field:"code=C2,order=10"`
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
