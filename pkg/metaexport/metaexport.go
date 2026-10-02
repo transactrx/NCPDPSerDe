@@ -252,9 +252,9 @@ func buildGroupFieldMeta(meta *Metadata, field reflect.StructField, tag string) 
 		return nil, fmt.Errorf("group tag on non-slice field")
 	}
 
-	max := 0
+	maxRepeats := 0
 	if v := rawTagValue(tag, "max"); v != "" {
-		if _, err := fmt.Sscanf(v, "%d", &max); err != nil {
+		if _, err := fmt.Sscanf(v, "%d", &maxRepeats); err != nil {
 			return nil, fmt.Errorf("invalid group max %q: %w", v, err)
 		}
 	}
@@ -264,7 +264,7 @@ func buildGroupFieldMeta(meta *Metadata, field reflect.StructField, tag string) 
 		return nil, err
 	}
 
-	return &Field{Name: field.Name, Role: "group", Type: name, Max: max}, nil
+	return &Field{Name: field.Name, Role: "group", Type: name, Max: maxRepeats}, nil
 }
 
 func buildLeafFieldMeta(meta *Metadata, field reflect.StructField, tag string) (*Field, error) {
