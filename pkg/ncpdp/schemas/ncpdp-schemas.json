@@ -755,18 +755,18 @@
       "type": "object",
       "description": "Intermediary Segment (AM19) - Request - F6",
       "properties": {
-        "IdCount": { "type": ["integer", "null"], "description": "Intermediary ID Count (8G)" },
+        "IdCount": { "type": ["integer", "null"], "description": "Intermediary ID Count (8G) - F6" },
         "Ids": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "TypeCode": { "type": ["string", "null"], "description": "Intermediary Type Code (8H)" },
-              "TypeEntity": { "type": ["string", "null"], "description": "Intermediary Type Entity (8J)" },
-              "Qualifier": { "type": ["string", "null"], "description": "Intermediary ID Qualifier (8K)" },
-              "Id": { "type": ["string", "null"], "description": "Intermediary ID (8M)" },
-              "StateProvinceAddress": { "type": ["string", "null"], "description": "Intermediary State/Province Address (8N)" },
-              "CountryCode": { "type": ["string", "null"], "description": "Intermediary Country Code (8U)" }
+              "TypeCode": { "type": ["string", "null"], "description": "Intermediary Type Code (8H) - F6" },
+              "TypeEntity": { "type": ["string", "null"], "description": "Intermediary Type Entity (8J) - F6" },
+              "Qualifier": { "type": ["string", "null"], "description": "Intermediary ID Qualifier (8K) - F6" },
+              "Id": { "type": ["string", "null"], "description": "Intermediary ID (8M) - F6" },
+              "StateProvinceAddress": { "type": ["string", "null"], "description": "Intermediary State/Province Address (8N) - F6" },
+              "CountryCode": { "type": ["string", "null"], "description": "Intermediary Country Code (8U) - F6" }
             }
           }
         },
@@ -778,12 +778,12 @@
       "type": "object",
       "description": "Last Known 4Rx Segment (AM37) - Request - F6",
       "properties": {
-        "IinNumber": { "type": ["string", "null"], "description": "Last Known IIN Number (3E)" },
-        "ProcessorControlNumber": { "type": ["string", "null"], "description": "Last Known Processor Control Number (3F)" },
-        "GroupId": { "type": ["string", "null"], "description": "Last Known Group ID (3G)" },
-        "CardholderId": { "type": ["string", "null"], "description": "Last Known Cardholder ID (3H)" },
-        "YearOfLastPaidClaim": { "type": ["string", "null"], "description": "Year of Last Paid Claim (3J)" },
-        "MonthOfLastPaidClaim": { "type": ["string", "null"], "description": "Month of Last Paid Claim (3K)" },
+        "IinNumber": { "type": ["string", "null"], "description": "Last Known IIN Number (3E) - F6" },
+        "ProcessorControlNumber": { "type": ["string", "null"], "description": "Last Known Processor Control Number (3F) - F6" },
+        "GroupId": { "type": ["string", "null"], "description": "Last Known Group ID (3G) - F6" },
+        "CardholderId": { "type": ["string", "null"], "description": "Last Known Cardholder ID (3H) - F6" },
+        "YearOfLastPaidClaim": { "type": ["string", "null"], "description": "Year of Last Paid Claim (3J) - F6" },
+        "MonthOfLastPaidClaim": { "type": ["string", "null"], "description": "Month of Last Paid Claim (3K) - F6" },
         "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
       }
     },
@@ -792,14 +792,14 @@
       "type": "object",
       "description": "N Transaction Payer Identification Segment (AM38) - Request - F6",
       "properties": {
-        "PayerIin": { "type": ["string", "null"], "description": "Payer IIN (9Y)" },
-        "PayerProcessorControlNumber": { "type": ["string", "null"], "description": "Payer Processor Control Number (9Z)" },
-        "PayerCardholderId": { "type": ["string", "null"], "description": "Payer Cardholder ID (AA)" },
-        "PayerGroupId": { "type": ["string", "null"], "description": "Payer Group ID (AB)" },
-        "PayerAdjudicatedProgramType": { "type": ["string", "null"], "description": "Payer Adjudicated Program Type (9U)" },
-        "TransactionSourceType": { "type": ["string", "null"], "description": "Transaction Source Type (AC)" },
-        "TransactionReconciliationId": { "type": ["string", "null"], "description": "Transaction Reconciliation ID (AD)" },
-        "TransactionReferenceNumber": { "type": ["string", "null"], "description": "Transaction Reference Number (K5)" },
+        "PayerIin": { "type": ["string", "null"], "description": "Payer IIN (9Y) - F6" },
+        "PayerProcessorControlNumber": { "type": ["string", "null"], "description": "Payer Processor Control Number (9Z) - F6" },
+        "PayerCardholderId": { "type": ["string", "null"], "description": "Payer Cardholder ID (AA) - F6" },
+        "PayerGroupId": { "type": ["string", "null"], "description": "Payer Group ID (AB) - F6" },
+        "PayerAdjudicatedProgramType": { "type": ["string", "null"], "description": "Payer Adjudicated Program Type (9U) - F6" },
+        "TransactionSourceType": { "type": ["string", "null"], "description": "Transaction Source Type (AC) - F6" },
+        "TransactionReconciliationId": { "type": ["string", "null"], "description": "Transaction Reconciliation ID (AD) - F6" },
+        "TransactionReferenceNumber": { "type": ["string", "null"], "description": "Transaction Reference Number (K5) - F6" },
         "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
       }
     },
@@ -1335,14 +1335,14 @@
       "type": "object",
       "description": "Intermediary Segment (AM36) - Response - F6",
       "properties": {
-        "AuthorizationCount": { "type": ["integer", "null"], "description": "Intermediary Authorization Count (8R)" },
+        "AuthorizationCount": { "type": ["integer", "null"], "description": "Intermediary Authorization Count (8R) - F6" },
         "Authorizations": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "TypeId": { "type": ["string", "null"], "description": "Intermediary Authorization Type ID (8S)" },
-              "Id": { "type": ["string", "null"], "description": "Intermediary Authorization ID (8T)" }
+              "TypeId": { "type": ["string", "null"], "description": "Intermediary Authorization Type ID (8S) - F6" },
+              "Id": { "type": ["string", "null"], "description": "Intermediary Authorization ID (8T) - F6" }
             }
           }
         },
@@ -1351,30 +1351,30 @@
           "items": {
             "type": "object",
             "properties": {
-              "Message": { "type": ["string", "null"], "description": "Intermediary Message (8Q)" }
+              "Message": { "type": ["string", "null"], "description": "Intermediary Message (8Q) - F6" }
             }
           }
         },
-        "HelpDeskSupportTypeCount": { "type": ["integer", "null"], "description": "Intermediary Help Desk Support Type Count (KC)" },
+        "HelpDeskSupportTypeCount": { "type": ["integer", "null"], "description": "Intermediary Help Desk Support Type Count (KC) - F6" },
         "HelpDeskSupportTypes": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Support Type (KB)" }
+              "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Support Type (KB) - F6" }
             }
           }
         },
-        "HelpDeskBusinessUnitTypeCount": { "type": ["integer", "null"], "description": "Intermediary Help Desk Business Unit Type Count (G9)" },
+        "HelpDeskBusinessUnitTypeCount": { "type": ["integer", "null"], "description": "Intermediary Help Desk Business Unit Type Count (G9) - F6" },
         "HelpDeskBusinessUnits": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Business Unit Type (G8)" },
-              "ContactInformationQualifier": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Qualifier (KA)" },
-              "ContactInformation": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information (JP)" },
-              "ContactInformationExtension": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Extension (JR)" }
+              "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Business Unit Type (G8) - F6" },
+              "ContactInformationQualifier": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Qualifier (KA) - F6" },
+              "ContactInformation": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information (JP) - F6" },
+              "ContactInformationExtension": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Extension (JR) - F6" }
             }
           }
         },
@@ -1386,50 +1386,50 @@
       "type": "object",
       "description": "Other Related Benefit Detail Segment (AM39) - Response - F6",
       "properties": {
-        "PlanType": { "type": ["string", "null"], "description": "Plan Type (KS)" },
-        "LisLevel": { "type": ["string", "null"], "description": "LIS Level (KF)" },
-        "LisEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "LIS Effective Date (KD)" },
-        "LisTerminationDate": { "type": ["string", "null"], "format": "date", "description": "LIS Termination Date (KG)" },
-        "DisabilityEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Disability Effective Date (AH)" },
-        "EsrdIndicator": { "type": ["string", "null"], "description": "ESRD Indicator (A5)" },
-        "EsrdEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "ESRD Effective Date (AJ)" },
-        "EsrdTerminationDate": { "type": ["string", "null"], "format": "date", "description": "ESRD Termination Date (A6)" },
-        "HospiceEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Hospice Effective Date (G4)" },
-        "HospiceTerminationDate": { "type": ["string", "null"], "format": "date", "description": "Hospice Termination Date (G7)" },
-        "HospiceProviderNumber": { "type": ["string", "null"], "description": "Hospice Provider Number (G6)" },
-        "HospiceFacilityName": { "type": ["string", "null"], "description": "Hospice Facility Name (G5)" },
-        "HospiceTelephoneNumber": { "type": ["string", "null"], "description": "Hospice Telephone Number (A8)" },
-        "InstitutionalIndicator": { "type": ["string", "null"], "description": "Institutional Indicator (BJ)" },
-        "InstitutionalEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Institutional Effective Date (BK)" },
-        "InstitutionalTerminationDate": { "type": ["string", "null"], "format": "date", "description": "Institutional Termination Date (GD)" },
-        "OtherBenefitCount": { "type": ["integer", "null"], "description": "Other Benefit Count (M8)" },
+        "PlanType": { "type": ["string", "null"], "description": "Plan Type (KS) - F6" },
+        "LisLevel": { "type": ["string", "null"], "description": "LIS Level (KF) - F6" },
+        "LisEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "LIS Effective Date (KD) - F6" },
+        "LisTerminationDate": { "type": ["string", "null"], "format": "date", "description": "LIS Termination Date (KG) - F6" },
+        "DisabilityEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Disability Effective Date (AH) - F6" },
+        "EsrdIndicator": { "type": ["string", "null"], "description": "ESRD Indicator (A5) - F6" },
+        "EsrdEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "ESRD Effective Date (AJ) - F6" },
+        "EsrdTerminationDate": { "type": ["string", "null"], "format": "date", "description": "ESRD Termination Date (A6) - F6" },
+        "HospiceEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Hospice Effective Date (G4) - F6" },
+        "HospiceTerminationDate": { "type": ["string", "null"], "format": "date", "description": "Hospice Termination Date (G7) - F6" },
+        "HospiceProviderNumber": { "type": ["string", "null"], "description": "Hospice Provider Number (G6) - F6" },
+        "HospiceFacilityName": { "type": ["string", "null"], "description": "Hospice Facility Name (G5) - F6" },
+        "HospiceTelephoneNumber": { "type": ["string", "null"], "description": "Hospice Telephone Number (A8) - F6" },
+        "InstitutionalIndicator": { "type": ["string", "null"], "description": "Institutional Indicator (BJ) - F6" },
+        "InstitutionalEffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Institutional Effective Date (BK) - F6" },
+        "InstitutionalTerminationDate": { "type": ["string", "null"], "format": "date", "description": "Institutional Termination Date (GD) - F6" },
+        "OtherBenefitCount": { "type": ["integer", "null"], "description": "Other Benefit Count (M8) - F6" },
         "OtherBenefits": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "TypeCode": { "type": ["string", "null"], "description": "Other Benefit Type Code (PN)" },
-              "EffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Effective Date (MZ)" },
-              "TerminationDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Termination Date (NN)" },
-              "StateProvinceAddress": { "type": ["string", "null"], "description": "Other Benefit State/Province Address (TA)" },
-              "TypeId": { "type": ["string", "null"], "description": "Other Benefit Type ID (N9)" },
-              "FacilityName": { "type": ["string", "null"], "description": "Other Benefit Facility Name (N1)" },
-              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Facility Telephone Number (N7)" }
+              "TypeCode": { "type": ["string", "null"], "description": "Other Benefit Type Code (PN) - F6" },
+              "EffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Effective Date (MZ) - F6" },
+              "TerminationDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Termination Date (NN) - F6" },
+              "StateProvinceAddress": { "type": ["string", "null"], "description": "Other Benefit State/Province Address (TA) - F6" },
+              "TypeId": { "type": ["string", "null"], "description": "Other Benefit Type ID (N9) - F6" },
+              "FacilityName": { "type": ["string", "null"], "description": "Other Benefit Facility Name (N1) - F6" },
+              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Facility Telephone Number (N7) - F6" }
             }
           }
         },
-        "OtherBenefitDetailInformationCount": { "type": ["integer", "null"], "description": "Other Benefit Detail Information Count (N8)" },
+        "OtherBenefitDetailInformationCount": { "type": ["integer", "null"], "description": "Other Benefit Detail Information Count (N8) - F6" },
         "OtherBenefitDetailInformation": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "Indicator": { "type": ["string", "null"], "description": "Other Benefit Detail Information Indicator (MS)" },
-              "EffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Detail Information Effective Date (MM)" },
-              "TerminationDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Detail Information Termination Date (MX)" },
-              "ProviderNumber": { "type": ["string", "null"], "description": "Other Benefit Detail Information Provider Number (MR)" },
-              "FacilityName": { "type": ["string", "null"], "description": "Other Benefit Detail Information Facility Name (MN)" },
-              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Detail Information Facility Telephone Number (MP)" }
+              "Indicator": { "type": ["string", "null"], "description": "Other Benefit Detail Information Indicator (MS) - F6" },
+              "EffectiveDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Detail Information Effective Date (MM) - F6" },
+              "TerminationDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Detail Information Termination Date (MX) - F6" },
+              "ProviderNumber": { "type": ["string", "null"], "description": "Other Benefit Detail Information Provider Number (MR) - F6" },
+              "FacilityName": { "type": ["string", "null"], "description": "Other Benefit Detail Information Facility Name (MN) - F6" },
+              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Detail Information Facility Telephone Number (MP) - F6" }
             }
           }
         },
@@ -1441,8 +1441,8 @@
       "type": "object",
       "description": "Provider Segment (AM40) - Response - F6",
       "properties": {
-        "DataSourceOfInvalidProviderDetermination": { "type": ["string", "null"], "description": "Data Source of Invalid Provider Determination (ZV)" },
-        "StateCodeForDataSourceOfInvalidProviderDetermination": { "type": ["string", "null"], "description": "State Code for Data Source of Invalid Provider Determination (ZZ)" },
+        "DataSourceOfInvalidProviderDetermination": { "type": ["string", "null"], "description": "Data Source of Invalid Provider Determination (ZV) - F6" },
+        "StateCodeForDataSourceOfInvalidProviderDetermination": { "type": ["string", "null"], "description": "State Code for Data Source of Invalid Provider Determination (ZZ) - F6" },
         "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
       }
     }

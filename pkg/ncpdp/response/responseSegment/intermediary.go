@@ -8,36 +8,36 @@ import (
 type Intermediary struct {
 	SegmentId ncpdp.SegmentId `json:"-"`
 
-	AuthorizationCount *int `field:"code=8R,order=2,countfor=Authorizations"`
+	AuthorizationCount *int `field:"code=8R,order=2,countfor=Authorizations,sinceVersion=F6"`
 	Authorizations     []IntermediaryAuthorization
 
 	Messages []IntermediaryMessage
 
-	HelpDeskSupportTypeCount *int `field:"code=KC,order=6,countfor=HelpDeskSupportTypes"`
+	HelpDeskSupportTypeCount *int `field:"code=KC,order=6,countfor=HelpDeskSupportTypes,sinceVersion=F6"`
 	HelpDeskSupportTypes     []IntermediaryHelpDeskSupportType
 
-	HelpDeskBusinessUnitTypeCount *int `field:"code=G9,order=8,countfor=HelpDeskBusinessUnits"`
+	HelpDeskBusinessUnitTypeCount *int `field:"code=G9,order=8,countfor=HelpDeskBusinessUnits,sinceVersion=F6"`
 	HelpDeskBusinessUnits         []IntermediaryHelpDeskBusinessUnit
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type IntermediaryAuthorization struct {
-	TypeId *string `field:"code=8S,order=3"`
-	Id     *string `field:"code=8T,order=4"`
+	TypeId *string `field:"code=8S,order=3,sinceVersion=F6"`
+	Id     *string `field:"code=8T,order=4,sinceVersion=F6"`
 }
 
 type IntermediaryMessage struct {
-	Message *string `field:"code=8Q,order=5"`
+	Message *string `field:"code=8Q,order=5,sinceVersion=F6"`
 }
 
 type IntermediaryHelpDeskSupportType struct {
-	Type *string `field:"code=KB,order=7"`
+	Type *string `field:"code=KB,order=7,sinceVersion=F6"`
 }
 
 type IntermediaryHelpDeskBusinessUnit struct {
-	Type                        *string `field:"code=G8,order=9"`
-	ContactInformationQualifier *string `field:"code=KA,order=10"`
-	ContactInformation          *string `field:"code=JP,order=11"`
-	ContactInformationExtension *string `field:"code=JR,order=12"`
+	Type                        *string `field:"code=G8,order=9,sinceVersion=F6"`
+	ContactInformationQualifier *string `field:"code=KA,order=10,sinceVersion=F6"`
+	ContactInformation          *string `field:"code=JP,order=11,sinceVersion=F6"`
+	ContactInformationExtension *string `field:"code=JR,order=12,sinceVersion=F6"`
 }

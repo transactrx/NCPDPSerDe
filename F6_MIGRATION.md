@@ -78,7 +78,9 @@ The `sinceVersion` tag is the general mechanism for this: any field scoped to a 
 
 ## New F6-only fields
 
-The JSON schema (`pkg/ncpdp/schemas/ncpdp-schemas.json`) gained **161 F6-only fields** across Patient, Prescriber, Claim, Pricing, Coordination of Benefits, and other segments. All are tagged `" - F6"` in their description and are **optional pointers** — D0 transactions leave them nil. Existing D0 fields are untouched, so existing schema consumers keep working.
+The JSON schema (`pkg/ncpdp/schemas/ncpdp-schemas.json`) gained **226 F6-only markers** across Patient, Prescriber, Claim, Pricing, Coordination of Benefits, and other segments — including every field of the six F6-only segments (request AM19/AM37/AM38, response AM36/AM39/AM40). All are tagged `" - F6"` in their description and are **optional pointers** — D0 transactions leave them nil. Existing D0 fields are untouched, so existing schema consumers keep working.
+
+Because every field of an F6-only segment is version-gated, a hand-populated F6-only segment renders as a bare header for D0 and is dropped from the output entirely (`buildSegment` excludes empty segments) — see `versionScopedSegment_test.go`.
 
 ## Useful new transaction helpers
 
