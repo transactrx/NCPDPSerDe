@@ -2,6 +2,7 @@ package responsesegment
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,12 @@ import (
 const (
 	MaxMessageCount  = 25
 	MaxMessageLength = 40
+
+	// Additional Message Information Qualifier (132-UH) values "01"-"09" are the
+	// only values defined for free text; higher numeric and alpha values are
+	// ECL-coded meanings (e.g. "12", "38" = Max Fair Price) and must never be
+	// generated or reassigned by this library.
+	maxFreeTextQualifier = 9
 )
 
 type Status struct {
@@ -99,11 +106,22 @@ func (segment *Status) AppendMessage(verbiage string) error {
 		return fmt.Errorf("maximum message count exceeded")
 	}
 
+	// Qualifiers must occur no more than once per transaction, so number the new
+	// chunks after the highest free-text qualifier already present rather than
+	// by slice position (which would collide with, or renumber past, coded
+	// values such as "12" or "38").
+	next := segment.nextFreeTextQualifier()
+	if next+len(chunks)-1 > maxFreeTextQualifier {
+		return fmt.Errorf("maximum free text message count exceeded")
+	}
+
+	newMessages := make([]AdditionalMessage, 0, len(chunks))
+
 	for i := 0; i < len(chunks); i++ {
 		msgText := chunks[i]
 
 		addtlMessage := AdditionalMessage{
-			Qualifier: reflectionutils.ToPointer(fmt.Sprintf("%02d", len(segment.AdditionalMessages)+1)),
+			Qualifier: reflectionutils.ToPointer(fmt.Sprintf("%02d", next+i)),
 			Message:   reflectionutils.ToPointer(msgText),
 		}
 
@@ -111,9 +129,69 @@ func (segment *Status) AppendMessage(verbiage string) error {
 			addtlMessage.Continuation = reflectionutils.ToPointer("+")
 		}
 
-		segment.AdditionalMessages = append(segment.AdditionalMessages, addtlMessage)
-		segment.AdditionalMessageCount = reflectionutils.ToPointer(len(segment.AdditionalMessages))
+		newMessages = append(newMessages, addtlMessage)
 	}
 
+	// Qualifier values must remain ordered within the transaction (numeric
+	// characters precede alpha), so insert the new block ahead of any
+	// higher-valued coded qualifiers instead of appending at the end.
+	idx := segment.qualifierInsertIndex(fmt.Sprintf("%02d", next))
+	segment.AdditionalMessages = append(segment.AdditionalMessages[:idx], append(newMessages, segment.AdditionalMessages[idx:]...)...)
+	segment.AdditionalMessageCount = reflectionutils.ToPointer(len(segment.AdditionalMessages))
+
 	return nil
+}
+
+// Next unused free-text qualifier value (1-9), continuing after the highest
+// free-text qualifier already present. Coded (>09 or alpha) and missing
+// qualifiers are ignored.
+func (segment *Status) nextFreeTextQualifier() int {
+	next := 1
+
+	for _, msg := range segment.AdditionalMessages {
+		if msg.Qualifier == nil {
+			continue
+		}
+
+		n, err := strconv.Atoi(strings.TrimSpace(*msg.Qualifier))
+		if err != nil || n < 1 || n > maxFreeTextQualifier {
+			continue
+		}
+
+		if n+1 > next {
+			next = n + 1
+		}
+	}
+
+	return next
+}
+
+// Index at which a message with the given qualifier belongs: before the first
+// existing message whose qualifier sorts higher. Two-character qualifiers sort
+// correctly as strings (ASCII digits precede alpha, matching the NCPDP 0-9
+// then A-Z ordering rule).
+func (segment *Status) qualifierInsertIndex(qualifier string) int {
+	for i, msg := range segment.AdditionalMessages {
+		if msg.Qualifier == nil {
+			continue
+		}
+
+		if normalizeQualifier(*msg.Qualifier) > qualifier {
+			return i
+		}
+	}
+
+	return len(segment.AdditionalMessages)
+}
+
+// Pad numeric qualifier values to two characters so a payer-sent "1" sorts
+// with "01"; non-numeric values are compared as sent.
+func normalizeQualifier(qualifier string) string {
+	qualifier = strings.TrimSpace(qualifier)
+
+	if n, err := strconv.Atoi(qualifier); err == nil {
+		return fmt.Sprintf("%02d", n)
+	}
+
+	return qualifier
 }
