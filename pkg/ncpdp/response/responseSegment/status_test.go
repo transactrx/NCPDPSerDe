@@ -183,6 +183,54 @@ func TestAppendMessageSuccessiveAppends(t *testing.T) {
 	})
 }
 
+// NCPDP allows gaps in the qualifier sequence. The UF count must always equal
+// the number of UH/FQ occurrences present, never the highest qualifier value,
+// and appending continues after the highest free-text value without filling
+// gaps (which could collide with a receiver's interpretation of order).
+func TestAppendMessageCountWithGappedQualifiers(t *testing.T) {
+	segment := &Status{
+		AdditionalMessages: []AdditionalMessage{
+			{Qualifier: reflectionutils.ToPointer("01"), Message: reflectionutils.ToPointer("FIRST")},
+			{Qualifier: reflectionutils.ToPointer("03"), Message: reflectionutils.ToPointer("THIRD, GAP AT 02")},
+			{Qualifier: reflectionutils.ToPointer("38"), Message: reflectionutils.ToPointer("405.66")},
+		},
+		AdditionalMessageCount: reflectionutils.ToPointer(3),
+	}
+
+	err := segment.AppendMessage("new note")
+	if err != nil {
+		t.Fatalf("AppendMessage returned error: %v", err)
+	}
+
+	// Next free text is 04 (after highest free-text 03), UF is 4 (entry count).
+	assertMessages(t, segment, []string{
+		"01|FIRST|",
+		"03|THIRD, GAP AT 02|",
+		"04|NEW NOTE|",
+		"38|405.66|",
+	})
+}
+
+func TestAppendMessageCountWithGappedQualifiersMultiChunk(t *testing.T) {
+	segment := &Status{
+		AdditionalMessages: []AdditionalMessage{
+			{Qualifier: reflectionutils.ToPointer("02"), Message: reflectionutils.ToPointer("ONLY MESSAGE, GAP AT 01")},
+		},
+		AdditionalMessageCount: reflectionutils.ToPointer(1),
+	}
+
+	err := segment.AppendMessage(strings.Repeat("A", MaxMessageLength) + "TAIL")
+	if err != nil {
+		t.Fatalf("AppendMessage returned error: %v", err)
+	}
+
+	assertMessages(t, segment, []string{
+		"02|ONLY MESSAGE, GAP AT 01|",
+		"03|" + strings.Repeat("A", MaxMessageLength) + "|+",
+		"04|TAIL|",
+	})
+}
+
 func TestAppendMessageFreeTextQualifiersExhausted(t *testing.T) {
 	segment := &Status{
 		AdditionalMessages: []AdditionalMessage{
