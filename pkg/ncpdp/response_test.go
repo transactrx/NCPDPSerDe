@@ -20,6 +20,10 @@ const statusSegmentPaid = "\x1e\x1cAM21\x1cANP"
 // surrounding group separator differs.
 const statusSegmentReject = "\x1e\x1cAM21\x1cANR\x1cFB85\x1cFB99\x1cUH01\x1cFQfirst message\x1cUH02\x1cFQsecond message"
 
+// AM21 status segment carrying ECL-coded 132-UH qualifier values (12, and
+// 38 = Max Fair Price) rather than free-text 01-09 sequence values.
+const statusSegmentCodedUH = "\x1e\x1cAM21\x1cANP\x1cUF02\x1cUH12\x1cFQMAXIMUM DAILY DOSE OF 1.000000\x1cUH38\x1cFQ405.66"
+
 func parseResponse(t *testing.T, raw string) *NcpdpTransaction[ResponseHeader] {
 	t.Helper()
 	tran := NewTransactionResponse(raw)
@@ -85,6 +89,18 @@ var responseHelperCases = []responseHelperCase{
 		wantIsRejected:    true,
 		wantRejectCodes:   []string{"85", "99"},
 		wantMessages:      map[string]string{"01": "first message", "02": "second message"},
+		wantRecordsLen:    1,
+		wantSharedSegLen:  0,
+		statusInSharedSeg: false,
+	},
+	{
+		name:              "D0 paid with coded additional message qualifiers",
+		raw:               responseHeaderPaidD0 + "\x1d" + statusSegmentCodedUH,
+		wantStatus:        PAID_STATUS,
+		wantIsPaid:        true,
+		wantIsRejected:    false,
+		wantRejectCodes:   []string{},
+		wantMessages:      map[string]string{"12": "MAXIMUM DAILY DOSE OF 1.000000", "38": "405.66"},
 		wantRecordsLen:    1,
 		wantSharedSegLen:  0,
 		statusInSharedSeg: false,
