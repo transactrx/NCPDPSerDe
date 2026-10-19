@@ -286,10 +286,10 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 // it plus everything after it parse as one claim group. Segments before it
 // parse as shared segments.
 func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type, structVal reflect.Value) error {
-	groupField, err := serde.GetGroupSlice(structType)
-	if err != nil {
-		return err
-	}
+	// Transaction types without a claim section (e.g. E1 eligibility requests)
+	// have no group-tagged slice; the whole transmission parses as shared
+	// segments.
+	groupField, _ := serde.GetGroupSlice(structType)
 
 	transactionIndex, err := findTransactionIndex(rawClaimString, groupField)
 	if err != nil {

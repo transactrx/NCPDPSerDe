@@ -692,6 +692,108 @@ func Test_CanParseF6BillingResponse(t *testing.T) {
 	}
 }
 
+const F6_REQUEST_E1_HEADER = "F6E100880151TEST      1011234567893     20260611SVCID     "
+
+// F6 eligibility (E1) requests have no claim section: request.Eligibility has
+// no group-tagged slice, so the whole transmission is shared segments.
+func buildF6EligibilityRequest() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_REQUEST_E1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C1TESTGROUP" + fs + "C61" +
+		ss + fs + "AM01" + fs + "C419341231" + fs + "C51" + fs + "CAELIGIBILITY" + fs + "CBDOE"
+}
+
+// Regression test: the ungrouped (vEB+) parser rejected transaction types
+// without a group-tagged slice with "group tag not found in object definition".
+func Test_CanParseF6EligibilityRequest(t *testing.T) {
+	i, err := Deserialize(buildF6EligibilityRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj, ok := i.(request.Eligibility)
+	if !ok {
+		t.Fatalf("expected request.Eligibility, got: %T", i)
+	}
+
+	header := obj.Header.Value
+	assertValue(t, "Version", header.Version, ncpdp.F6)
+	assertValue(t, "TransactionCode", header.TransactionCode, "E1")
+
+	assertString(t, "Cardholder id (field C2)", obj.Insurance.Cardholder.Id, "POLICY123")
+	assertString(t, "Group id (field C1)", obj.Insurance.GroupId, "TESTGROUP")
+	assertString(t, "Patient first name", obj.Patient.FirstName, "ELIGIBILITY")
+	assertString(t, "Patient last name", obj.Patient.LastName, "DOE")
+}
+
+// With no group-tagged slice, every segment of an F6 E1 request is shared —
+// including unknown ones, which must land in the shared DynamicSegments
+// instead of being mistaken for the start of a claim section.
+func Test_F6EligibilityUnknownSegmentsStayShared(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	rawData := F6_REQUEST_E1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C61" +
+		ss + fs + "AM98" + fs + "A11" + fs + "A2BB" +
+		ss + fs + "AM01" + fs + "CAELIGIBILITY" + fs + "CBDOE"
+
+	obj := request.Eligibility{}
+	err := DeserializeType(rawData, &obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(obj.DynamicSegments) != 1 {
+		t.Errorf("Shared dynamic segment count mismatch. Wanted: 1 (AM98)   Got: %v", len(obj.DynamicSegments))
+	}
+
+	// Known segments after the unknown one still parse as shared segments.
+	assertString(t, "Patient first name", obj.Patient.FirstName, "ELIGIBILITY")
+	assertString(t, "Patient last name", obj.Patient.LastName, "DOE")
+}
+
+// F6 response header layout is identical to D0 (31 bytes).
+const F6_RESPONSE_E1_HEADER = "F6E11A011234567893     20260611"
+
+// Unlike the request, the eligibility response does have a group-tagged slice
+// (per-record status/COB), so the AM21 status is located by segment ID and
+// assigned to the single record.
+func buildF6EligibilityResponse() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_RESPONSE_E1_HEADER +
+		ss + fs + "AM25" + fs + "C1TESTGROUP" + fs + "C2CARD123" +
+		ss + fs + "AM21" + fs + "ANA"
+}
+
+func Test_CanParseF6EligibilityResponse(t *testing.T) {
+	i, err := Deserialize(buildF6EligibilityResponse())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj, ok := i.(response.Eligibility)
+	if !ok {
+		t.Fatalf("expected response.Eligibility, got: %T", i)
+	}
+
+	if obj.Header.Value.Version != ncpdp.F6 {
+		t.Errorf("Version mismatch. Wanted: F6   Got: %q", obj.Header.Value.Version)
+	}
+
+	assertString(t, "Group id (field C1)", obj.Insurance.GroupId, "TESTGROUP")
+	assertString(t, "Cardholder id (field C2)", obj.Insurance.CardholderId, "CARD123")
+
+	if len(obj.Groups) != 1 {
+		t.Fatalf("Group count mismatch. Wanted: 1   Got: %v", len(obj.Groups))
+	}
+	assertString(t, "Response status (field AN)", obj.Groups[0].Status.ResponseStatusCode, "A")
+}
+
 const F6_REQUEST_FULL_HEADER = "F6B188015600PCN12345671011234567893     20260611VENDORCERT"
 
 // Built from the raw F6 sample (RawSample_F6.txt) with CRLF line breaks
