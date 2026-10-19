@@ -397,6 +397,51 @@ func Test_CanRoundTripF6BillingResponse(t *testing.T) {
 	}
 }
 
+const F6_REQUEST_E1_HEADER = "F6E100880151TEST      1011234567893     20260611SVCID     "
+
+// F6 eligibility (E1) requests have no claim section: request.Eligibility has
+// no group-tagged slice, so the whole transmission is shared segments.
+func buildF6EligibilityRequest() string {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	return F6_REQUEST_E1_HEADER +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C1TESTGROUP" + fs + "C61" +
+		ss + fs + "AM01" + fs + "C419341231" + fs + "C51" + fs + "CAELIGIBILITY" + fs + "CBDOE"
+}
+
+// Regression test: a serialized F6 E1 request must deserialize back. The
+// ungrouped (vEB+) parser used to reject transaction types without a
+// group-tagged slice with "group tag not found in object definition".
+func Test_CanRoundTripF6EligibilityRequest(t *testing.T) {
+	obj := request.Eligibility{}
+	err := claimdeserializer.DeserializeType(buildF6EligibilityRequest(), &obj)
+	if err != nil {
+		t.Fatalf("Failed to deserialize: %v", err)
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatalf("Failed to serialize: %v", err)
+	}
+
+	assertHeaderPrefix(t, serialized, F6_REQUEST_E1_HEADER)
+	assertNoGroupSeparators(t, serialized)
+
+	obj2 := request.Eligibility{}
+	err = claimdeserializer.DeserializeType(serialized, &obj2)
+	if err != nil {
+		t.Fatalf("Failed to deserialize serialized claim: %v", err)
+	}
+
+	if obj2.Header.Value != obj.Header.Value {
+		t.Errorf("Header mismatch after round trip.\nWanted: %+v\nGot:    %+v", obj.Header.Value, obj2.Header.Value)
+	}
+	assertString(t, "Cardholder id (field C2) after round trip", obj2.Insurance.Cardholder.Id, "POLICY123")
+	assertString(t, "Patient first name after round trip", obj2.Patient.FirstName, "ELIGIBILITY")
+	assertString(t, "Patient last name after round trip", obj2.Patient.LastName, "DOE")
+}
+
 const F6_REQUEST_FULL_HEADER = "F6B188015600PCN12345671011234567893     20260611VENDORCERT"
 
 // Built from the raw F6 sample (RawSample_F6.txt) with CRLF line breaks
