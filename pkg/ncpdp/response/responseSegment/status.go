@@ -102,7 +102,7 @@ func (segment *Status) AppendMessage(verbiage string) error {
 	// Break into chunks by max field length
 	chunks := stringutils.Chunk(verbiage, MaxMessageLength)
 
-	if len(chunks)+len(segment.AdditionalMessages) >= MaxMessageCount {
+	if len(chunks)+len(segment.AdditionalMessages) > MaxMessageCount {
 		return fmt.Errorf("maximum message count exceeded")
 	}
 
@@ -142,6 +142,41 @@ func (segment *Status) AppendMessage(verbiage string) error {
 	return nil
 }
 
+// SetMessage sets free-text messages to the given message, chunking it into the appropriate data
+// size and using continuation characters where required. An empty message removes any existing one.
+// FQ entries with qualifiers greater than 09 are always retained.
+// Returns an error when unable to set the message.
+func (segment *Status) SetMessage(message string) error {
+	if segment == nil {
+		return nil
+	}
+
+	// Preserve original values in case we need to roll back
+	previous := segment.AdditionalMessages
+	previousCount := segment.AdditionalMessageCount
+
+	// Preserve only non-free-text messages
+	segment.AdditionalMessages = nil
+	for _, msg := range previous {
+		if _, ok := freeTextQualifier(msg.Qualifier); !ok {
+			segment.AdditionalMessages = append(segment.AdditionalMessages, msg)
+		}
+	}
+
+	segment.AdditionalMessageCount = nil
+	if len(segment.AdditionalMessages) > 0 {
+		segment.AdditionalMessageCount = reflectionutils.ToPointer(len(segment.AdditionalMessages))
+	}
+
+	if err := segment.AppendMessage(message); err != nil {
+		segment.AdditionalMessages = previous
+		segment.AdditionalMessageCount = previousCount
+		return err
+	}
+
+	return nil
+}
+
 // Next unused free-text qualifier value (1-9), continuing after the highest
 // free-text qualifier already present. Coded (>09 or alpha) and missing
 // qualifiers are ignored.
@@ -149,12 +184,8 @@ func (segment *Status) nextFreeTextQualifier() int {
 	next := 1
 
 	for _, msg := range segment.AdditionalMessages {
-		if msg.Qualifier == nil {
-			continue
-		}
-
-		n, err := strconv.Atoi(strings.TrimSpace(*msg.Qualifier))
-		if err != nil || n < 1 || n > maxFreeTextQualifier {
+		n, ok := freeTextQualifier(msg.Qualifier)
+		if !ok {
 			continue
 		}
 
@@ -164,6 +195,21 @@ func (segment *Status) nextFreeTextQualifier() int {
 	}
 
 	return next
+}
+
+// freeTextQualifier returns the numeric value of a free-text qualifier (1-9).
+// Returns false for structured (greater than 09), non-numeric, or missing qualifiers
+func freeTextQualifier(qualifier *string) (int, bool) {
+	if qualifier == nil {
+		return 0, false
+	}
+
+	n, err := strconv.Atoi(strings.TrimSpace(*qualifier))
+	if err != nil || n < 1 || n > maxFreeTextQualifier {
+		return 0, false
+	}
+
+	return n, true
 }
 
 // Index at which a message with the given qualifier belongs: before the first
