@@ -262,6 +262,43 @@ func TestAppendMessageTooLongForRemainingQualifiers(t *testing.T) {
 	}
 }
 
+func segmentWithStructuredMessages(count int) (*Status, []string) {
+	segment := &Status{}
+	snapshot := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		qualifier := fmt.Sprintf("%02d", maxFreeTextQualifier+1+i)
+		segment.AdditionalMessages = append(segment.AdditionalMessages, AdditionalMessage{
+			Qualifier: reflectionutils.ToPointer(qualifier),
+			Message:   reflectionutils.ToPointer("VALUE"),
+		})
+		snapshot = append(snapshot, qualifier+"|VALUE|")
+	}
+	segment.AdditionalMessageCount = reflectionutils.ToPointer(count)
+
+	return segment, snapshot
+}
+
+func TestAppendMessageAllowsExactlyMaxMessageCount(t *testing.T) {
+	segment, existing := segmentWithStructuredMessages(MaxMessageCount - 1)
+
+	if err := segment.AppendMessage("last"); err != nil {
+		t.Fatalf("AppendMessage returned error: %v", err)
+	}
+
+	assertMessages(t, segment, append([]string{"01|LAST|"}, existing...))
+}
+
+func TestAppendMessageExceedingMaxMessageCountLeavesSegmentUnchanged(t *testing.T) {
+	segment, existing := segmentWithStructuredMessages(MaxMessageCount - 1)
+
+	err := segment.AppendMessage(strings.Repeat("A", MaxMessageLength) + "TAIL")
+	if err == nil {
+		t.Fatal("AppendMessage should have returned an error when the message count is exceeded")
+	}
+
+	assertMessages(t, segment, existing)
+}
+
 func TestSetMessageReplacesFreeTextAndPreservesStructuredQualifiers(t *testing.T) {
 	segment := &Status{
 		AdditionalMessages: []AdditionalMessage{
@@ -449,21 +486,11 @@ func TestSetMessageNilSegment(t *testing.T) {
 }
 
 func TestSetMessageMaxMessageCountLeavesSegmentUnchanged(t *testing.T) {
-	segment := &Status{}
-	want := make([]string, 0, MaxMessageCount)
-	for i := 0; i < MaxMessageCount; i++ {
-		qualifier := fmt.Sprintf("%02d", maxFreeTextQualifier+1+i)
-		segment.AdditionalMessages = append(segment.AdditionalMessages, AdditionalMessage{
-			Qualifier: reflectionutils.ToPointer(qualifier),
-			Message:   reflectionutils.ToPointer("VALUE"),
-		})
-		want = append(want, qualifier+"|VALUE|")
-	}
-	segment.AdditionalMessageCount = reflectionutils.ToPointer(len(segment.AdditionalMessages))
+	segment, existing := segmentWithStructuredMessages(MaxMessageCount)
 
 	if err := segment.SetMessage("no room"); err == nil {
 		t.Fatal("SetMessage should have returned an error when the message count is exceeded")
 	}
 
-	assertMessages(t, segment, want)
+	assertMessages(t, segment, existing)
 }

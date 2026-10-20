@@ -102,7 +102,7 @@ func (segment *Status) AppendMessage(verbiage string) error {
 	// Break into chunks by max field length
 	chunks := stringutils.Chunk(verbiage, MaxMessageLength)
 
-	if len(chunks)+len(segment.AdditionalMessages) >= MaxMessageCount {
+	if len(chunks)+len(segment.AdditionalMessages) > MaxMessageCount {
 		return fmt.Errorf("maximum message count exceeded")
 	}
 
