@@ -183,7 +183,10 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 	}
 
 	// Set group data
-	evaluateGrouping(rawClaimString, claimType, claimObjectRef)
+	err := evaluateGrouping(rawClaimString, claimType, claimObjectRef)
+	if err != nil {
+		return nil, err
+	}
 
 	// Set shared segment data
 	endIndex := groupIndex
@@ -248,14 +251,14 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 		return nil
 	}
 
-	// Find the slice field with the group tag
+	// Find the slice field with the group tag. A transmission that carries
+	// claim groups the transaction type cannot hold (per the NCPDP standard
+	// an eligibility request has no claim section, yet non-standard DX
+	// data-collection E1 feeds append one) must fail loudly: silently
+	// dropping the groups would rebuild a shorter message with no error.
 	groupField, err := serde.GetGroupSlice(structType)
-	if err != nil {
-		return err
-	}
-
-	if groupField == nil {
-		return nil
+	if err != nil || groupField == nil {
+		return fmt.Errorf("transmission carries %v claim group(s) but transaction type %v does not define a claim section", len(rawGroups), reflectionutils.GetElementType(structType).Name())
 	}
 
 	baseVal := reflectionutils.GetElementValue(structVal)
