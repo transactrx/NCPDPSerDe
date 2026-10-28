@@ -3,12 +3,15 @@ package claimdeserializer
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/transactrx/NCPDPSerDe/pkg/dynamic"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp/request"
 	"github.com/transactrx/NCPDPSerDe/pkg/ncpdp/response"
+	"github.com/transactrx/NCPDPSerDe/pkg/serde"
 )
 
 const REQUEST_B1 = "880151D0B1          1011234567893     20231219          AM04C2POLICYNUMBERTHATISLOCCJOHNCDDOEC1D0PAIDDURC61AM01CX99CYVERIC419341231C51CAJOHNCBDOECM9876 TESTING LANECNSPARTANBURGCOSCCP293011234CQ8642538600AM07EM1D26000001E103D700172240780E70000001000D300D530D61D80DE20231219DF00DJ1NX2DK20DK21C8128EAEVPANUMU701AM02EY05E9               AM03EZ01DB1234587693DRERVINGPM86458212342E01DL12345876934EERVING2JJULIUS DUNKI2K15 SLAM DUNK LANE2MPHILADELPHIA2NPA2P123456789AM11D9IDC40{DQ83DDU40IDN01AM13VE2WE02DOM06.9          WE02DOZ79.899        XE1ZE20231219H11358H2ABH3CDH4EFGHIJKLMNOPXE2ZE20231218H10835H2QRH3STH4UVXYZAM06DY20230203CFREDSAIL TECHNOLOGIES INC.CG                              CH                    CI  CJ               DZ0790001976AM054C15C016C037C015581    E820231219HB1HC07DV0000000{5E026E70 6EA5 AM142Q0112V200709152U12S42R62T200709152Z114B1A4KJ29204B1B4J404B1C4J14B44KY4B5A4K14B5B4K34B84KHEART INSTITUTE4B94KHEARTSVILLE4B104KMO4B114G200709114B124KNAM158CVPC283QVISTA PACIFIC CTR3U8888 PACIFIC AVE5JJURUPA VALLEY3VCA6D92509AM16BMTBU WITH BOE E0570 DOP12/2018AM087E1E4TDE5M0E61G8E117E2E4HDE5M0E61G8E117E3E4DDE5M0E61G8E11J9QFH6COAGENT-IDAM09KE01ME321034NE100{AM10EF03EG2EC03RE03TE51927177800        ED0000000003EE0000005AUE01RE03TE38779016308        ED0000000030EE0000036HUE01RE03TE62991277601        ED0000030000EE0000380HUE01AMXX&BDICHD&CB&FEA590&G[D&H00&ID&JEA590RCP&K145023&LN&MN&N1992211627&U410&V1013&W3&Y9GYB9&Z20241218#A3#BE#CFS8133578#E00005#F073416#G00228202950#H595560106973525236#I1934959901#KFS7324558#L1730616749#M466#N -#OY#PN#WALPR5CBC#XPANCIERA#YPENNY#ZPP!F5000!MCT"
@@ -946,9 +949,12 @@ func assertF6FullSamplePricing(t *testing.T, obj request.Billing) {
 	assertFloat(t, "Pricing ingredient cost (D9)", pricing.IngredientCostSubmitted, 123456.78)
 	assertFloat(t, "Pricing dispensing fee (DC)", pricing.DispensingFeeSubmitted, 25.00)
 	assertFloat(t, "Pricing professional service fee (BE)", pricing.ProfessionalServiceFeeSubmitted, 20.00)
-	// DX is present but empty in the raw sample; the deserializer allocates the
-	// pointer and leaves the zero value.
-	assertFloat(t, "Pricing patient paid amount (DX, empty)", pricing.PatientPaidAmountSubmitted, 0)
+	// DX is present but empty in the raw sample; an empty numeric cannot be
+	// represented by the typed field, so the pointer stays nil and the raw
+	// value is preserved as a dynamic field (asserted below).
+	if pricing.PatientPaidAmountSubmitted != nil {
+		t.Errorf("Pricing patient paid amount (DX, empty) mismatch. Wanted: nil   Got: %v", *pricing.PatientPaidAmountSubmitted)
+	}
 	assertFloat(t, "Pricing incentive amount (E3)", pricing.IncentiveAmountSubmitted, 5.00)
 	if pricing.OtherAmountClaimSubmittedCount == nil || *pricing.OtherAmountClaimSubmittedCount != 1 {
 		t.Errorf("Pricing other amount count (H7) mismatch. Wanted: 1   Got: %v", pricing.OtherAmountClaimSubmittedCount)
@@ -974,9 +980,47 @@ func assertF6FullSamplePricing(t *testing.T, obj request.Billing) {
 	assertFloat(t, "Pricing usual and customary charge (DQ)", pricing.UsualAndCustmaryCharge, 134567.00)
 	assertFloat(t, "Pricing gross amount due (DU)", pricing.GrossAmountDue, 124753.22)
 	assertString(t, "Pricing basis of cost determination (DN)", pricing.BasisOfCostDetermination, "01")
-	if len(pricing.DynamicFields) != 0 {
-		t.Errorf("Pricing dynamic field spillover. Wanted: 0   Got: %v", len(pricing.DynamicFields))
+	// The empty DX is the only value the typed fields cannot hold; it must be
+	// the lone dynamic field, preserved with its original (empty) value.
+	if len(pricing.DynamicFields) != 1 {
+		t.Errorf("Pricing dynamic field count mismatch. Wanted: 1 (empty DX)   Got: %v", len(pricing.DynamicFields))
+	} else {
+		code, value := dynamicFieldCodeValue(t, pricing.DynamicFields[0])
+		if code != "DX" || value != "" {
+			t.Errorf("Pricing preserved field mismatch. Wanted: DX=%q   Got: %v=%q", "", code, value)
+		}
 	}
+}
+
+// dynamicFieldCodeValue extracts the field code and raw value from a
+// single-field dynamic struct produced by the deserializer.
+func dynamicFieldCodeValue(t *testing.T, ds dynamic.DynamicStruct) (string, string) {
+	t.Helper()
+
+	if ds.DynamicType == nil || ds.Value == nil {
+		t.Fatal("dynamic field is missing type information")
+	}
+
+	val := reflect.ValueOf(*ds.Value)
+	typ := val.Type()
+	if typ.Kind() != reflect.Struct || typ.NumField() != 1 {
+		t.Fatalf("dynamic field is not a single-field struct: %v", typ)
+	}
+
+	attr, err := serde.GetFieldAttribute(typ.Field(0).Tag.Get(serde.FieldTag))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fv := val.Field(0)
+	if fv.Kind() == reflect.Pointer {
+		if fv.IsNil() {
+			return attr.Code, ""
+		}
+		fv = fv.Elem()
+	}
+
+	return attr.Code, fv.String()
 }
 
 // An F6 transmission with only shared segments must parse without error and

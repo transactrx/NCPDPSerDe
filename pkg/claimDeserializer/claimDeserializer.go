@@ -22,6 +22,8 @@ const (
 	rawSegmentTag = "rawsegment"
 )
 
+var timeType = reflect.TypeOf(time.Time{})
+
 const (
 	dZeroRequestLength  = 56
 	dZeroResponseLength = 31
@@ -375,10 +377,17 @@ func segmentIdOf(rawSeg string) string {
 	return rawFields[idIndex]
 }
 
+// dynamicFieldOrderBase keeps dynamically added field orders above every
+// static field order. The serializer keys its per-segment field map by order,
+// so a dynamic field whose order collided with a static field's order (or
+// with the first order of a nested repeating group) would silently replace
+// that field in the rebuilt segment. Static orders are small (< 100).
+const dynamicFieldOrderBase = 1 << 16
+
 // Add elements to dynamic field list.
 func appendDynamicFields(structType reflect.Type, structVal reflect.Value, dyFieldCodes, dyFieldValues []string) error {
 	baseType := reflectionutils.GetElementType(structType)
-	startOrder := baseType.NumField()
+	startOrder := dynamicFieldOrderBase + baseType.NumField()
 
 	for i := 0; i < len(dyFieldCodes); i++ {
 		dyCode := dyFieldCodes[i]
@@ -559,12 +568,27 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 			sliceLen := f.Len()
 			sliceItemType := f.Type().Elem()
 
-			// Create new slice element. Only grow this slice when the element
-			// type owns the field code directly; a repeating code that lives in
-			// a deeper nested slice (e.g. a second 6E reject within a single
-			// other payer) must repeat inside the last element instead of
-			// splitting it into a new occurrence of this slice.
-			if sliceLen <= repeatingFieldIndex && (sliceLen == 0 || isDynamic || typeOwnsCode(sliceItemType, codeTag)) {
+			// Decide whether this code starts a new occurrence of the
+			// repeating group or belongs to the current (last) one. NCPDP
+			// repeating groups are delimited by the reappearance of a code the
+			// element type owns, never by the code's position in the whole
+			// segment — a count accumulated across the segment misassigns
+			// nested repeats under the second occurrence of an outer group
+			// (e.g. the HC/DV pair of a second AM05 other payer). Only grow
+			// this slice when the element type owns the field code directly; a
+			// repeating code that lives in a deeper nested slice must repeat
+			// inside the last element instead of splitting it into a new
+			// occurrence of this slice.
+			startNew := false
+			if isDynamic {
+				startNew = sliceLen <= repeatingFieldIndex
+			} else if sliceLen == 0 {
+				startNew = true
+			} else if typeOwnsCode(sliceItemType, codeTag) {
+				startNew = codeOccupied(sliceItemType, f.Index(sliceLen-1), codeTag)
+			}
+
+			if startNew {
 				sliceItem := reflect.New(sliceItemType).Elem()
 
 				// Initialize element
@@ -595,15 +619,21 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 				if isDynamic {
 					// Set dynamic fields by field name
 					if ft.Name == serde.DynamicFieldName(codeTag, orderTag) {
-						setFieldValue(f, ft, propVal, attr)
-						setCount++
+						if setFieldValue(f, ft, propVal, attr) {
+							setCount++
+						}
 					}
 					continue
 				}
 
 				if attr.Code == codeTag {
-					setFieldValue(f, ft, propVal, attr)
-					setCount++
+					// A value the typed field cannot represent (an empty or
+					// blank-filled numeric/date) leaves the field unset and
+					// counts as not consumed, so the caller preserves the raw
+					// value as a dynamic field instead of inventing a zero.
+					if setFieldValue(f, ft, propVal, attr) {
+						setCount++
+					}
 					continue
 				}
 			}
@@ -611,6 +641,56 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 	}
 
 	return setCount
+}
+
+// codeOccupied reports whether the struct already carries a value for the
+// field with the given code tag, looking through embedded structs but not
+// nested slices (their element types own those codes). A repeating group's
+// next occurrence starts when its codes reappear, so "occupied" marks the
+// boundary of the current occurrence.
+func codeOccupied(structType reflect.Type, structVal reflect.Value, codeTag string) bool {
+	if structVal.Kind() != reflect.Struct {
+		return false
+	}
+
+	for i := 0; i < structVal.NumField(); i++ {
+		f := structVal.Field(i)
+		ft := structType.Field(i)
+
+		switch ft.Type.Kind() {
+		case reflect.Struct:
+			if codeOccupied(ft.Type, f, codeTag) {
+				return true
+			}
+
+		case reflect.Slice:
+			// Nested slice fields are owned by their own element type.
+
+		default:
+			tag := ft.Tag.Get(serde.FieldTag)
+			if tag == serde.Empty {
+				continue
+			}
+
+			attr, err := serde.GetFieldAttribute(tag)
+			if err != nil || attr.Code != codeTag {
+				continue
+			}
+
+			if ft.Type.Kind() == reflect.Pointer {
+				if !f.IsNil() {
+					return true
+				}
+				continue
+			}
+
+			if !f.IsZero() {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 type typeCodeKey struct {
@@ -665,58 +745,74 @@ func typeOwnsCode(structType reflect.Type, codeTag string) bool {
 	return owns
 }
 
-// Set base field by data type.
-func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute) {
+// Set base field by data type. Reports whether the raw value was actually
+// parsed and stored; false means the typed field cannot represent the value
+// (e.g. an empty or blank-filled numeric/date), so the caller must leave the
+// field unset and preserve the raw value instead of keeping a zero value.
+func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute) bool {
 	if !f.CanSet() {
-		return
+		return false
 	}
 
 	switch f.Interface().(type) {
 	case int, int8, int16, int32, int64:
 		intVal, err := strconv.Atoi(val.String())
-		if err == nil {
-			f.Set(reflect.ValueOf(intVal))
+		if err != nil {
+			return false
 		}
+		f.Set(reflect.ValueOf(intVal))
 
 	case uint, uint8, uint16, uint32, uint64:
 		intVal, err := strconv.Atoi(val.String())
-		if err == nil {
-			f.Set(reflect.ValueOf(uint(intVal)))
+		if err != nil {
+			return false
 		}
+		f.Set(reflect.ValueOf(uint(intVal)))
 
 	case float32, float64:
 		fs := serde.NewFieldSettings(attr)
 		flt, err := fs.Unsign(val.String())
-		if err == nil && flt != nil {
-			f.Set(reflect.ValueOf(*flt))
+		if err != nil || flt == nil {
+			return false
 		}
+		f.Set(reflect.ValueOf(*flt))
 
 	case time.Time:
-		if attr.Format != serde.Empty {
-			dt, err := time.Parse(attr.Format, val.String())
-			if err == nil {
-				f.Set(reflect.ValueOf(dt))
-			}
+		if attr.Format == serde.Empty {
+			return false
 		}
+		dt, err := time.Parse(attr.Format, val.String())
+		if err != nil {
+			return false
+		}
+		f.Set(reflect.ValueOf(dt))
 
 	default:
 		f.Set(val)
 	}
+
+	return true
 }
 
-// Set field value.
-func setFieldValue(f reflect.Value, ft reflect.StructField, val reflect.Value, attr serde.FieldAttribute) {
+// Set field value. Reports whether a value was stored (see setField); a
+// pointer field stays nil when the value cannot be parsed, never pointing at
+// a zero value the sender did not transmit.
+func setFieldValue(f reflect.Value, ft reflect.StructField, val reflect.Value, attr serde.FieldAttribute) bool {
 	switch ft.Type.Kind() {
 	case reflect.Pointer:
 		fv := reflect.New(ft.Type.Elem())
 
-		setField(fv.Elem(), val, attr)
-		if f.CanSet() {
-			f.Set(fv)
+		if !setField(fv.Elem(), val, attr) {
+			return false
 		}
+		if !f.CanSet() {
+			return false
+		}
+		f.Set(fv)
+		return true
 
 	default:
-		setField(f, val, attr)
+		return setField(f, val, attr)
 	}
 }
 
@@ -753,6 +849,13 @@ func initializeStruct(structType reflect.Type, structVal reflect.Value) {
 			fieldBaseType := reflectionutils.GetElementType(ft.Type)
 			switch fieldBaseType.Kind() {
 			case reflect.Struct:
+				// *time.Time holds a scalar field value, not a nested group:
+				// it must stay nil until a value actually parses, or absent
+				// dates read as the zero date (0001-01-01) and are mistaken
+				// for populated fields.
+				if fieldBaseType == timeType {
+					break
+				}
 				fv := reflect.New(ft.Type.Elem())
 				initializeStruct(ft.Type.Elem(), fv.Elem())
 				if f.CanSet() {
