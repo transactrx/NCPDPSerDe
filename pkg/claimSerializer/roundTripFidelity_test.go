@@ -193,3 +193,119 @@ func Test_RoundTripPreservesBlankNumericFields(t *testing.T) {
 		assertFieldValues(t, serialized, "&U", []string{"    "})
 	}
 }
+
+// A later payer with several qualifier/amount pairs must keep each pair
+// intact and in order: the second HC within payer 2 starts a new nested
+// element because HC is already occupied in the current pair, never because
+// of its position in the segment.
+func Test_RoundTripCobSecondPayerMultipleAmounts(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+
+	oldAM05 := "AM05" + fs + "4C1" + fs + "5C01" + fs + "6C03" + fs + "7C015581    " + fs + "E820231219" + fs + "HB1" + fs + "HC07" + fs + "DV0000000{" + fs + "5E02" + fs + "6E70 " + fs + "6EA5 "
+	newAM05 := "AM05" + fs + "4C2" +
+		fs + "5C01" + fs + "6C03" + fs + "7C01111" + fs + "HB1" + fs + "HC07" + fs + "DV0000100{" +
+		fs + "5C02" + fs + "6C03" + fs + "7C02222" + fs + "HB2" + fs + "HC07" + fs + "DV0000200{" + fs + "HC08" + fs + "DV0000300{"
+
+	raw := strings.Replace(REQUEST_B1, oldAM05, newAM05, 1)
+	if raw == REQUEST_B1 {
+		t.Fatal("AM05 replacement did not apply to REQUEST_B1")
+	}
+
+	obj := request.Billing{}
+	if err := claimdeserializer.DeserializeType(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+
+	payers := obj.Claims[0].CoordinationOfBenefits.OtherPayer
+	if len(payers) != 2 {
+		t.Fatalf("OtherPayer count mismatch. Wanted: 2   Got: %v", len(payers))
+	}
+	if len(payers[0].OtherPayerAmountsPaid) != 1 || len(payers[1].OtherPayerAmountsPaid) != 2 {
+		t.Fatalf("amount pair distribution mismatch. Wanted: 1/2   Got: %v/%v",
+			len(payers[0].OtherPayerAmountsPaid), len(payers[1].OtherPayerAmountsPaid))
+	}
+	for i, want := range []struct {
+		qualifier string
+		amount    float64
+	}{
+		{"07", 20.00},
+		{"08", 30.00},
+	} {
+		pair := payers[1].OtherPayerAmountsPaid[i]
+		if pair.Qualifier == nil || *pair.Qualifier != want.qualifier || pair.AmountPaid == nil || *pair.AmountPaid != want.amount {
+			t.Errorf("payer 2 pair %v mismatch. Wanted: {%v %v}   Got: {%v %v}", i+1, want.qualifier, want.amount, pair.Qualifier, pair.AmountPaid)
+		}
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertFieldValues(t, serialized, "HB", []string{"1", "2"})
+	assertFieldValues(t, serialized, "HC", []string{"07", "07", "08"})
+	assertFieldValues(t, serialized, "DV", []string{"100{", "200{", "300{"})
+}
+
+// Empty fields inside the second occurrence of a repeating group must stay
+// nil there (not bleed into the first occurrence or invent values), the
+// first occurrence's values must survive, an empty string field round-trips
+// in place, and re-serializing a reparsed message is stable.
+func Test_RoundTripEmptyFieldsInSecondDurItem(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	rs := string(ncpdp.SEGMENT)
+
+	raw := RESPONSE_B1 + rs + fs + "AM24" +
+		fs + "J61" + fs + "E4PA" + fs + "FS" + fs + "FT0" + fs + "FU20260101" + fs + "FV0001000" + fs + "FW2" +
+		fs + "J62" + fs + "E4TD" + fs + "FT1" + fs + "FU" + fs + "FV" + fs + "FW3"
+
+	obj := response.Billing{}
+	if err := claimdeserializer.DeserializeType(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+
+	items := obj.Claims[0].Dur.Items
+	if len(items) != 2 {
+		t.Fatalf("DUR item count mismatch. Wanted: 2   Got: %v", len(items))
+	}
+	if items[0].PreviousFillDate == nil || items[0].PreviousFillDate.Format("20060102") != "20260101" {
+		t.Errorf("item 1 PreviousFillDate mismatch. Wanted: 20260101   Got: %v", items[0].PreviousFillDate)
+	}
+	if items[0].PreviousFillDateQuantity == nil || *items[0].PreviousFillDateQuantity != 1.0 {
+		t.Errorf("item 1 PreviousFillDateQuantity mismatch. Wanted: 1   Got: %v", items[0].PreviousFillDateQuantity)
+	}
+	if items[0].ClinicalSignificanceCode == nil || *items[0].ClinicalSignificanceCode != "" {
+		t.Errorf("item 1 ClinicalSignificanceCode mismatch. Wanted: empty string   Got: %v", items[0].ClinicalSignificanceCode)
+	}
+	if items[1].PreviousFillDate != nil {
+		t.Errorf("item 2 PreviousFillDate mismatch. Wanted: nil   Got: %v", *items[1].PreviousFillDate)
+	}
+	if items[1].PreviousFillDateQuantity != nil {
+		t.Errorf("item 2 PreviousFillDateQuantity mismatch. Wanted: nil   Got: %v", *items[1].PreviousFillDateQuantity)
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Item 1's values inline; item 2's preserved empties re-emitted at the
+	// segment's end. The empty string FS is a typed field and stays in place.
+	assertFieldValues(t, serialized, "FU", []string{"20260101", ""})
+	assertFieldValues(t, serialized, "FV", []string{"1000", ""})
+	assertFieldValues(t, serialized, "FS", []string{""})
+	assertFieldValues(t, serialized, "J6", []string{"1", "2"})
+
+	// Reparsing the rebuilt message and serializing again must be stable.
+	reparsed := response.Billing{}
+	if err := claimdeserializer.DeserializeType(serialized, &reparsed); err != nil {
+		t.Fatal(err)
+	}
+	serialized2, err := Serialize(&reparsed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if serialized2 != serialized {
+		t.Errorf("re-serialization is not stable.\nFirst:  %q\nSecond: %q", serialized, serialized2)
+	}
+}

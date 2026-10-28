@@ -177,3 +177,62 @@ func Test_RoundTripF6IntermediaryHelpDesk(t *testing.T) {
 	assertFieldValues(t, serialized, "JP", []string{"5559876543", "intermediary@example.com"})
 	assertFieldValues(t, serialized, "JR", []string{"00001234"})
 }
+
+// A support type may carry several business units (BB > 1). Each contact
+// stays under its own support type, and the rebuilt counts reflect each
+// type's own business unit list.
+func Test_RoundTripF6HelpDeskMultipleBusinessUnits(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+
+	raw := "F6B11A011234567893     20261026" +
+		ss + fs + "AM21" + fs + "ANA" +
+		fs + "BH02" +
+		fs + "BG1" + fs + "BB02" +
+		fs + "BA1" + fs + "BF1" + fs + "BC5551112222" +
+		fs + "BA2" + fs + "BF3" + fs + "BChttps://portal.example.com" + fs + "BD00009999" +
+		fs + "BG2" + fs + "BB01" + fs + "BA3" + fs + "BF4" + fs + "BCsupport@example.com" +
+		ss + fs + "AM22" + fs + "EM1" + fs + "D26000001"
+
+	obj := response.Billing{}
+	if err := claimdeserializer.DeserializeType(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+
+	supportTypes := obj.Claims[0].Status.HelpDeskSupportTypes
+	if len(supportTypes) != 2 {
+		t.Fatalf("support type count mismatch. Wanted: 2   Got: %v", len(supportTypes))
+	}
+	if len(supportTypes[0].BusinessUnits) != 2 || len(supportTypes[1].BusinessUnits) != 1 {
+		t.Fatalf("business unit distribution mismatch. Wanted: 2/1   Got: %v/%v",
+			len(supportTypes[0].BusinessUnits), len(supportTypes[1].BusinessUnits))
+	}
+	if got := supportTypes[0].BusinessUnits[1].ContactInformationExtension; got == nil || *got != "00009999" {
+		t.Errorf("extension mismatch. Wanted: 00009999 on type 1 unit 2   Got: %v", got)
+	}
+	if got := supportTypes[1].BusinessUnits[0].ContactInformation; got == nil || *got != "support@example.com" {
+		t.Errorf("type 2 contact mismatch. Wanted: support@example.com   Got: %v", got)
+	}
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertFieldValues(t, serialized, "BH", []string{"2"})
+	assertFieldValues(t, serialized, "BG", []string{"1", "2"})
+	assertFieldValues(t, serialized, "BB", []string{"2", "1"})
+	assertFieldValues(t, serialized, "BA", []string{"1", "2", "3"})
+	assertFieldValues(t, serialized, "BC", []string{"5551112222", "https://portal.example.com", "support@example.com"})
+	assertFieldValues(t, serialized, "BD", []string{"00009999"})
+
+	// Contacts stay contiguous under their support type: both of type 1's
+	// units precede the second BG.
+	wantOrder := fs + "BG1" + fs + "BB2" +
+		fs + "BA1" + fs + "BF1" + fs + "BC5551112222" +
+		fs + "BA2" + fs + "BF3" + fs + "BChttps://portal.example.com" + fs + "BD00009999" +
+		fs + "BG2" + fs + "BB1" + fs + "BA3" + fs + "BF4" + fs + "BCsupport@example.com"
+	if !strings.Contains(serialized, wantOrder) {
+		t.Errorf("help desk loop order mismatch.\nWanted substring: %q\nGot: %q", wantOrder, serialized)
+	}
+}
