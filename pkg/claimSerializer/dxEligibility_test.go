@@ -26,23 +26,32 @@ func buildDxEligibilityRequest() string {
 }
 
 // Per the NCPDP standard an eligibility request carries no claim section in
-// D.0 or F6, so the model defines no claim group. A transmission that carries
-// one anyway (the DX data-collection E1 layout) must fail loudly instead of
-// silently dropping the group from the parse and the rebuild.
-func Test_EligibilityRequestWithClaimGroupErrors(t *testing.T) {
+// D.0 or F6, so the model defines no claim group. Non-standard DX
+// data-collection E1 feeds append AM11/AMXX anyway; the platform
+// intentionally strips those during claim compression before forwarding, and
+// the library matches that flow: the standard portion parses, the group is
+// dropped, and the rebuilt message carries no group separator.
+func Test_EligibilityRequestDropsNonStandardClaimGroup(t *testing.T) {
 	raw := buildDxEligibilityRequest()
 
 	obj := request.Eligibility{}
-	err := claimdeserializer.DeserializeType(raw, &obj)
-	if err == nil {
-		t.Fatal("expected an error for an eligibility request carrying a claim group, got none")
-	}
-	if !strings.Contains(err.Error(), "claim group") {
-		t.Errorf("error does not name the claim group problem: %v", err)
+	if err := claimdeserializer.DeserializeType(raw, &obj); err != nil {
+		t.Fatal(err)
 	}
 
-	if _, err := claimdeserializer.Deserialize(raw); err == nil {
-		t.Error("expected an error from Deserialize for an eligibility request carrying a claim group, got none")
+	assertString(t, "Patient last name (CB)", obj.Patient.LastName, "DOE")
+	assertString(t, "Insurance cardholder id (C2)", obj.Insurance.Cardholder.Id, "CARD4M94KP02")
+
+	serialized, err := Serialize(&obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertNoGroupSeparators(t, serialized)
+	for _, code := range []string{"AM11", "AMXX"} {
+		if strings.Contains(serialized, code) {
+			t.Errorf("rebuilt eligibility request still carries dropped segment %v", code)
+		}
 	}
 }
 

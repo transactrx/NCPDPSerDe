@@ -251,14 +251,16 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 		return nil
 	}
 
-	// Find the slice field with the group tag. A transmission that carries
-	// claim groups the transaction type cannot hold (per the NCPDP standard
-	// an eligibility request has no claim section, yet non-standard DX
-	// data-collection E1 feeds append one) must fail loudly: silently
-	// dropping the groups would rebuild a shorter message with no error.
-	groupField, err := serde.GetGroupSlice(structType)
-	if err != nil || groupField == nil {
-		return fmt.Errorf("transmission carries %v claim group(s) but transaction type %v does not define a claim section", len(rawGroups), reflectionutils.GetElementType(structType).Name())
+	// Find the slice field with the group tag. A transaction type with no
+	// claim section drops any claim groups the transmission carries: per the
+	// NCPDP standard an eligibility request has no claim section in D.0 or
+	// F6, but non-standard DX data-collection E1 feeds append AM11/AMXX
+	// anyway, and the platform intentionally strips those during claim
+	// compression before forwarding. Parsing the standard portion instead of
+	// failing matches that flow.
+	groupField, _ := serde.GetGroupSlice(structType)
+	if groupField == nil {
+		return nil
 	}
 
 	baseVal := reflectionutils.GetElementValue(structVal)
