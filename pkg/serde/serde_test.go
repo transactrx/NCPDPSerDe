@@ -163,6 +163,9 @@ func Test_DynamicFieldName(t *testing.T) {
 		{"hash replaced", "#A", 2, "Field_hashA_2"},
 		{"exclamation replaced", "!F", 7, "Field_exclamationF_7"},
 		{"multiple illegal characters", "{}", 4, "Field_leftbracerightbrace_4"},
+		{"at sign replaced", "@A", 5, "Field_atsignA_5"},
+		{"control byte hex escaped", "\x04Z", 6, "Field_u0004Z_6"},
+		{"high byte hex escaped", "�B", 7, "Field_ufffdB_7"},
 	}
 
 	for _, test := range tests {

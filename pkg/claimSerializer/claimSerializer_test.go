@@ -503,6 +503,31 @@ func Test_CanRoundTripF6FullFieldSample(t *testing.T) {
 	}
 
 	assertF6FullSamplePricingRoundTrip(t, obj2)
+
+	// DX is present but empty in the source. The typed field cannot hold an
+	// empty numeric, so it stays nil and the raw field is preserved: the
+	// serialized output must carry the empty DX, not invent a zero or drop it.
+	if pricing := obj2.Claims[0].Pricing; pricing.PatientPaidAmountSubmitted != nil {
+		t.Errorf("Pricing patient paid amount (DX, empty in source) mismatch after round trip. Wanted: nil   Got: %v", *pricing.PatientPaidAmountSubmitted)
+	}
+	assertFieldCount(t, serialized, "DX", 1)
+	if strings.Contains(serialized, string(ncpdp.FIELD)+"DX0") {
+		t.Errorf("Empty DX was serialized with an invented value: %q", fieldValueOf(serialized, "DX"))
+	}
+}
+
+// fieldValueOf returns the raw value of the first occurrence of a field code
+// in a serialized claim.
+func fieldValueOf(serialized, code string) string {
+	i := strings.Index(serialized, string(ncpdp.FIELD)+code)
+	if i < 0 {
+		return ""
+	}
+	rest := serialized[i+1+len(code):]
+	if j := strings.IndexAny(rest, string([]byte{ncpdp.FIELD, ncpdp.SEGMENT, ncpdp.GROUP})); j >= 0 {
+		return rest[:j]
+	}
+	return rest
 }
 
 func assertF6FullSamplePricingRoundTrip(t *testing.T, obj request.Billing) {
@@ -517,7 +542,6 @@ func assertF6FullSamplePricingRoundTrip(t *testing.T, obj request.Billing) {
 		{"ingredient cost (D9)", pricing.IngredientCostSubmitted, 123456.78},
 		{"dispensing fee (DC)", pricing.DispensingFeeSubmitted, 25.00},
 		{"professional service fee (BE)", pricing.ProfessionalServiceFeeSubmitted, 20.00},
-		{"patient paid amount (DX, empty in source)", pricing.PatientPaidAmountSubmitted, 0},
 		{"incentive amount (E3)", pricing.IncentiveAmountSubmitted, 5.00},
 		{"flat sales tax (HA)", pricing.FlatSalesTaxAmountSubmitted, 4.32},
 		{"percentage sales tax amount (GE)", pricing.PercentageSalesTaxAmountSubmitted, 1234.57},

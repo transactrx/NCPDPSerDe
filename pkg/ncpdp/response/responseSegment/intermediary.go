@@ -16,9 +16,6 @@ type Intermediary struct {
 	HelpDeskSupportTypeCount *int `field:"code=KC,order=6,countfor=HelpDeskSupportTypes,sinceVersion=F6"`
 	HelpDeskSupportTypes     []IntermediaryHelpDeskSupportType
 
-	HelpDeskBusinessUnitTypeCount *int `field:"code=G9,order=8,countfor=HelpDeskBusinessUnits,sinceVersion=F6"`
-	HelpDeskBusinessUnits         []IntermediaryHelpDeskBusinessUnit
-
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
@@ -31,8 +28,16 @@ type IntermediaryMessage struct {
 	Message *string `field:"code=8Q,order=5,sinceVersion=F6"`
 }
 
+// IntermediaryHelpDeskSupportType is one occurrence of the F6 Intermediary
+// Help Desk Support loop. Per the vF6 implementation guide ("The Intermediary
+// Help Desk Business Unit Type loop will repeat within an occurrence of the
+// Intermediary Help Desk Support Type loop"), each support type carries its
+// own business unit count (G9) and contacts.
 type IntermediaryHelpDeskSupportType struct {
 	Type *string `field:"code=KB,order=7,sinceVersion=F6"`
+
+	BusinessUnitCount *int `field:"code=G9,order=8,countfor=BusinessUnits,sinceVersion=F6"`
+	BusinessUnits     []IntermediaryHelpDeskBusinessUnit
 }
 
 type IntermediaryHelpDeskBusinessUnit struct {
