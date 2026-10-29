@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type DynamicStruct struct {
@@ -45,6 +46,14 @@ var illegalNamingRunes = map[rune]string{
 	'{':  "leftbrace",
 	'|':  "pipe",
 	'}':  "rightbrace",
+	'@':  "atsign",
+	'%':  "percent",
+	'+':  "plus",
+	'-':  "hyphen",
+	'.':  "period",
+	'/':  "slash",
+	'~':  "tilde",
+	' ':  "space",
 }
 
 // FieldName builds the struct field name for a dynamically generated field.
@@ -53,16 +62,22 @@ func FieldName(fieldCode string, order int) string {
 }
 
 // ReplaceIllegalCharacters replaces characters that are invalid in Go
-// identifiers with word equivalents.
+// identifiers with word equivalents, falling back to a u-prefixed hex escape
+// for anything else (control bytes and other garbage seen in production field
+// codes) — reflect.StructOf panics on an invalid field name, so every input
+// must map to identifier characters.
 func ReplaceIllegalCharacters(str string) string {
 	builder := strings.Builder{}
 
 	for _, ch := range str {
 		val, found := illegalNamingRunes[ch]
-		if found {
+		switch {
+		case found:
 			builder.WriteString(val)
-		} else {
+		case ch == '_' || unicode.IsLetter(ch) || unicode.IsDigit(ch):
 			builder.WriteRune(ch)
+		default:
+			fmt.Fprintf(&builder, "u%04x", ch)
 		}
 	}
 
@@ -86,6 +101,17 @@ func restoreIllegalCharacters(mangled string) string {
 			builder.WriteRune(matchedRune)
 			mangled = mangled[matchedLen:]
 			continue
+		}
+
+		// u-prefixed hex escape (see ReplaceIllegalCharacters). No word
+		// equivalent starts with 'u', and a passthrough 'u' is never followed
+		// by exactly four hex digits within a two-character field code.
+		if mangled[0] == 'u' && len(mangled) >= 5 {
+			if v, err := strconv.ParseUint(mangled[1:5], 16, 32); err == nil {
+				builder.WriteRune(rune(v))
+				mangled = mangled[5:]
+				continue
+			}
 		}
 
 		r := []rune(mangled)

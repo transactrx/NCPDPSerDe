@@ -43,24 +43,28 @@ type Status struct {
 	HelpDeskSupportTypeCount *int `field:"code=BH,order=19,countfor=HelpDeskSupportTypes,sinceVersion=F6"`
 	HelpDeskSupportTypes     []HelpDeskSupportType
 
-	HelpDeskBusinessUnitTypeCount *int `field:"code=BB,order=21,countfor=HelpDeskBusinessUnits,sinceVersion=F6"`
-	HelpDeskBusinessUnits         []HelpDeskBusinessUnit
-
-	HelpDeskContactInformationExtension *string    `field:"code=BD,order=25,sinceVersion=F6"`
-	AdjudicatedProgramType              *string    `field:"code=ZR,order=26,sinceVersion=F6"`
-	NextAvailableFillDate               *time.Time `field:"code=BT,format=YYYYMMdd,order=27,sinceVersion=F6"`
+	AdjudicatedProgramType *string    `field:"code=ZR,order=26,sinceVersion=F6"`
+	NextAvailableFillDate  *time.Time `field:"code=BT,format=YYYYMMdd,order=27,sinceVersion=F6"`
 
 	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
+// HelpDeskSupportType is one occurrence of the F6 Help Desk Support loop. Per
+// the vF6 implementation guide ("The Help Desk Business Unit Type loop will
+// repeat within an occurrence of the Help Desk Support Type loop"), each
+// support type carries its own business unit count (BB) and contacts.
 type HelpDeskSupportType struct {
 	Type *string `field:"code=BG,order=20,sinceVersion=F6"`
+
+	BusinessUnitCount *int `field:"code=BB,order=21,countfor=BusinessUnits,sinceVersion=F6"`
+	BusinessUnits     []HelpDeskBusinessUnit
 }
 
 type HelpDeskBusinessUnit struct {
 	Type                        *string `field:"code=BA,order=22,sinceVersion=F6"`
 	ContactInformationQualifier *string `field:"code=BF,order=23,sinceVersion=F6"`
 	ContactInformation          *string `field:"code=BC,order=24,sinceVersion=F6"`
+	ContactInformationExtension *string `field:"code=BD,order=25,sinceVersion=F6"`
 }
 
 type RejectCode struct {

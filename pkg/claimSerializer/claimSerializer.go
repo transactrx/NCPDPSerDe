@@ -314,6 +314,11 @@ func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skip
 	}
 
 	if fieldAttribute.CountFor != serde.Empty {
+		// The derived count always wins over a supplied value: a received
+		// count that contradicts the actual occurrences (trading partners do
+		// send e.g. UF=11 over 5 additional messages) is deliberately
+		// corrected, and an omitted required count (UH/FQ sent with no UF) is
+		// supplied, so rebuilt messages are internally consistent.
 		if count, ok := derivedCount(baseVal, &fieldAttribute, itemIndex); ok {
 			return buildCountField(fieldAttribute, count, skipCodes)
 		}

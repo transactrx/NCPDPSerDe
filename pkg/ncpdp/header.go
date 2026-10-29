@@ -15,10 +15,11 @@ const (
 	layoutF6Tag = "layoutF6"
 )
 
-// RawValue and Size are internal bookkeeping populated during
-// deserialization/serialization; they are excluded from JSON.
+// RawValue carries the header bytes exactly as received so they can be
+// re-emitted unchanged on serialization (it survives the JSON round trip for
+// that reason); Size is internal bookkeeping and is excluded from JSON.
 type NcpdpHeader[V RequestHeader | ResponseHeader | FinancialRequestHeader | FinancialResponseHeader] struct {
-	RawValue string `json:"-"`
+	RawValue string `json:",omitempty"`
 	Size     int    `json:"-"`
 	Value    V
 }
@@ -124,7 +125,21 @@ func (h *NcpdpHeader[V]) BuildNcpdpHeader() error {
 		sb.WriteString(stringutils.RightPadExact(val, ' ', fl.layout.Length))
 	}
 
-	h.RawValue = sb.String()
+	built := sb.String()
+
+	// Keep the header bytes exactly as received while they still parse to the
+	// same field values: fixed-width fields a sender padded unusually (e.g. a
+	// leading-space PCN) must round-trip unchanged. Rebuild normalized only
+	// when a consumer actually changed a field.
+	if h.RawValue != Empty && h.RawValue != built {
+		reparsed := NcpdpHeader[V]{RawValue: h.RawValue}
+		if err := reparsed.ParseNcpdpHeader(); err == nil && reparsed.Value == h.Value && reparsed.Size == len(built) {
+			h.RawValue = reparsed.RawValue
+			return nil
+		}
+	}
+
+	h.RawValue = built
 
 	return nil
 }

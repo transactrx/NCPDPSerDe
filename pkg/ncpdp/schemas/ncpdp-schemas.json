@@ -1021,26 +1021,27 @@
         "HelpDeskSupportTypeCount": { "type": ["integer", "null"], "description": "Help Desk Support Type Count (BH) - F6" },
         "HelpDeskSupportTypes": {
           "type": "array",
+          "description": "Help Desk Support loop - F6. The business unit loop repeats within each occurrence of the support type loop.",
           "items": {
             "type": "object",
             "properties": {
-              "Type": { "type": ["string", "null"], "description": "Help Desk Support Type (BG) - F6" }
+              "Type": { "type": ["string", "null"], "description": "Help Desk Support Type (BG) - F6" },
+              "BusinessUnitCount": { "type": ["integer", "null"], "description": "Help Desk Business Unit Type Count (BB) - F6" },
+              "BusinessUnits": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Type": { "type": ["string", "null"], "description": "Help Desk Business Unit Type (BA) - F6" },
+                    "ContactInformationQualifier": { "type": ["string", "null"], "description": "Help Desk Contact Information Qualifier (BF) - F6" },
+                    "ContactInformation": { "type": ["string", "null"], "description": "Help Desk Contact Information (BC) - F6" },
+                    "ContactInformationExtension": { "type": ["string", "null"], "description": "Help Desk Contact Information Extension (BD) - F6" }
+                  }
+                }
+              }
             }
           }
         },
-        "HelpDeskBusinessUnitTypeCount": { "type": ["integer", "null"], "description": "Help Desk Business Unit Type Count (BB) - F6" },
-        "HelpDeskBusinessUnits": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "Type": { "type": ["string", "null"], "description": "Help Desk Business Unit Type (BA) - F6" },
-              "ContactInformationQualifier": { "type": ["string", "null"], "description": "Help Desk Contact Information Qualifier (BF) - F6" },
-              "ContactInformation": { "type": ["string", "null"], "description": "Help Desk Contact Information (BC) - F6" }
-            }
-          }
-        },
-        "HelpDeskContactInformationExtension": { "type": ["string", "null"], "description": "Help Desk Contact Information Extension (BD) - F6" },
         "AdjudicatedProgramType": { "type": ["string", "null"], "description": "Adjudicated Program Type (ZR) - F6" },
         "NextAvailableFillDate": { "type": ["string", "null"], "format": "date", "description": "Next Available Fill Date (BT) - F6" },
         "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
@@ -1358,23 +1359,24 @@
         "HelpDeskSupportTypeCount": { "type": ["integer", "null"], "description": "Intermediary Help Desk Support Type Count (KC) - F6" },
         "HelpDeskSupportTypes": {
           "type": "array",
+          "description": "Intermediary Help Desk Support loop - F6. The business unit loop repeats within each occurrence of the support type loop.",
           "items": {
             "type": "object",
             "properties": {
-              "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Support Type (KB) - F6" }
-            }
-          }
-        },
-        "HelpDeskBusinessUnitTypeCount": { "type": ["integer", "null"], "description": "Intermediary Help Desk Business Unit Type Count (G9) - F6" },
-        "HelpDeskBusinessUnits": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Business Unit Type (G8) - F6" },
-              "ContactInformationQualifier": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Qualifier (KA) - F6" },
-              "ContactInformation": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information (JP) - F6" },
-              "ContactInformationExtension": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Extension (JR) - F6" }
+              "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Support Type (KB) - F6" },
+              "BusinessUnitCount": { "type": ["integer", "null"], "description": "Intermediary Help Desk Business Unit Type Count (G9) - F6" },
+              "BusinessUnits": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Business Unit Type (G8) - F6" },
+                    "ContactInformationQualifier": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Qualifier (KA) - F6" },
+                    "ContactInformation": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information (JP) - F6" },
+                    "ContactInformationExtension": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Extension (JR) - F6" }
+                  }
+                }
+              }
             }
           }
         },
