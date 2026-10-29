@@ -679,23 +679,24 @@ func codeOccupied(structType reflect.Type, structVal reflect.Value, codeTag stri
 			// Nested slice fields are owned by their own element type.
 
 		default:
-			tag := ft.Tag.Get(serde.FieldTag)
-			if tag == serde.Empty {
-				continue
-			}
-
-			attr, err := serde.GetFieldAttribute(tag)
-			if err != nil || attr.Code != codeTag {
-				continue
-			}
-
-			if fieldOccupied(f) {
+			if fieldCodeMatches(ft, codeTag) && fieldOccupied(f) {
 				return true
 			}
 		}
 	}
 
 	return false
+}
+
+// fieldCodeMatches reports whether a struct field carries the given code tag.
+func fieldCodeMatches(ft reflect.StructField, codeTag string) bool {
+	tag := ft.Tag.Get(serde.FieldTag)
+	if tag == serde.Empty {
+		return false
+	}
+
+	attr, err := serde.GetFieldAttribute(tag)
+	return err == nil && attr.Code == codeTag
 }
 
 // fieldOccupied reports whether a scalar struct field already holds a parsed

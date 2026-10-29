@@ -1,6 +1,7 @@
 package claimserializer
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -28,6 +29,19 @@ func buildF6HelpDeskResponse() string {
 		ss + fs + "AM22" + fs + "EM1" + fs + "D26000001"
 }
 
+// assertStrPtr fails the test when got does not hold the wanted value (or is
+// non-nil while nil is wanted).
+func assertStrPtr(t *testing.T, context, name string, want, got *string) {
+	t.Helper()
+
+	switch {
+	case want == nil && got != nil:
+		t.Errorf("%v: %v mismatch. Wanted: nil   Got: %q", context, name, *got)
+	case want != nil && (got == nil || *got != *want):
+		t.Errorf("%v: %v mismatch. Wanted: %q   Got: %v", context, name, *want, got)
+	}
+}
+
 func assertHelpDeskSupportTypes(t *testing.T, status responsesegment.Status, context string) {
 	t.Helper()
 
@@ -46,34 +60,21 @@ func assertHelpDeskSupportTypes(t *testing.T, status responsesegment.Status, con
 		{"2", "3", "4", "help@example.com", nil},
 	} {
 		st := status.HelpDeskSupportTypes[i]
+		ctx := fmt.Sprintf("%v: support type %v", context, i+1)
 
-		if st.Type == nil || *st.Type != want.supportType {
-			t.Errorf("%v: support type %v mismatch. Wanted: %q   Got: %v", context, i+1, want.supportType, st.Type)
-		}
+		assertStrPtr(t, ctx, "type", strPtr(want.supportType), st.Type)
 		if st.BusinessUnitCount == nil || *st.BusinessUnitCount != 1 {
-			t.Errorf("%v: support type %v BB count mismatch. Wanted: 1   Got: %v", context, i+1, st.BusinessUnitCount)
+			t.Errorf("%v: BB count mismatch. Wanted: 1   Got: %v", ctx, st.BusinessUnitCount)
 		}
 		if len(st.BusinessUnits) != 1 {
-			t.Fatalf("%v: support type %v business unit count mismatch. Wanted: 1   Got: %v", context, i+1, len(st.BusinessUnits))
+			t.Fatalf("%v: business unit count mismatch. Wanted: 1   Got: %v", ctx, len(st.BusinessUnits))
 		}
 
 		bu := st.BusinessUnits[0]
-		if bu.Type == nil || *bu.Type != want.unitType {
-			t.Errorf("%v: support type %v unit type mismatch. Wanted: %q   Got: %v", context, i+1, want.unitType, bu.Type)
-		}
-		if bu.ContactInformationQualifier == nil || *bu.ContactInformationQualifier != want.qualifier {
-			t.Errorf("%v: support type %v qualifier mismatch. Wanted: %q   Got: %v", context, i+1, want.qualifier, bu.ContactInformationQualifier)
-		}
-		if bu.ContactInformation == nil || *bu.ContactInformation != want.contact {
-			t.Errorf("%v: support type %v contact mismatch. Wanted: %q   Got: %v", context, i+1, want.contact, bu.ContactInformation)
-		}
-		if want.extension == nil {
-			if bu.ContactInformationExtension != nil {
-				t.Errorf("%v: support type %v extension mismatch. Wanted: nil   Got: %q", context, i+1, *bu.ContactInformationExtension)
-			}
-		} else if bu.ContactInformationExtension == nil || *bu.ContactInformationExtension != *want.extension {
-			t.Errorf("%v: support type %v extension mismatch. Wanted: %q   Got: %v", context, i+1, *want.extension, bu.ContactInformationExtension)
-		}
+		assertStrPtr(t, ctx, "unit type", strPtr(want.unitType), bu.Type)
+		assertStrPtr(t, ctx, "qualifier", strPtr(want.qualifier), bu.ContactInformationQualifier)
+		assertStrPtr(t, ctx, "contact", strPtr(want.contact), bu.ContactInformation)
+		assertStrPtr(t, ctx, "extension", want.extension, bu.ContactInformationExtension)
 	}
 }
 
