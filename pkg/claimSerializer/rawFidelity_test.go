@@ -66,6 +66,41 @@ func Test_RoundTripPreservesDuplicateScalarFields(t *testing.T) {
 	}
 }
 
+// Field codes outside the identifier-safe set (seen in production: a 5X P2
+// data-collection segment using @A..@P codes, plus stray control bytes) must
+// not panic reflect.StructOf. They preserve as dynamic fields and re-emit.
+func Test_RoundTripPreservesGarbageFieldCodes(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+	gs := string(ncpdp.GROUP)
+
+	raw := "880151D0B2TESTTEST1 1011234567893     20231219          " +
+		ss + fs + "AM04" + fs + "C2TEST" +
+		gs + ss + fs + "AM07" + fs + "EM1" + fs + "D2100001" + fs + "E103" + fs + "D700002125401" +
+		fs + "@A123" + fs + "\x04Z9"
+
+	obj := request.Reversal{}
+	if err := claimdeserializer.DeserializeType(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, serialize := range []struct {
+		name string
+		run  func() (string, error)
+	}{
+		{"direct", func() (string, error) { return Serialize(&obj) }},
+		{"via JSON", func() (string, error) { return jsonRoundTripSerialize(obj) }},
+	} {
+		serialized, err := serialize.run()
+		if err != nil {
+			t.Fatalf("%v serialization failed: %v", serialize.name, err)
+		}
+
+		assertFieldValues(t, serialized, "@A", []string{"123"})
+		assertFieldValues(t, serialized, "\x04Z", []string{"9"})
+	}
+}
+
 // Header bytes re-emit exactly as received while the parsed fields are
 // unchanged (seen in production: a PCN and a software vendor certification id
 // right-justified with leading spaces). Editing a header field rebuilds the
