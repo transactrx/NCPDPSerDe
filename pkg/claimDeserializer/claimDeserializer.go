@@ -632,6 +632,13 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 				}
 
 				if attr.Code == codeTag {
+					// A duplicated non-repeating field must not overwrite the
+					// first occurrence: leaving it unconsumed routes the raw
+					// duplicate into the segment's dynamic fields, so it
+					// round-trips instead of silently collapsing into one.
+					if fieldOccupied(f) {
+						continue
+					}
 					// A value the typed field cannot represent (an empty or
 					// blank-filled numeric/date) leaves the field unset and
 					// counts as not consumed, so the caller preserves the raw
@@ -682,20 +689,22 @@ func codeOccupied(structType reflect.Type, structVal reflect.Value, codeTag stri
 				continue
 			}
 
-			if ft.Type.Kind() == reflect.Pointer {
-				if !f.IsNil() {
-					return true
-				}
-				continue
-			}
-
-			if !f.IsZero() {
+			if fieldOccupied(f) {
 				return true
 			}
 		}
 	}
 
 	return false
+}
+
+// fieldOccupied reports whether a scalar struct field already holds a parsed
+// value: a non-nil pointer, or a non-zero value for plain fields.
+func fieldOccupied(f reflect.Value) bool {
+	if f.Kind() == reflect.Pointer {
+		return !f.IsNil()
+	}
+	return !f.IsZero()
 }
 
 type typeCodeKey struct {

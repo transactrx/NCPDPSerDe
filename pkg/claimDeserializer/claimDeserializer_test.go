@@ -293,8 +293,10 @@ func Test_CanParseBillingRequest(t *testing.T) {
 }
 
 // Test_JsonOutputExcludesInternalFields verifies that internal bookkeeping
-// fields (header RawValue/Size, SegmentId, and Raw group captures) are not
-// exposed when a deserialized claim is marshaled to JSON.
+// fields (header Size, SegmentId, and Raw group captures) are not exposed
+// when a deserialized claim is marshaled to JSON. The header's RawValue IS
+// exposed: it carries the original header bytes through the JSON round trip
+// so unusual fixed-width padding re-emits unchanged.
 func Test_JsonOutputExcludesInternalFields(t *testing.T) {
 	assertNoInternalFields := func(name string, obj any, err error) {
 		if err != nil {
@@ -309,10 +311,13 @@ func Test_JsonOutputExcludesInternalFields(t *testing.T) {
 		}
 
 		jsonStr := string(bytes)
-		for _, key := range []string{`"RawValue"`, `"Size"`, `"SegmentId"`, `"Raw"`} {
+		for _, key := range []string{`"Size"`, `"SegmentId"`, `"Raw"`} {
 			if strings.Contains(jsonStr, key) {
 				t.Errorf("%v: marshaled JSON must not contain internal field %v", name, key)
 			}
+		}
+		if !strings.Contains(jsonStr, `"RawValue"`) {
+			t.Errorf("%v: marshaled JSON must carry the header RawValue for byte-exact round trips", name)
 		}
 	}
 
