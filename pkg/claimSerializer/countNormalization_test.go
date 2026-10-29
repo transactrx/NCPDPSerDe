@@ -52,3 +52,47 @@ func Test_RoundTripNormalizesMismatchedCounts(t *testing.T) {
 		assertFieldValues(t, serialized, "FQ", []string{"Member redetermination reqd as of 2026", "11."})
 	}
 }
+
+// An omitted required count is supplied on rebuild (seen in production: B3
+// responses carrying UH/FQ additional messages with no UF at all; the D.0
+// standard requires 130-UF whenever 526-FQ is used).
+func Test_RoundTripAddsOmittedRequiredCount(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+	gs := string(ncpdp.GROUP)
+
+	raw := "D0B31A011234567893     20231219" +
+		gs + ss + fs + "AM21" + fs + "ANP" + fs + "F3AUTH123456" +
+		fs + "UH01" + fs + "FQPlan limit reached, authorization on file" +
+		ss + fs + "AM22" + fs + "EM1" + fs + "D26000001"
+
+	obj := response.Rebill{}
+	if err := claimdeserializer.DeserializeType(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+
+	status := obj.Claims[0].Status
+	if len(status.AdditionalMessages) != 1 {
+		t.Fatalf("Additional message count mismatch. Wanted: 1   Got: %v", len(status.AdditionalMessages))
+	}
+	if status.AdditionalMessageCount != nil {
+		t.Errorf("Parsed count mismatch. Wanted: nil (not sent)   Got: %v", *status.AdditionalMessageCount)
+	}
+
+	for _, serialize := range []struct {
+		name string
+		run  func() (string, error)
+	}{
+		{"direct", func() (string, error) { return Serialize(&obj) }},
+		{"via JSON", func() (string, error) { return jsonRoundTripSerialize(obj) }},
+	} {
+		serialized, err := serialize.run()
+		if err != nil {
+			t.Fatalf("%v serialization failed: %v", serialize.name, err)
+		}
+
+		assertFieldValues(t, serialized, "UF", []string{"1"})
+		assertFieldValues(t, serialized, "UH", []string{"01"})
+		assertFieldValues(t, serialized, "FQ", []string{"Plan limit reached, authorization on file"})
+	}
+}
