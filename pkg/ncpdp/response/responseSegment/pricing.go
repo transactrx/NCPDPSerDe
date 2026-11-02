@@ -78,6 +78,8 @@ type RegulatoryFee struct {
 
 type BenefitStageIndicator struct {
 	Indicator *string `field:"code=9X,order=54,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OtherAmountPaid struct {

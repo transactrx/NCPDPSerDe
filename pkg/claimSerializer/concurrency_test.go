@@ -1,6 +1,7 @@
 package claimserializer
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -82,4 +83,69 @@ func roundTripLocalConcurrently(t *testing.T, baseline string) bool {
 	}
 
 	return true
+}
+
+// Where Test_SerializeIsConcurrencySafe exercises one shared F6 object, this
+// test hammers the full NCPDP -> model -> JSON -> model -> NCPDP chain from
+// many goroutines over DISTINCT transaction shapes at once, so the shared
+// reflection caches (typeOwnsCode, field codes, segment/field attributes) see
+// interleaved first-populations for different types. Every result must be
+// byte-identical to the sequential baseline: a race or cache
+// cross-contamination shows up as a mismatch, and `go test -race` pins the
+// access pattern itself.
+func Test_ConcurrentRoundTripsMatchSequentialBaseline(t *testing.T) {
+	samples := []string{
+		REQUEST_B1, REQUEST_B2, REQUEST_B3, REQUEST_E1,
+		RESPONSE_B2, RESPONSE_B3, RESPONSE_E1,
+	}
+
+	baseline := make([]string, len(samples))
+	for i, raw := range samples {
+		out, err := fullRoundTrip(raw)
+		if err != nil {
+			t.Fatalf("sample %d baseline round trip failed: %v", i, err)
+		}
+		baseline[i] = out
+	}
+
+	const workers = 8
+	const iterations = 50
+
+	errs := make(chan error, workers)
+	var wg sync.WaitGroup
+
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func(worker int) {
+			defer wg.Done()
+			for iter := 0; iter < iterations; iter++ {
+				for i, raw := range samples {
+					out, err := fullRoundTrip(raw)
+					if err != nil {
+						errs <- fmt.Errorf("worker %d iter %d sample %d: %w", worker, iter, i, err)
+						return
+					}
+					if out != baseline[i] {
+						errs <- fmt.Errorf("worker %d iter %d sample %d: output diverged from sequential baseline", worker, iter, i)
+						return
+					}
+				}
+			}
+		}(w)
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Error(err)
+	}
+}
+
+func fullRoundTrip(raw string) (string, error) {
+	obj, err := claimdeserializer.Deserialize(raw)
+	if err != nil {
+		return "", err
+	}
+	return jsonRoundTripSerialize(obj)
 }
