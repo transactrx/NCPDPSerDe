@@ -62,7 +62,36 @@ func Deserialize(rawClaimString string) (interface{}, error) {
 		return DeserializeResponse(rawClaimString)
 	}
 
-	return nil, fmt.Errorf("unable to determine transaction type")
+	return nil, fmt.Errorf("unable to determine transaction type%s", headerShapeHint(rawClaimString, true))
+}
+
+// headerShapeHint describes where the first separator sits relative to the
+// known fixed header lengths. A transaction code read from a header of the
+// wrong shape is meaningless bytes, so a failed type lookup names the likely
+// cause (response fed to the request parser or vice versa, leading garbage, a
+// truncated header) instead of only echoing those bytes.
+func headerShapeHint(rawClaimString string, parsingRequest bool) string {
+	idx := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.FIELD, ncpdp.SEGMENT, ncpdp.GROUP})
+
+	switch {
+	case idx == dZeroRequestLength || idx == f6RequestLength:
+		if !parsingRequest {
+			return fmt.Sprintf(" (the first separator is at byte %d, the shape of a request header — this data may be a request passed to the response parser)", idx)
+		}
+
+	case idx == dZeroResponseLength:
+		if parsingRequest {
+			return fmt.Sprintf(" (the first separator is at byte %d, the shape of a response header — this data may be a response passed to the request parser)", idx)
+		}
+
+	case idx < 0:
+		return " (no NCPDP separators present)"
+
+	default:
+		return fmt.Sprintf(" (the first separator is at byte %d, which matches no known header length — D0 request 56, F6 request 58, response 31 — so the data may have leading garbage or a truncated header)", idx)
+	}
+
+	return ""
 }
 
 // Parse raw request.
@@ -77,7 +106,7 @@ func DeserializeRequest(rawClaimString string) (interface{}, error) {
 	rawClaimString = trimClaimFrame(rawClaimString)
 
 	if len(rawClaimString) < 10 {
-		return nil, fmt.Errorf("unable to determine transaction type")
+		return nil, fmt.Errorf("unable to determine transaction type: data is %d bytes, shorter than any request header", len(rawClaimString))
 	}
 
 	// D0 request headers lead with the BIN (digits); vEB+ headers (e.g. F6)
@@ -89,7 +118,7 @@ func DeserializeRequest(rawClaimString string) (interface{}, error) {
 
 	claimType, err := serde.GetRequestType(tranCode)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w%s", err, headerShapeHint(rawClaimString, true))
 	}
 
 	// Create object
@@ -112,14 +141,14 @@ func DeserializeResponse(rawClaimString string) (interface{}, error) {
 	rawClaimString = trimClaimFrame(rawClaimString)
 
 	if len(rawClaimString) < 4 {
-		return nil, fmt.Errorf("unable to determine transaction type")
+		return nil, fmt.Errorf("unable to determine transaction type: data is %d bytes, shorter than any response header", len(rawClaimString))
 	}
 
 	tranCode := rawClaimString[2:4]
 
 	claimType, err := serde.GetResponseType(tranCode)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w%s", err, headerShapeHint(rawClaimString, false))
 	}
 
 	// Create object
@@ -520,7 +549,7 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 		// Find segment ID in field list
 		segmentIdIndex := sliceutils.IndexOfStartsWith(ncpdp.SEGMENT_FIELD_ID, rawFields)
 		if segmentIdIndex < 0 {
-			return fmt.Errorf("segment id element does not exist")
+			return fmt.Errorf("segment id element does not exist: a segment with %d field(s), starting with field code %q, has no AM segment identifier, so its data cannot be attributed", len(rawFields), stringutils.Substring(rawFields[0], 0, ncpdp.ID_LENGTH))
 		}
 
 		// Create new segment and initialize
