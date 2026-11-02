@@ -50,4 +50,6 @@ type DurItem struct {
 	MaximumDailyDoseUnitOfMeasure *string  `field:"code=YL,order=27,sinceVersion=F6"`
 	MinimumDailyDoseQuantity      *float64 `field:"code=YJ,decimalPlaces=3,order=28,sinceVersion=F6"`
 	MinimumDailyDoseUnitOfMeasure *string  `field:"code=YI,order=29,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

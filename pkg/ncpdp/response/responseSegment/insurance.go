@@ -28,4 +28,6 @@ type Medicaid struct {
 type Payer struct {
 	Qualifier *string `field:"code=J7,order=6"`
 	Id        *string `field:"code=J8,order=7"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

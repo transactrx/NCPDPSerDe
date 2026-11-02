@@ -22,10 +22,14 @@ type Intermediary struct {
 type IntermediaryAuthorization struct {
 	TypeId *string `field:"code=8S,order=3,sinceVersion=F6"`
 	Id     *string `field:"code=8T,order=4,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type IntermediaryMessage struct {
 	Message *string `field:"code=8Q,order=5,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 // IntermediaryHelpDeskSupportType is one occurrence of the F6 Intermediary
@@ -38,6 +42,8 @@ type IntermediaryHelpDeskSupportType struct {
 
 	BusinessUnitCount *int `field:"code=G9,order=8,countfor=BusinessUnits,sinceVersion=F6"`
 	BusinessUnits     []IntermediaryHelpDeskBusinessUnit
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type IntermediaryHelpDeskBusinessUnit struct {
@@ -45,4 +51,6 @@ type IntermediaryHelpDeskBusinessUnit struct {
 	ContactInformationQualifier *string `field:"code=KA,order=10,sinceVersion=F6"`
 	ContactInformation          *string `field:"code=JP,order=11,sinceVersion=F6"`
 	ContactInformationExtension *string `field:"code=JR,order=12,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

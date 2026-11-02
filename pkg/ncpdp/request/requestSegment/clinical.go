@@ -21,6 +21,8 @@ type Clinical struct {
 type ClinicalDiagnosis struct {
 	Qualifier *string `field:"code=WE,order=3"`
 	Code      *string `field:"code=DO,order=4"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type ClinicalMeasurement struct {
@@ -30,4 +32,6 @@ type ClinicalMeasurement struct {
 	Dimension *string    `field:"code=H2,order=8"`
 	Unit      *string    `field:"code=H3,order=9"`
 	Value     *string    `field:"code=H4,order=10"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

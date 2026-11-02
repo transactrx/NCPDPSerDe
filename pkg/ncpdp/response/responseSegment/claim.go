@@ -64,16 +64,24 @@ type PreferredProduct struct {
 	RequiredTherapyTimePeriodDuration  *string    `field:"code=P3,order=17,sinceVersion=F6"`
 	RequiredTherapyTimePeriodStartDate *time.Time `field:"code=P4,format=YYYYMMdd,order=18,sinceVersion=F6"`
 	RequiredTherapyTimePeriodEndDate   *time.Time `field:"code=P5,format=YYYYMMdd,order=19,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type RequiredTherapyIndicator struct {
 	Indicator *string `field:"code=P1,order=15,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type PlanBenefitOverrideValue struct {
 	Value *string `field:"code=RF,order=22,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type BenefitTypeOpportunity struct {
 	Opportunity *string `field:"code=AE,order=38,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

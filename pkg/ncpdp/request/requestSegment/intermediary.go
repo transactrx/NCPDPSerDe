@@ -21,4 +21,6 @@ type IntermediaryId struct {
 	Id                   *string `field:"code=8M,order=6,sinceVersion=F6"`
 	StateProvinceAddress *string `field:"code=8N,order=7,sinceVersion=F6"`
 	CountryCode          *string `field:"code=8U,order=8,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

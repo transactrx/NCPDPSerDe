@@ -205,6 +205,17 @@ func (h *NcpdpHeader[V]) ParseNcpdpHeader() error {
 		return fmt.Errorf("NCPDP header data length %d is shorter than expected header size %d", len(h.RawValue), size)
 	}
 
+	// Fixed-width parsing cannot detect a malformed header by content — a
+	// short, long, or multi-byte-polluted header (real traffic: 46/55/154-byte
+	// headers, non-breaking spaces in the PCN) simply shifts every following
+	// field — but any such header breaks the alignment of the separator that
+	// must follow it. Refuse loudly instead of silently garbling the fields.
+	if len(h.RawValue) > size {
+		if next := h.RawValue[size]; next != SEGMENT && next != GROUP {
+			return fmt.Errorf("malformed NCPDP header: expected a segment or group separator after the %d header bytes, found %q", size, next)
+		}
+	}
+
 	h.Value = *item
 	h.Size = size
 	h.RawValue = h.RawValue[:size]

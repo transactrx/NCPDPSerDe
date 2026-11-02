@@ -31,4 +31,6 @@ type OtherPayer struct {
 	AdjudicatedProgramType  *string    `field:"code=9T,order=16,sinceVersion=F6"`
 	Name                    *string    `field:"code=M5,order=17,sinceVersion=F6"`
 	HelpDeskPhoneExtension  *string    `field:"code=7Q,order=18,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

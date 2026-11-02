@@ -15,13 +15,13 @@ type Patient struct {
 	// Ids captures every CX/CY occurrence when the F6 patient ID repeats; the
 	// scalar IdQualifier/Id fields are kept for D0 backward compatibility.
 	Ids                    []PatientId `field:"sinceVersion=F6"`
-	BirthDate              *time.Time `field:"code=C4,format=YYYYMMdd,order=5"`
-	GenderCode             *string    `field:"code=C5,order=6"`
-	FirstName              *string    `field:"code=CA,order=7"`
-	MiddleName             *string    `field:"code=0C,order=8,sinceVersion=F6"`
-	LastName               *string    `field:"code=CB,order=9"`
-	NameSuffix             *string    `field:"code=0E,order=10,sinceVersion=F6"`
-	NamePrefix             *string    `field:"code=0D,order=11,sinceVersion=F6"`
+	BirthDate              *time.Time  `field:"code=C4,format=YYYYMMdd,order=5"`
+	GenderCode             *string     `field:"code=C5,order=6"`
+	FirstName              *string     `field:"code=CA,order=7"`
+	MiddleName             *string     `field:"code=0C,order=8,sinceVersion=F6"`
+	LastName               *string     `field:"code=CB,order=9"`
+	NameSuffix             *string     `field:"code=0E,order=10,sinceVersion=F6"`
+	NamePrefix             *string     `field:"code=0D,order=11,sinceVersion=F6"`
 	Address                PatientAddress
 	Phone                  *string                 `field:"code=CQ,order=19"`
 	PlaceOfService         *string                 `field:"code=C7,order=20"`
@@ -40,6 +40,8 @@ type Patient struct {
 type PatientId struct {
 	Qualifier *string `field:"code=CX,order=3"`
 	Id        *string `field:"code=CY,order=4"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type PatientAddress struct {
