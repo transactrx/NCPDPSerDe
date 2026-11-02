@@ -76,14 +76,21 @@ func buildHeader(structType reflect.Type, structVal reflect.Value) (string, erro
 	baseVal := reflectionutils.GetElementValue(structVal)
 	headerValue := baseVal.FieldByName(headerField.Name)
 
-	serMethod, err := serde.GetMethod(headerValue, attr.Serializer)
+	// Run the build method on a copy of the header: it writes the rebuilt
+	// RawValue back into the struct it is called on, and Serialize must not
+	// mutate its input — concurrent serializations of one shared object race
+	// on that write.
+	headerCopy := reflect.New(headerValue.Type()).Elem()
+	headerCopy.Set(headerValue)
+
+	serMethod, err := serde.GetMethod(headerCopy, attr.Serializer)
 	if err != nil {
 		return serde.Empty, err
 	}
 
 	serMethod.Call([]reflect.Value{})
 
-	rawField := headerValue.FieldByName(attr.RawField)
+	rawField := headerCopy.FieldByName(attr.RawField)
 	if !rawField.IsValid() {
 		return serde.Empty, fmt.Errorf("raw field not found in header definition")
 	}
