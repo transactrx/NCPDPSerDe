@@ -96,25 +96,34 @@ func (roles *catalogRoles) collectPart(partType reflect.Type, path string) {
 
 	for i := 0; i < partType.NumField(); i++ {
 		field := partType.Field(i)
+		fieldPath := path + "." + field.Name
 
 		if tag, found := field.Tag.Lookup("segment"); found {
-			if strings.Contains(tag, "dynamic") {
-				continue // the DynamicSegments slice itself
-			}
-			if segType := elementStruct(field.Type); segType != nil {
-				if _, seen := roles.segments[segType]; !seen {
-					roles.segments[segType] = path + "." + field.Name
-					roles.collectItems(segType, path+"."+field.Name)
-				}
-			}
+			roles.collectSegment(field.Type, tag, fieldPath)
 			continue
 		}
 
 		if _, found := field.Tag.Lookup("group"); found {
 			if el := elementStruct(field.Type); el != nil {
-				roles.collectPart(el, path+"."+field.Name)
+				roles.collectPart(el, fieldPath)
 			}
 		}
+	}
+}
+
+func (roles *catalogRoles) collectSegment(fieldType reflect.Type, tag, path string) {
+	if strings.Contains(tag, "dynamic") {
+		return // the DynamicSegments slice itself
+	}
+
+	segType := elementStruct(fieldType)
+	if segType == nil {
+		return
+	}
+
+	if _, seen := roles.segments[segType]; !seen {
+		roles.segments[segType] = path
+		roles.collectItems(segType, path)
 	}
 }
 
@@ -222,46 +231,60 @@ func TestCatalogFieldTagInvariants(t *testing.T) {
 	roles := collectRoles(t)
 
 	for segType, where := range roles.segments {
-		fields := []taggedField{}
-		collectTaggedFields(t, segType, where, false, map[reflect.Type]bool{}, &fields)
+		checkSegmentFieldTags(t, segType, where)
+	}
+}
 
-		orders := map[int][]string{}
-		codes := map[string][]string{}
+func checkSegmentFieldTags(t *testing.T, segType reflect.Type, where string) {
+	t.Helper()
 
-		for _, f := range fields {
-			if structuralCodes[f.attr.Code] {
-				continue
-			}
+	fields := []taggedField{}
+	collectTaggedFields(t, segType, where, false, map[reflect.Type]bool{}, &fields)
 
-			// countfor must name a sibling slice on the declaring struct (or
-			// be the reserved per-item index counter): the serializer derives
-			// the count from that slice's length via FieldByName.
-			if f.attr.CountFor != serde.Empty && f.attr.CountFor != serde.CountForIndex {
-				target, found := f.owner.FieldByName(f.attr.CountFor)
-				if !found || target.Type.Kind() != reflect.Slice {
-					t.Errorf("%s: countfor=%q does not name a sibling slice field — the counter can never derive", f.path, f.attr.CountFor)
-				}
-			}
+	orders := map[int][]string{}
+	codes := map[string][]string{}
 
-			if f.dualMapped {
-				continue
-			}
-
-			orders[f.attr.Order] = append(orders[f.attr.Order], f.path)
-			codeKey := f.attr.Code + "|" + f.attr.SinceVersion
-			codes[codeKey] = append(codes[codeKey], f.path)
+	for _, f := range fields {
+		if structuralCodes[f.attr.Code] {
+			continue
 		}
 
-		for order, paths := range orders {
-			if len(paths) > 1 {
-				t.Errorf("%s: order %d is shared by %v — the serializer's order-keyed field map would silently drop all but one", segType, order, paths)
-			}
+		checkCountForTarget(t, f)
+
+		if f.dualMapped {
+			continue
 		}
 
-		for codeKey, paths := range codes {
-			if len(paths) > 1 {
-				t.Errorf("%s: code %s is mapped by %v within the same version scope — the deserializer would consume one received value into both", segType, codeKey, paths)
-			}
+		orders[f.attr.Order] = append(orders[f.attr.Order], f.path)
+		codeKey := f.attr.Code + "|" + f.attr.SinceVersion
+		codes[codeKey] = append(codes[codeKey], f.path)
+	}
+
+	for order, paths := range orders {
+		if len(paths) > 1 {
+			t.Errorf("%s: order %d is shared by %v — the serializer's order-keyed field map would silently drop all but one", segType, order, paths)
 		}
+	}
+
+	for codeKey, paths := range codes {
+		if len(paths) > 1 {
+			t.Errorf("%s: code %s is mapped by %v within the same version scope — the deserializer would consume one received value into both", segType, codeKey, paths)
+		}
+	}
+}
+
+// checkCountForTarget asserts that a countfor tag names a sibling slice on
+// the declaring struct (or is the reserved per-item index counter): the
+// serializer derives the count from that slice's length via FieldByName.
+func checkCountForTarget(t *testing.T, f taggedField) {
+	t.Helper()
+
+	if f.attr.CountFor == serde.Empty || f.attr.CountFor == serde.CountForIndex {
+		return
+	}
+
+	target, found := f.owner.FieldByName(f.attr.CountFor)
+	if !found || target.Type.Kind() != reflect.Slice {
+		t.Errorf("%s: countfor=%q does not name a sibling slice field — the counter can never derive", f.path, f.attr.CountFor)
 	}
 }
