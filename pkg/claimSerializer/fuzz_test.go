@@ -80,24 +80,33 @@ func FuzzRoundTrip(f *testing.F) {
 			t.Fatalf("accepted input failed to serialize: %v\ninput: %q", err, raw)
 		}
 
-		prev := out1
-		for pass := 2; pass <= 10; pass++ {
-			obj2, err := claimdeserializer.Deserialize(prev)
-			if err != nil {
-				t.Fatalf("rebuilt message refused by our own parser (pass %d): %v\ninput: %q\nrebuilt: %q", pass, err, raw, prev)
-			}
+		assertRoundTripConvergence(t, raw, out1)
+	})
+}
 
-			next, err := jsonRoundTripSerialize(obj2)
-			if err != nil {
-				t.Fatalf("round trip %d failed to serialize: %v\nrebuilt: %q", pass, err, prev)
-			}
+// assertRoundTripConvergence re-parses and re-serializes the library's own
+// output until it reaches a byte-stable fixed point, failing when a rebuild
+// is refused by our own parser or the bytes still drift after nine rebuilds.
+func assertRoundTripConvergence(t *testing.T, raw, first string) {
+	t.Helper()
 
-			if next == prev {
-				return // reached the fixed point
-			}
-			prev = next
+	prev := first
+	for pass := 2; pass <= 10; pass++ {
+		obj, err := claimdeserializer.Deserialize(prev)
+		if err != nil {
+			t.Fatalf("rebuilt message refused by our own parser (pass %d): %v\ninput: %q\nrebuilt: %q", pass, err, raw, prev)
 		}
 
-		t.Fatalf("serialization did not converge within nine rebuilds:\ninput: %q\nlast: %q", raw, prev)
-	})
+		next, err := jsonRoundTripSerialize(obj)
+		if err != nil {
+			t.Fatalf("round trip %d failed to serialize: %v\nrebuilt: %q", pass, err, prev)
+		}
+
+		if next == prev {
+			return // reached the fixed point
+		}
+		prev = next
+	}
+
+	t.Fatalf("serialization did not converge within nine rebuilds:\ninput: %q\nlast: %q", raw, prev)
 }
