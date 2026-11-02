@@ -32,7 +32,7 @@ const (
 
 // trimClaimFrame removes transport framing from a raw claim: leading
 // whitespace (which would throw off header-offset detection) and trailing
-// CR/LF line endings. Trailing blanks are left intact — they belong to the
+// CR/LF line endings. Trailing blanks are left intact — they belong to the
 // last field's value (e.g. a blank-padded H6) and must round-trip unchanged.
 func trimClaimFrame(raw string) string {
 	raw = strings.TrimLeftFunc(raw, unicode.IsSpace)
@@ -76,19 +76,19 @@ func headerShapeHint(rawClaimString string, parsingRequest bool) string {
 	switch {
 	case idx == dZeroRequestLength || idx == f6RequestLength:
 		if !parsingRequest {
-			return fmt.Sprintf(" (the first separator is at byte %d, the shape of a request header — this data may be a request passed to the response parser)", idx)
+			return fmt.Sprintf(" (the first separator is at byte %d, the shape of a request header — this data may be a request passed to the response parser)", idx)
 		}
 
 	case idx == dZeroResponseLength:
 		if parsingRequest {
-			return fmt.Sprintf(" (the first separator is at byte %d, the shape of a response header — this data may be a response passed to the request parser)", idx)
+			return fmt.Sprintf(" (the first separator is at byte %d, the shape of a response header — this data may be a response passed to the request parser)", idx)
 		}
 
 	case idx < 0:
 		return " (no NCPDP separators present)"
 
 	default:
-		return fmt.Sprintf(" (the first separator is at byte %d, which matches no known header length — D0 request 56, F6 request 58, response 31 — so the data may have leading garbage or a truncated header)", idx)
+		return fmt.Sprintf(" (the first separator is at byte %d, which matches no known header length — D0 request 56, F6 request 58, response 31 — so the data may have leading garbage or a truncated header)", idx)
 	}
 
 	return ""
@@ -201,23 +201,42 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 
 	groupIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.GROUP})
 
-	if groupIndex < 0 && ncpdp.OmitsGroupSeparator(ncpdp.DetectTransmissionVersion(rawClaimString)) {
+	// The transmission version gates group-separator omission and, during
+	// field consumption, version-scoped (sinceVersion) typed fields: a value
+	// received for a field scoped to a NEWER version than the transmission
+	// must stay unconsumed and preserve as a dynamic field, because the
+	// serializer omits such fields for this version and the received bytes
+	// would otherwise vanish silently.
+	version := ncpdp.DetectTransmissionVersion(rawClaimString)
+
+	// Segments materialized across every part of the transmission. A
+	// transmission that parses to zero segments (a header followed only by
+	// bare separators or id-only fragments) carries no data and cannot be
+	// re-serialized into anything this parser would accept, so it refuses
+	// loudly instead of round-tripping to an unparseable husk.
+	segmentCount := 0
+
+	if groupIndex < 0 && ncpdp.OmitsGroupSeparator(version) {
 		// vEB+ (e.g. F6) eliminated the group separator and allows only a single
 		// transaction per transmission; the claim segments directly follow the
 		// shared segments and are located by segment ID instead.
-		err := evaluateUngroupedTransaction(rawClaimString, claimType, claimObjectRef)
+		count, err := evaluateUngroupedTransaction(rawClaimString, claimType, claimObjectRef, version)
 		if err != nil {
 			return nil, err
+		}
+		if count == 0 {
+			return nil, fmt.Errorf("improperly formatted data: the transmission contains a header but no parseable segments")
 		}
 
 		return claimObjectRef.Interface(), nil
 	}
 
 	// Set group data
-	err := evaluateGrouping(rawClaimString, claimType, claimObjectRef)
+	groupCount, err := evaluateGrouping(rawClaimString, claimType, claimObjectRef, version)
 	if err != nil {
 		return nil, err
 	}
+	segmentCount += groupCount
 
 	// Set shared segment data
 	endIndex := groupIndex
@@ -225,8 +244,14 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 		endIndex = len(rawClaimString)
 	}
 
-	if err := evaluateSegments(rawClaimString[0:endIndex], claimType, claimObjectRef); err != nil {
+	sharedCount, err := evaluateSegments(rawClaimString[0:endIndex], claimType, claimObjectRef, version)
+	if err != nil {
 		return nil, err
+	}
+	segmentCount += sharedCount
+
+	if segmentCount == 0 {
+		return nil, fmt.Errorf("improperly formatted data: the transmission contains a header but no parseable segments")
 	}
 
 	return claimObjectRef.Interface(), nil
@@ -283,13 +308,14 @@ func evaluateHeader(rawClaimString string, structType reflect.Type, structVal re
 	return nil
 }
 
-// Evaluate claim groups.
-func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal reflect.Value) error {
+// Evaluate claim groups. Returns the number of segments materialized across
+// every group.
+func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal reflect.Value, version string) (int, error) {
 	rawGroups := stringutils.SplitBySeparator(rawClaimString, ncpdp.GROUP)
 
 	// No groups present
 	if len(rawGroups) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	// Find the slice field with the group tag. A transaction type with no
@@ -301,11 +327,13 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 	// failing matches that flow.
 	groupField, _ := serde.GetGroupSlice(structType)
 	if groupField == nil {
-		return nil
+		return 0, nil
 	}
 
 	baseVal := reflectionutils.GetElementValue(structVal)
 	groupSlice := baseVal.FieldByName(groupField.Name)
+
+	segmentCount := 0
 
 	for _, rawClaimGroup := range rawGroups {
 		// Create new element for group slice
@@ -316,18 +344,20 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 		initializeStruct(groupElementType, groupItem)
 
 		// Set field defined as "raw" data tag
-		setStructFieldByCodeTag(groupElementType, groupItem, rawGroupTag, reflect.ValueOf(string(ncpdp.GROUP)+rawClaimGroup), 0, 0, false)
+		setStructFieldByCodeTag(groupElementType, groupItem, rawGroupTag, reflect.ValueOf(string(ncpdp.GROUP)+rawClaimGroup), 0, 0, false, version)
 
 		// Set segment data
-		if err := evaluateSegments(rawClaimGroup, groupElementType, groupItem); err != nil {
-			return err
+		count, err := evaluateSegments(rawClaimGroup, groupElementType, groupItem, version)
+		if err != nil {
+			return segmentCount, err
 		}
+		segmentCount += count
 
 		// Append element to group slice
 		groupSlice.Set(reflect.Append(groupSlice, groupItem))
 	}
 
-	return nil
+	return segmentCount, nil
 }
 
 // Evaluate an ungrouped (vEB+/F6) transmission. No group separators exist, so
@@ -335,7 +365,7 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 // segment that belongs to the claim group struct starts the transaction, and
 // it plus everything after it parse as one claim group. Segments before it
 // parse as shared segments.
-func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type, structVal reflect.Value) error {
+func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type, structVal reflect.Value, version string) (int, error) {
 	// Transaction types without a claim section (e.g. E1 eligibility requests)
 	// have no group-tagged slice; the whole transmission parses as shared
 	// segments.
@@ -343,7 +373,7 @@ func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type
 
 	transactionIndex, err := findTransactionIndex(rawClaimString, groupField)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	sharedRaw := rawClaimString
@@ -351,13 +381,13 @@ func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type
 		sharedRaw = rawClaimString[:transactionIndex]
 	}
 
-	err = evaluateSegments(sharedRaw, structType, structVal)
+	segmentCount, err := evaluateSegments(sharedRaw, structType, structVal, version)
 	if err != nil {
-		return err
+		return segmentCount, err
 	}
 
 	if transactionIndex == -1 {
-		return nil
+		return segmentCount, nil
 	}
 
 	transactionRaw := rawClaimString[transactionIndex:]
@@ -367,18 +397,19 @@ func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type
 
 	initializeStruct(groupElementType, groupItem)
 
-	setStructFieldByCodeTag(groupElementType, groupItem, rawGroupTag, reflect.ValueOf(transactionRaw), 0, 0, false)
+	setStructFieldByCodeTag(groupElementType, groupItem, rawGroupTag, reflect.ValueOf(transactionRaw), 0, 0, false, version)
 
-	err = evaluateSegments(transactionRaw, groupElementType, groupItem)
+	count, err := evaluateSegments(transactionRaw, groupElementType, groupItem, version)
 	if err != nil {
-		return err
+		return segmentCount, err
 	}
+	segmentCount += count
 
 	baseVal := reflectionutils.GetElementValue(structVal)
 	groupSlice := baseVal.FieldByName(groupField.Name)
 	groupSlice.Set(reflect.Append(groupSlice, groupItem))
 
-	return nil
+	return segmentCount, nil
 }
 
 // findTransactionIndex locates the start of the single (vEB+) claim group: the
@@ -438,14 +469,11 @@ func appendDynamicFields(structType reflect.Type, structVal reflect.Value, dyFie
 	startOrder := dynamicFieldOrderBase + baseType.NumField()
 
 	// Offset by the dynamic fields already held so successive calls (one per
-	// preserved field of a repeating-group occurrence) keep unique orders —
+	// preserved field of a repeating-group occurrence) keep unique orders —
 	// the serializer keys its field map by order, so a collision would
 	// silently drop a preserved field.
-	if dynField, err := serde.GetDynamicSlice(baseType, serde.FieldTag); err == nil && dynField != nil {
-		existing := reflectionutils.GetElementValue(structVal).FieldByName(dynField.Name)
-		if existing.IsValid() && existing.Kind() == reflect.Slice {
-			startOrder += existing.Len()
-		}
+	if existing, found := findDynamicSliceValue(structType, structVal, serde.FieldTag); found && existing.Kind() == reflect.Slice {
+		startOrder += existing.Len()
 	}
 
 	for i := 0; i < len(dyFieldCodes); i++ {
@@ -469,7 +497,7 @@ func appendDynamicFields(structType reflect.Type, structVal reflect.Value, dyFie
 		initializeStruct(typ, field)
 
 		// Set field value
-		setStructFieldByCodeTag(typ, field, dyCode, reflect.ValueOf(dyValue), startOrder, 0, true)
+		setStructFieldByCodeTag(typ, field, dyCode, reflect.ValueOf(dyValue), startOrder, 0, true, serde.Empty)
 
 		//Create item to append to slice
 		ds := dynamic.DynamicStruct{DynamicType: typ}
@@ -488,23 +516,42 @@ func appendDynamicFields(structType reflect.Type, structVal reflect.Value, dyFie
 	return nil
 }
 
-// Add element to dynamic segment list
-func appendDynamicSlice(structType reflect.Type, structVal reflect.Value, dynamicElementValue reflect.Value, tagType string) error {
+// findDynamicSliceValue locates the dynamic slice (the field tagged
+// code=dynamic for the given tag type), looking through nested structs: some
+// segments keep their DynamicFields inside an embedded group (e.g.
+// InsuranceAdditionalInformation.MedicarePartD), and a top-level-only lookup
+// silently lost every field preserved on such a segment.
+func findDynamicSliceValue(structType reflect.Type, structVal reflect.Value, tagType string) (reflect.Value, bool) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
-	dynamicField, err := serde.GetDynamicSlice(baseType, tagType)
-	if err != nil {
-		return err
+	if baseType.Kind() != reflect.Struct || !baseVal.IsValid() {
+		return reflect.Value{}, false
 	}
 
-	if dynamicField == nil {
-		return nil
+	if dynamicField, err := serde.GetDynamicSlice(baseType, tagType); err == nil && dynamicField != nil {
+		if v := baseVal.FieldByName(dynamicField.Name); v.IsValid() {
+			return v, true
+		}
 	}
 
-	dynamicObj := baseVal.FieldByName(dynamicField.Name)
-	if !dynamicObj.IsValid() {
-		return fmt.Errorf("dynamic object is invalid")
+	for i := 0; i < baseType.NumField(); i++ {
+		if baseType.Field(i).Type.Kind() != reflect.Struct {
+			continue
+		}
+		if v, ok := findDynamicSliceValue(baseType.Field(i).Type, baseVal.Field(i), tagType); ok {
+			return v, ok
+		}
+	}
+
+	return reflect.Value{}, false
+}
+
+// Add element to dynamic segment list
+func appendDynamicSlice(structType reflect.Type, structVal reflect.Value, dynamicElementValue reflect.Value, tagType string) error {
+	dynamicObj, found := findDynamicSliceValue(structType, structVal, tagType)
+	if !found {
+		return fmt.Errorf("dynamic code tag not found in object definition: code=dynamic")
 	}
 
 	if !dynamicObj.CanSet() {
@@ -517,8 +564,9 @@ func appendDynamicSlice(structType reflect.Type, structVal reflect.Value, dynami
 	return nil
 }
 
-// Evaluate claim segments.
-func evaluateSegments(rawData string, structType reflect.Type, structVal reflect.Value) error {
+// Evaluate claim segments. Returns the number of segments materialized (empty
+// and id-only fragments are skipped and do not count).
+func evaluateSegments(rawData string, structType reflect.Type, structVal reflect.Value, version string) (int, error) {
 	rawSegments := stringutils.SplitBySeparator(rawData, ncpdp.SEGMENT)
 
 	baseType := reflectionutils.GetElementType(structType)
@@ -526,7 +574,7 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 
 	segmentMap, err := serde.GetSegmentDefinitionById(baseType)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// A non-repeating segment sent twice must not overwrite its first
@@ -534,13 +582,15 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 	// dynamic segments, mirroring how duplicated scalar fields are kept.
 	parsedSegments := map[string]bool{}
 
+	segmentCount := 0
+
 	for _, rawSeg := range rawSegments {
 		// Get all fields, keeping a segment id that arrived without its
 		// leading field separator (e.g. "<RS>AM29<FS>...").
 		rawFields := stringutils.SplitBySeparatorKeepingPrefix(rawSeg, ncpdp.FIELD)
 
 		// An empty segment ("<RS><RS>") carries no data: skip it and keep
-		// parsing — returning here used to silently drop every remaining
+		// parsing — returning here used to silently drop every remaining
 		// segment of the part. The stray separator normalizes away on rebuild.
 		if len(rawFields) == 0 {
 			continue
@@ -549,7 +599,16 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 		// Find segment ID in field list
 		segmentIdIndex := sliceutils.IndexOfStartsWith(ncpdp.SEGMENT_FIELD_ID, rawFields)
 		if segmentIdIndex < 0 {
-			return fmt.Errorf("segment id element does not exist: a segment with %d field(s), starting with field code %q, has no AM segment identifier, so its data cannot be attributed", len(rawFields), stringutils.Substring(rawFields[0], 0, ncpdp.ID_LENGTH))
+			return segmentCount, fmt.Errorf("segment id element does not exist: a segment with %d field(s), starting with field code %q, has no AM segment identifier, so its data cannot be attributed", len(rawFields), stringutils.Substring(rawFields[0], 0, ncpdp.ID_LENGTH))
+		}
+
+		// A segment that is nothing but its own identifier ("<RS><FS>AM22")
+		// carries no data fields and cannot survive serialization (the
+		// serializer drops empty segments, and SegmentId is excluded from
+		// JSON), so it normalizes away like an empty segment instead of
+		// round-tripping inconsistently.
+		if len(rawFields) == 1 && len(rawFields[segmentIdIndex]) <= 4 {
+			continue
 		}
 
 		// Create new segment and initialize
@@ -577,24 +636,31 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 		initializeStruct(elementType, segment)
 
 		// Set field defined as "raw" data tag
-		setStructFieldByCodeTag(elementType, segment, rawSegmentTag, reflect.ValueOf(string(ncpdp.SEGMENT)+rawSeg), 0, 0, false)
+		setStructFieldByCodeTag(elementType, segment, rawSegmentTag, reflect.ValueOf(string(ncpdp.SEGMENT)+rawSeg), 0, 0, false, version)
 
 		fieldCountMap := map[string]int{}
 
-		// Set field data
+		// Set field data. carriesData tracks whether anything beyond the
+		// segment identifier survives into the model: a segment holding only
+		// its id and discarded counters renders empty on rebuild, so
+		// materializing it would let a transmission round-trip to output the
+		// parser itself refuses.
 		dyFieldCodes := []string{}
 		dyFieldValues := []string{}
+		carriesData := false
 		for fieldIndex := 0; fieldIndex < len(rawFields); fieldIndex++ {
 			rawField := rawFields[fieldIndex]
-			fieldCode := stringutils.Substring(rawField, 0, ncpdp.ID_LENGTH)
-			fieldValue := stringutils.Substring(rawField, ncpdp.ID_LENGTH, -1)
+			fieldCode, fieldValue := stringutils.SplitRunePrefix(rawField, ncpdp.ID_LENGTH)
 
 			fieldCodeCount := fieldCountMap[fieldCode]
 
-			setCount := setStructFieldByCodeTag(elementType, segment, fieldCode, reflect.ValueOf(fieldValue), fieldIndex+1, fieldCodeCount, isDynamicSegment)
-			if setCount == 0 {
+			setCount, discarded := setStructFieldByCodeTag(elementType, segment, fieldCode, reflect.ValueOf(fieldValue), fieldIndex+1, fieldCodeCount, isDynamicSegment, version)
+			if setCount == 0 && !discarded {
 				dyFieldCodes = append(dyFieldCodes, fieldCode)
 				dyFieldValues = append(dyFieldValues, fieldValue)
+			}
+			if fieldIndex != segmentIdIndex && !discarded {
+				carriesData = true
 			}
 
 			// Increment field code count
@@ -602,28 +668,44 @@ func evaluateSegments(rawData string, structType reflect.Type, structVal reflect
 			fieldCountMap[fieldCode] = fieldCodeCount
 		}
 
+		if !carriesData {
+			continue
+		}
+
 		if isDynamicSegment {
 			segmentIf := segment.Interface()
 			dynamicSegment.Value = &segmentIf
 			appendDynamicSlice(baseType, baseVal, reflect.ValueOf(dynamicSegment), serde.SegmentTag)
 		} else {
-			appendDynamicFields(segment.Type(), segment, dyFieldCodes, dyFieldValues)
+			// Preservation failure is data loss, never silent: every segment
+			// model carries a dynamic slice (possibly in a nested group), so
+			// this only fires on a model gap.
+			if err := appendDynamicFields(segment.Type(), segment, dyFieldCodes, dyFieldValues); err != nil {
+				return segmentCount, fmt.Errorf("cannot preserve unconsumed fields on segment %v: %w", segmentIdFieldValue, err)
+			}
 			segmentRef := baseVal.FieldByName(segmentDef.Field.Name)
 			segmentRef.Set(segment)
 		}
+
+		segmentCount++
 	}
 
-	return nil
+	return segmentCount, nil
 }
 
 // Set struct field using code tag value to locate appropriate field.
 // Ex: `field:"code=EN"`
-func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, codeTag string, propVal reflect.Value, orderTag, repeatingFieldIndex int, isDynamic bool) int {
+//
+// Returns how many fields consumed the value, and whether the value was
+// deliberately DISCARDED (an unparseable countfor counter): a discarded value
+// must be neither preserved as a dynamic field nor treated as segment data.
+func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, codeTag string, propVal reflect.Value, orderTag, repeatingFieldIndex int, isDynamic bool, version string) (int, bool) {
 	if structVal.Kind() != reflect.Struct {
-		return 0
+		return 0, false
 	}
 
 	setCount := 0
+	discarded := false
 
 	for i := 0; i < structVal.NumField(); i++ {
 		f := structVal.Field(i)
@@ -632,8 +714,9 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 		switch ft.Type.Kind() {
 		case reflect.Struct:
 			// Embedded struct
-			count := setStructFieldByCodeTag(ft.Type, f, codeTag, propVal, orderTag, repeatingFieldIndex, isDynamic)
+			count, disc := setStructFieldByCodeTag(ft.Type, f, codeTag, propVal, orderTag, repeatingFieldIndex, isDynamic, version)
 			setCount = setCount + count
+			discarded = discarded || disc
 
 		case reflect.Slice:
 			sliceLen := f.Len()
@@ -643,7 +726,7 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 			// repeating group or belongs to the current (last) one. NCPDP
 			// repeating groups are delimited by the reappearance of a code the
 			// element type owns, never by the code's position in the whole
-			// segment — a count accumulated across the segment misassigns
+			// segment — a count accumulated across the segment misassigns
 			// nested repeats under the second occurrence of an outer group
 			// (e.g. the HC/DV pair of a second AM05 other payer). Only grow
 			// this slice when the element type owns the field code directly; a
@@ -665,45 +748,60 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 				// Initialize element
 				initializeStruct(sliceItemType, sliceItem)
 
-				count := setStructFieldByCodeTag(sliceItemType, sliceItem, codeTag, propVal, orderTag, repeatingFieldIndex, isDynamic)
-				if count == 0 && !isDynamic {
+				count, disc := setStructFieldByCodeTag(sliceItemType, sliceItem, codeTag, propVal, orderTag, repeatingFieldIndex, isDynamic, version)
+				if count == 0 && !disc && !isDynamic {
 					count = preserveItemDynamicField(sliceItemType, sliceItem, codeTag, propVal)
 				}
 				if count > 0 {
 					f.Set(reflect.Append(f, sliceItem))
 				}
 				setCount = setCount + count
+				discarded = discarded || disc
 
 				continue
 			}
 
 			// Update existing slice item
 			sliceItem := f.Index(sliceLen - 1)
-			count := setStructFieldByCodeTag(sliceItemType, sliceItem, codeTag, propVal, orderTag, repeatingFieldIndex, isDynamic)
-			if count == 0 && !isDynamic {
+			count, disc := setStructFieldByCodeTag(sliceItemType, sliceItem, codeTag, propVal, orderTag, repeatingFieldIndex, isDynamic, version)
+			if count == 0 && !disc && !isDynamic {
 				count = preserveItemDynamicField(sliceItemType, sliceItem, codeTag, propVal)
 			}
 			setCount = setCount + count
+			discarded = discarded || disc
 
 		default:
+			if isDynamic {
+				// Dynamic fields match by NAME, never by tag: the name encodes
+				// the code losslessly, while a garbage code containing struct
+				// tag syntax (a quote or backslash) renders the tag unreadable
+				// and would silently drop the field.
+				if ft.Name == serde.DynamicFieldName(codeTag, orderTag) {
+					attr, _ := serde.GetFieldAttribute(ft.Tag.Get(serde.FieldTag))
+					if setFieldValue(f, ft, propVal, attr) {
+						setCount++
+					}
+				}
+				continue
+			}
+
 			tag := ft.Tag.Get(serde.FieldTag)
 			if tag != serde.Empty {
 				attr, err := serde.GetFieldAttribute(tag)
 				if err != nil {
-					return 0
-				}
-
-				if isDynamic {
-					// Set dynamic fields by field name
-					if ft.Name == serde.DynamicFieldName(codeTag, orderTag) {
-						if setFieldValue(f, ft, propVal, attr) {
-							setCount++
-						}
-					}
-					continue
+					return 0, false
 				}
 
 				if attr.Code == codeTag {
+					// A field scoped to a newer version than the transmission
+					// (e.g. an F6-only code arriving in a D0 message) must not
+					// consume the value: the serializer omits such fields for
+					// this version, so consuming would silently drop the
+					// received bytes. Left unconsumed, the raw value preserves
+					// as a dynamic field and re-emits verbatim.
+					if attr.SinceVersion != serde.Empty && !ncpdp.VersionAtLeast(version, attr.SinceVersion) {
+						continue
+					}
 					// A duplicated non-repeating field must not overwrite the
 					// first occurrence: leaving it unconsumed routes the raw
 					// duplicate into the segment's dynamic fields, so it
@@ -717,6 +815,16 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 					// value as a dynamic field instead of inventing a zero.
 					if setFieldValue(f, ft, propVal, attr) {
 						setCount++
+						continue
+					}
+					// Except counters: the serializer always derives
+					// countfor-tagged values from the actual occurrences (the
+					// derived count wins by ruling), so an unparseable counter
+					// is consumed and discarded — preserving its raw value
+					// beside the derived counter and spawn a phantom occurrence
+					// on reparse.
+					if attr.CountFor != serde.Empty {
+						discarded = true
 					}
 					continue
 				}
@@ -724,7 +832,7 @@ func setStructFieldByCodeTag(structType reflect.Type, structVal reflect.Value, c
 		}
 	}
 
-	return setCount
+	return setCount, discarded
 }
 
 // preserveItemDynamicField keeps a field whose code belongs to a repeating
@@ -740,10 +848,6 @@ func preserveItemDynamicField(itemType reflect.Type, itemVal reflect.Value, code
 		return 0
 	}
 
-	if dynField, err := serde.GetDynamicSlice(itemType, serde.FieldTag); err != nil || dynField == nil {
-		return 0
-	}
-
 	if err := appendDynamicFields(itemType, itemVal, []string{codeTag}, []string{propVal.String()}); err != nil {
 		return 0
 	}
@@ -755,7 +859,10 @@ func preserveItemDynamicField(itemType reflect.Type, itemVal reflect.Value, code
 // field with the given code tag, looking through embedded structs but not
 // nested slices (their element types own those codes). A repeating group's
 // next occurrence starts when its codes reappear, so "occupied" marks the
-// boundary of the current occurrence.
+// boundary of the current occurrence. A value PRESERVED in the occurrence's
+// dynamic fields counts as occupied too: the occurrence does carry that code,
+// its value just could not land in the typed field — ignoring it would group
+// the same message differently on every reparse.
 func codeOccupied(structType reflect.Type, structVal reflect.Value, codeTag string) bool {
 	if structVal.Kind() != reflect.Struct {
 		return false
@@ -776,6 +883,29 @@ func codeOccupied(structType reflect.Type, structVal reflect.Value, codeTag stri
 
 		default:
 			if fieldCodeMatches(ft, codeTag) && fieldOccupied(f) {
+				return true
+			}
+		}
+	}
+
+	return dynamicFieldsContainCode(structType, structVal, codeTag)
+}
+
+// dynamicFieldsContainCode reports whether the struct's dynamic field slice
+// holds a preserved value for the given code.
+func dynamicFieldsContainCode(structType reflect.Type, structVal reflect.Value, codeTag string) bool {
+	dynSlice, found := findDynamicSliceValue(structType, structVal, serde.FieldTag)
+	if !found || dynSlice.Kind() != reflect.Slice {
+		return false
+	}
+
+	for i := 0; i < dynSlice.Len(); i++ {
+		ds, ok := dynSlice.Index(i).Interface().(dynamic.DynamicStruct)
+		if !ok || ds.DynamicType == nil {
+			continue
+		}
+		for j := 0; j < ds.DynamicType.NumField(); j++ {
+			if code, _, ok := dynamic.ParseFieldName(ds.DynamicType.Field(j).Name); ok && code == codeTag {
 				return true
 			}
 		}
@@ -894,6 +1024,13 @@ func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute) boo
 		}
 		dt, err := time.Parse(attr.Format, val.String())
 		if err != nil {
+			return false
+		}
+		// The zero time is this library's "absent" sentinel: the serializer
+		// omits zero dates. A received value that parses exactly to it (e.g.
+		// the placeholder 00010101) must stay unconsumed and preserve as a
+		// dynamic field, or it would silently vanish from the rebuilt message.
+		if dt.IsZero() {
 			return false
 		}
 		f.Set(reflect.ValueOf(dt))

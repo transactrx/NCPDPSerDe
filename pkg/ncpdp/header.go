@@ -205,6 +205,15 @@ func (h *NcpdpHeader[V]) ParseNcpdpHeader() error {
 		return fmt.Errorf("NCPDP header data length %d is shorter than expected header size %d", len(h.RawValue), size)
 	}
 
+	// Separator bytes can never occur inside the fixed-width header: finding
+	// one means the header is short or garbled and every field after it is
+	// misaligned. Without this check the separator is swallowed into the
+	// preserved header bytes and re-emitted, producing output the parser
+	// itself cannot route.
+	if idx := stringutils.IndexOfAny(h.RawValue[:size], 0, []byte{FIELD, SEGMENT, GROUP}); idx != -1 {
+		return fmt.Errorf("malformed NCPDP header: separator byte at offset %d inside the %d-byte fixed-width header", idx, size)
+	}
+
 	// Fixed-width parsing cannot detect a malformed header by content — a
 	// short, long, or multi-byte-polluted header (real traffic: 46/55/154-byte
 	// headers, non-breaking spaces in the PCN) simply shifts every following

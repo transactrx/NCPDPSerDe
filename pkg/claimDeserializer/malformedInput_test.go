@@ -53,6 +53,34 @@ func Test_MalformedHeaderRefused(t *testing.T) {
 	}
 }
 
+// A transmission that parses to zero segments (a header followed only by bare
+// separators or id-only fragments) cannot be re-serialized into anything this
+// parser would accept — the rebuild would be a header-only string the parser
+// refuses — so it refuses loudly up front. Found by FuzzRoundTrip.
+func Test_TransmissionWithoutSegmentsRefused(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+	gs := string(ncpdp.GROUP)
+
+	tests := []struct {
+		name string
+		raw  string
+	}{
+		{"request header and segment separator only", "999999D0B1TESTPCN   1011234567893     20261001VENDOR0001" + ss},
+		{"response header and segment separator only", "D0B11A011234567893     20261001" + ss},
+		{"request header and group separator only", "999999D0B1TESTPCN   1011234567893     20261001VENDOR0001" + gs + ss},
+		{"id-only segment is the whole transmission", "D0B11A011234567893     20261001" + ss + fs + "AM22"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := Deserialize(test.raw); err == nil {
+				t.Errorf("Transmission without segments accepted silently. Wanted: error   Got: nil")
+			}
+		})
+	}
+}
+
 // A segment with no AM segment id at all cannot be attributed to anything:
 // its data would be lost or misassigned, so it must refuse loudly instead of
 // silently dropping the rest of the part.

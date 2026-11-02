@@ -136,6 +136,46 @@ func Test_RoundTripRecoversSegmentWithoutLeadingFieldSeparator(t *testing.T) {
 	}
 }
 
+// A field code scoped to a newer NCPDP version than the transmission (an
+// F6-only code arriving in a D0 message) must not vanish: the typed field is
+// version-gated at consumption, so the raw value preserves as a dynamic field
+// and re-emits verbatim. Consuming it would store it in a field the
+// serializer rightly omits for D0, silently dropping the received bytes.
+// Found by FuzzRoundTrip.
+func Test_RoundTripPreservesNewerVersionFieldInOlderMessage(t *testing.T) {
+	fs := string(ncpdp.FIELD)
+	ss := string(ncpdp.SEGMENT)
+	gs := string(ncpdp.GROUP)
+
+	// 7A (patient street address) exists only in F6; this is a D0 message.
+	raw := "999999D0B1TESTPCN   1011234567893     20261001VENDOR0001" +
+		ss + fs + "AM01" + fs + "C419800101" + fs + "CAJOHN" + fs + "7A1234 MAPLE LN" +
+		gs + ss + fs + "AM07" + fs + "EM1" + fs + "D21234567" + fs + "E103" + fs + "D700172240780" + fs + "DJ1"
+
+	obj := request.Billing{}
+	if err := claimdeserializer.DeserializeType(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+
+	if obj.Patient.Address.StreetLine1 != nil {
+		t.Errorf("F6-only street field consumed in a D0 message. Wanted: nil   Got: %q", *obj.Patient.Address.StreetLine1)
+	}
+
+	for _, serialize := range []struct {
+		name string
+		run  func() (string, error)
+	}{
+		{"direct", func() (string, error) { return Serialize(&obj) }},
+		{"via JSON", func() (string, error) { return jsonRoundTripSerialize(obj) }},
+	} {
+		serialized, err := serialize.run()
+		if err != nil {
+			t.Fatalf("%v serialization failed: %v", serialize.name, err)
+		}
+		assertFieldValues(t, serialized, "7A", []string{"1234 MAPLE LN"})
+	}
+}
+
 // A non-repeating segment sent twice (seen in production: a duplicated AM22)
 // must not silently collapse: the first occurrence wins the typed field and
 // the duplicate is preserved as a dynamic segment, so both round-trip.
