@@ -477,12 +477,15 @@ func DynamicFieldName(fieldCode string, order int) string {
 func NewDynamicSegmentType(rawData string) reflect.Type {
 	dyFieldList := dynamic.DynamicFieldList{}
 
-	rawFields := stringutils.SplitBySeparator(rawData, ncpdp.FIELD)
+	// Keep a prefix field (a segment id without its leading separator) so the
+	// dynamic type's field indices line up with the deserializer's field walk.
+	rawFields := stringutils.SplitBySeparatorKeepingPrefix(rawData, ncpdp.FIELD)
 
-	// Iterate fields, defining type for each
+	// Iterate fields, defining type for each. The code split must stay
+	// rune-aware and aligned with the deserializer's field walk.
 	for i := 0; i < len(rawFields); i++ {
 		rawField := rawFields[i]
-		fieldCode := stringutils.Substring(rawField, 0, ncpdp.ID_LENGTH)
+		fieldCode, _ := stringutils.SplitRunePrefix(rawField, ncpdp.ID_LENGTH)
 
 		order := i + 1
 		name := DynamicFieldName(fieldCode, order)

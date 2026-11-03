@@ -100,14 +100,20 @@ type IntermediaryAuthorization struct {
 
 type ProcedureModifierCode struct {
 	Code *string `field:"code=ER,order=9"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type SubmissionClarificationCode struct {
 	Code *string `field:"code=DK,order=19"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type SubmissionTypeCode struct {
 	Code *string `field:"code=K8,order=50,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OriginalManufacturerProduct struct {

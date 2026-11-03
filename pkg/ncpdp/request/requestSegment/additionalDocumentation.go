@@ -39,4 +39,6 @@ type AdditionalDocumentationQuestion struct {
 	DollarAmountResponse *float64   `field:"code=4H,decimalPlaces=2,overpunch=true,order=14"`
 	NumericResponse      *int       `field:"code=4J,order=15"`
 	AlphanumericResponse *string    `field:"code=4K,order=16"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

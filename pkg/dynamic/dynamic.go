@@ -64,7 +64,7 @@ func FieldName(fieldCode string, order int) string {
 // ReplaceIllegalCharacters replaces characters that are invalid in Go
 // identifiers with word equivalents, falling back to a u-prefixed hex escape
 // for anything else (control bytes and other garbage seen in production field
-// codes) — reflect.StructOf panics on an invalid field name, so every input
+// codes) â€” reflect.StructOf panics on an invalid field name, so every input
 // must map to identifier characters.
 func ReplaceIllegalCharacters(str string) string {
 	builder := strings.Builder{}
@@ -122,9 +122,9 @@ func restoreIllegalCharacters(mangled string) string {
 	return builder.String()
 }
 
-// parseFieldName extracts the field code and order encoded in a dynamically
+// ParseFieldName extracts the field code and order encoded in a dynamically
 // generated field name (see FieldName).
-func parseFieldName(name string) (code string, order int, ok bool) {
+func ParseFieldName(name string) (code string, order int, ok bool) {
 	if !strings.HasPrefix(name, fieldNamePrefix) {
 		return "", 0, false
 	}
@@ -198,7 +198,7 @@ func (d *DynamicStruct) UnmarshalJSON(data []byte) error {
 			continue
 		}
 
-		code, order, ok := parseFieldName(name)
+		code, order, ok := ParseFieldName(name)
 		if !ok {
 			continue
 		}

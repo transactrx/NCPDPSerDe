@@ -127,6 +127,37 @@ func SplitBySeparator(data string, sep byte) []string {
 	return strings.Split(data[sepIndex+1:], string(sep))
 }
 
+// SplitRunePrefix splits a string into its first n CHARACTERS and the rest.
+// NCPDP field codes are two characters; splitting on bytes would cut a
+// multi-byte character in half, turning valid text into invalid byte
+// sequences that can never round-trip stably. Invalid bytes count as one
+// character each, so arbitrary garbage still splits deterministically.
+func SplitRunePrefix(str string, n int) (string, string) {
+	count := 0
+	for i := range str {
+		if count == n {
+			return str[:i], str[i:]
+		}
+		count++
+	}
+	return str, ""
+}
+
+// SplitBySeparatorKeepingPrefix splits like SplitBySeparator but keeps any
+// content found before the first separator as a leading element instead of
+// discarding it. Real traffic contains segments whose id arrives without its
+// leading field separator (e.g. "<RS>AM29<FS>C4..."); dropping that prefix
+// would lose the segment id and, with it, the whole segment. A well-formed
+// "<sep>..." input yields the same elements as SplitBySeparator, and empty
+// input yields no elements.
+func SplitBySeparatorKeepingPrefix(data string, sep byte) []string {
+	parts := strings.Split(data, string(sep))
+	if len(parts) > 0 && parts[0] == "" {
+		parts = parts[1:]
+	}
+	return parts
+}
+
 // Split string into chunks by size.
 func Chunk(s string, chunkSize int) []string {
 	if len(s) == 0 {

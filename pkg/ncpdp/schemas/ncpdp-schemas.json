@@ -109,7 +109,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Patient ID Qualifier (CX)" },
-              "Id": { "type": ["string", "null"], "description": "Patient ID (CY)" }
+              "Id": { "type": ["string", "null"], "description": "Patient ID (CY)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -182,7 +183,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Code": { "type": ["string", "null"], "description": "Procedure Modifier Code (ER)" }
+              "Code": { "type": ["string", "null"], "description": "Procedure Modifier Code (ER)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -200,7 +202,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Code": { "type": ["string", "null"], "description": "Submission Clarification Code (DK)" }
+              "Code": { "type": ["string", "null"], "description": "Submission Clarification Code (DK)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -250,7 +253,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Code": { "type": ["string", "null"], "description": "Submission Type Code (K8) - F6" }
+              "Code": { "type": ["string", "null"], "description": "Submission Type Code (K8) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -293,7 +297,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Other Amount Claimed Submitted Qualifier (H8)" },
-              "AmountSubmitted": { "type": ["number", "null"], "description": "Other Amount Claimed Submitted (H9)" }
+              "AmountSubmitted": { "type": ["number", "null"], "description": "Other Amount Claimed Submitted (H9)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -312,7 +317,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "TypeCode": { "type": ["string", "null"], "description": "Regulatory Fee Type Code (RL) - F6" }
+              "TypeCode": { "type": ["string", "null"], "description": "Regulatory Fee Type Code (RL) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -403,7 +409,8 @@
                   "type": "object",
                   "properties": {
                     "Qualifier": { "type": ["string", "null"], "description": "Other Payer Amount Paid Qualifier (HC)" },
-                    "AmountPaid": { "type": ["number", "null"], "description": "Other Payer Amount Paid (DV)" }
+                    "AmountPaid": { "type": ["number", "null"], "description": "Other Payer Amount Paid (DV)" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
               },
@@ -413,7 +420,8 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "RejectCode": { "type": ["string", "null"], "description": "Other Payer Reject Code (6E)" }
+                    "RejectCode": { "type": ["string", "null"], "description": "Other Payer Reject Code (6E)" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
               },
@@ -424,7 +432,8 @@
                   "type": "object",
                   "properties": {
                     "Qualifier": { "type": ["string", "null"], "description": "Other Payer-Patient Responsibility Amount Qualifier (NP)" },
-                    "Amount": { "type": ["number", "null"], "description": "Other Payer-Patient Responsibility Amount (NQ)" }
+                    "Amount": { "type": ["number", "null"], "description": "Other Payer-Patient Responsibility Amount (NQ)" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
               },
@@ -435,7 +444,8 @@
                   "type": "object",
                   "properties": {
                     "Qualifier": { "type": ["string", "null"], "description": "Benefit Stage Qualifier (MV)" },
-                    "Amount": { "type": ["number", "null"], "description": "Benefit Stage Amount (MW)" }
+                    "Amount": { "type": ["number", "null"], "description": "Benefit Stage Amount (MW)" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
               },
@@ -449,7 +459,8 @@
                   "type": "object",
                   "properties": {
                     "TypeCode": { "type": ["string", "null"], "description": "Other Payer Regulatory Fee Type Code (RN) - F6" },
-                    "ExemptIndicator": { "type": ["string", "null"], "description": "Other Payer Regulatory Fee Exempt Indicator (P8) - F6" }
+                    "ExemptIndicator": { "type": ["string", "null"], "description": "Other Payer Regulatory Fee Exempt Indicator (P8) - F6" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
               },
@@ -459,10 +470,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "Indicator": { "type": ["string", "null"], "description": "Benefit Stage Indicator (9X) - F6" }
+                    "Indicator": { "type": ["string", "null"], "description": "Benefit Stage Indicator (9X) - F6" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
-              }
+              },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -552,7 +565,8 @@
                   "Qualifier": { "type": ["string", "null"], "description": "DUR Co-Agent ID Qualifier (J9)" },
                   "Id": { "type": ["string", "null"], "description": "DUR Co-Agent ID (H6)" }
                 }
-              }
+              },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -600,10 +614,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "Code": { "type": ["string", "null"], "description": "Compound Ingredient Modifier Code (2H)" }
+                    "Code": { "type": ["string", "null"], "description": "Compound Ingredient Modifier Code (2H)" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
-              }
+              },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -622,7 +638,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Diagnosis Code Qualifier (WE)" },
-              "Code": { "type": ["string", "null"], "description": "Diagnosis Code (DO)" }
+              "Code": { "type": ["string", "null"], "description": "Diagnosis Code (DO)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -636,7 +653,8 @@
               "Time": { "type": ["string", "null"], "description": "Measurement Time (H1) - HHmm" },
               "Dimension": { "type": ["string", "null"], "description": "Measurement Dimension (H2)" },
               "Unit": { "type": ["string", "null"], "description": "Measurement Unit (H3)" },
-              "Value": { "type": ["string", "null"], "description": "Measurement Value (H4)" }
+              "Value": { "type": ["string", "null"], "description": "Measurement Value (H4)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -677,7 +695,8 @@
               "ResponseDate": { "type": ["string", "null"], "format": "date", "description": "Question Date Response (4G)" },
               "DollarAmountResponse": { "type": ["number", "null"], "description": "Question Dollar Amount Response (4H)" },
               "NumericResponse": { "type": ["integer", "null"], "description": "Question Numeric Response (4J)" },
-              "AlphanumericResponse": { "type": ["string", "null"], "description": "Question Alphanumeric Response (4K)" }
+              "AlphanumericResponse": { "type": ["string", "null"], "description": "Question Alphanumeric Response (4K)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -766,7 +785,8 @@
               "Qualifier": { "type": ["string", "null"], "description": "Intermediary ID Qualifier (8K) - F6" },
               "Id": { "type": ["string", "null"], "description": "Intermediary ID (8M) - F6" },
               "StateProvinceAddress": { "type": ["string", "null"], "description": "Intermediary State/Province Address (8N) - F6" },
-              "CountryCode": { "type": ["string", "null"], "description": "Intermediary Country Code (8U) - F6" }
+              "CountryCode": { "type": ["string", "null"], "description": "Intermediary Country Code (8U) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -909,7 +929,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Payer ID Qualifier (J7)" },
-              "Id": { "type": ["string", "null"], "description": "Payer ID (J8)" }
+              "Id": { "type": ["string", "null"], "description": "Payer ID (J8)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -957,7 +978,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Patient ID Qualifier (CX) - F6" },
-              "Id": { "type": ["string", "null"], "description": "Patient ID (CY) - F6" }
+              "Id": { "type": ["string", "null"], "description": "Patient ID (CY) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -981,7 +1003,8 @@
             "type": "object",
             "properties": {
               "Code": { "type": ["string", "null"], "description": "Reject Code (FB)" },
-              "OccurrenceIndicator": { "type": ["integer", "null"], "description": "Reject Field Occurrence Indicator (4F)" }
+              "OccurrenceIndicator": { "type": ["integer", "null"], "description": "Reject Field Occurrence Indicator (4F)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -991,7 +1014,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Code": { "type": ["string", "null"], "description": "Approved Message Code (6F)" }
+              "Code": { "type": ["string", "null"], "description": "Approved Message Code (6F)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1003,7 +1027,8 @@
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Additional Message Information Qualifier (UH)" },
               "Message": { "type": ["string", "null"], "description": "Additional Message Information (FQ)" },
-              "Continuation": { "type": ["string", "null"], "description": "Additional Message Information Continuity (UG)" }
+              "Continuation": { "type": ["string", "null"], "description": "Additional Message Information Continuity (UG)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1035,10 +1060,12 @@
                     "Type": { "type": ["string", "null"], "description": "Help Desk Business Unit Type (BA) - F6" },
                     "ContactInformationQualifier": { "type": ["string", "null"], "description": "Help Desk Contact Information Qualifier (BF) - F6" },
                     "ContactInformation": { "type": ["string", "null"], "description": "Help Desk Contact Information (BC) - F6" },
-                    "ContactInformationExtension": { "type": ["string", "null"], "description": "Help Desk Contact Information Extension (BD) - F6" }
+                    "ContactInformationExtension": { "type": ["string", "null"], "description": "Help Desk Contact Information Extension (BD) - F6" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
-              }
+              },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1079,14 +1106,16 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "Indicator": { "type": ["string", "null"], "description": "Required Therapy Indicator (P1) - F6" }
+                    "Indicator": { "type": ["string", "null"], "description": "Required Therapy Indicator (P1) - F6" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
               },
               "RequiredTherapyTimePeriodQualifier": { "type": ["string", "null"], "description": "Required Therapy Time Period Qualifier (P2) - F6" },
               "RequiredTherapyTimePeriodDuration": { "type": ["string", "null"], "description": "Required Therapy Time Period Duration (P3) - F6" },
               "RequiredTherapyTimePeriodStartDate": { "type": ["string", "null"], "format": "date", "description": "Required Therapy Time Period Start Date (P4) - F6" },
-              "RequiredTherapyTimePeriodEndDate": { "type": ["string", "null"], "format": "date", "description": "Required Therapy Time Period End Date (P5) - F6" }
+              "RequiredTherapyTimePeriodEndDate": { "type": ["string", "null"], "format": "date", "description": "Required Therapy Time Period End Date (P5) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1098,7 +1127,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Value": { "type": ["string", "null"], "description": "Plan Benefit Override Value (RF) - F6" }
+              "Value": { "type": ["string", "null"], "description": "Plan Benefit Override Value (RF) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1122,7 +1152,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Opportunity": { "type": ["string", "null"], "description": "Benefit Type Opportunity (AE) - F6" }
+              "Opportunity": { "type": ["string", "null"], "description": "Benefit Type Opportunity (AE) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1152,7 +1183,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Other Amount Paid Qualifier (J3)" },
-              "AmountPaid": { "type": ["number", "null"], "description": "Other Amount Paid (J4)" }
+              "AmountPaid": { "type": ["number", "null"], "description": "Other Amount Paid (J4)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1187,7 +1219,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Benefit Stage Qualifier (MV)" },
-              "Amount": { "type": ["number", "null"], "description": "Benefit Stage Amount (MW)" }
+              "Amount": { "type": ["number", "null"], "description": "Benefit Stage Amount (MW)" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1208,7 +1241,8 @@
             "type": "object",
             "properties": {
               "Qualifier": { "type": ["string", "null"], "description": "Patient Pay Component Qualifier (KQ) - F6" },
-              "Amount": { "type": ["number", "null"], "description": "Patient Pay Component Amount (KN) - F6" }
+              "Amount": { "type": ["number", "null"], "description": "Patient Pay Component Amount (KN) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1219,7 +1253,8 @@
             "type": "object",
             "properties": {
               "TypeCode": { "type": ["string", "null"], "description": "Regulatory Fee Type Code (RL) - F6" },
-              "ExemptIndicator": { "type": ["string", "null"], "description": "Regulatory Fee Exempt Indicator (RM) - F6" }
+              "ExemptIndicator": { "type": ["string", "null"], "description": "Regulatory Fee Exempt Indicator (RM) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1229,7 +1264,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Indicator": { "type": ["string", "null"], "description": "Benefit Stage Indicator (9X) - F6" }
+              "Indicator": { "type": ["string", "null"], "description": "Benefit Stage Indicator (9X) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1275,7 +1311,8 @@
               "MaximumDailyDoseQuantity": { "type": ["number", "null"], "description": "Maximum Daily Dose Quantity (YO) - F6" },
               "MaximumDailyDoseUnitOfMeasure": { "type": ["string", "null"], "description": "Maximum Daily Dose Unit of Measure (YL) - F6" },
               "MinimumDailyDoseQuantity": { "type": ["number", "null"], "description": "Minimum Daily Dose Quantity (YJ) - F6" },
-              "MinimumDailyDoseUnitOfMeasure": { "type": ["string", "null"], "description": "Minimum Daily Dose Unit of Measure (YI) - F6" }
+              "MinimumDailyDoseUnitOfMeasure": { "type": ["string", "null"], "description": "Minimum Daily Dose Unit of Measure (YI) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1324,7 +1361,8 @@
               "BenefitClassification": { "type": ["string", "null"], "description": "Other Payer Benefit Classification (P6) - F6" },
               "AdjudicatedProgramType": { "type": ["string", "null"], "description": "Other Payer Adjudicated Program Type (9T) - F6" },
               "Name": { "type": ["string", "null"], "description": "Other Payer Name (M5) - F6" },
-              "HelpDeskPhoneExtension": { "type": ["string", "null"], "description": "Other Payer Help Desk Telephone Number Extension (7Q) - F6" }
+              "HelpDeskPhoneExtension": { "type": ["string", "null"], "description": "Other Payer Help Desk Telephone Number Extension (7Q) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1343,7 +1381,8 @@
             "type": "object",
             "properties": {
               "TypeId": { "type": ["string", "null"], "description": "Intermediary Authorization Type ID (8S) - F6" },
-              "Id": { "type": ["string", "null"], "description": "Intermediary Authorization ID (8T) - F6" }
+              "Id": { "type": ["string", "null"], "description": "Intermediary Authorization ID (8T) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1352,7 +1391,8 @@
           "items": {
             "type": "object",
             "properties": {
-              "Message": { "type": ["string", "null"], "description": "Intermediary Message (8Q) - F6" }
+              "Message": { "type": ["string", "null"], "description": "Intermediary Message (8Q) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1373,10 +1413,12 @@
                     "Type": { "type": ["string", "null"], "description": "Intermediary Help Desk Business Unit Type (G8) - F6" },
                     "ContactInformationQualifier": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Qualifier (KA) - F6" },
                     "ContactInformation": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information (JP) - F6" },
-                    "ContactInformationExtension": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Extension (JR) - F6" }
+                    "ContactInformationExtension": { "type": ["string", "null"], "description": "Intermediary Help Desk Contact Information Extension (JR) - F6" },
+                    "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
                   }
                 }
-              }
+              },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1416,7 +1458,8 @@
               "StateProvinceAddress": { "type": ["string", "null"], "description": "Other Benefit State/Province Address (TA) - F6" },
               "TypeId": { "type": ["string", "null"], "description": "Other Benefit Type ID (N9) - F6" },
               "FacilityName": { "type": ["string", "null"], "description": "Other Benefit Facility Name (N1) - F6" },
-              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Facility Telephone Number (N7) - F6" }
+              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Facility Telephone Number (N7) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },
@@ -1431,7 +1474,8 @@
               "TerminationDate": { "type": ["string", "null"], "format": "date", "description": "Other Benefit Detail Information Termination Date (MX) - F6" },
               "ProviderNumber": { "type": ["string", "null"], "description": "Other Benefit Detail Information Provider Number (MR) - F6" },
               "FacilityName": { "type": ["string", "null"], "description": "Other Benefit Detail Information Facility Name (MN) - F6" },
-              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Detail Information Facility Telephone Number (MP) - F6" }
+              "FacilityTelephoneNumber": { "type": ["string", "null"], "description": "Other Benefit Detail Information Facility Telephone Number (MP) - F6" },
+              "DynamicFields": { "type": "array", "items": { "$ref": "#/$defs/DynamicStruct" } }
             }
           }
         },

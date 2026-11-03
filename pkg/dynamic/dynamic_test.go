@@ -27,9 +27,9 @@ func Test_FieldNameParseRoundTrip(t *testing.T) {
 		{code: "AD", order: 100},
 	} {
 		name := FieldName(test.code, test.order)
-		code, order, ok := parseFieldName(name)
+		code, order, ok := ParseFieldName(name)
 		if !ok || code != test.code || order != test.order {
-			t.Errorf("parseFieldName(%q) mismatch. Wanted: (%q, %v)   Got: (%q, %v, %v)", name, test.code, test.order, code, order, ok)
+			t.Errorf("ParseFieldName(%q) mismatch. Wanted: (%q, %v)   Got: (%q, %v, %v)", name, test.code, test.order, code, order, ok)
 		}
 	}
 }
