@@ -81,7 +81,7 @@ func Test_D0MissingGroupSeparatorRebuildConverges(t *testing.T) {
 	if gsIndex < 0 {
 		t.Fatalf("rebuild did not restore the group separator: %q", out)
 	}
-	if am07 := strings.Index(out, "AM07"); am07 < gsIndex {
+	if strings.Index(out, "AM07") < gsIndex {
 		t.Errorf("group separator not emitted before the claim segments: %q", out)
 	}
 
