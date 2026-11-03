@@ -216,10 +216,15 @@ func deserializeRaw(rawClaimString string, claimType reflect.Type, claimObjectRe
 	// loudly instead of round-tripping to an unparseable husk.
 	segmentCount := 0
 
-	if groupIndex < 0 && ncpdp.OmitsGroupSeparator(version) {
+	if groupIndex < 0 {
 		// vEB+ (e.g. F6) eliminated the group separator and allows only a single
 		// transaction per transmission; the claim segments directly follow the
-		// shared segments and are located by segment ID instead.
+		// shared segments and are located by segment ID instead. A pre-vEB
+		// transmission missing its group separator is a sender formatting error,
+		// but its single claim group is locatable the same way, so it parses
+		// into the typed claim instead of stranding every claim segment in
+		// transmission-level dynamic preservation; the rebuild emits the
+		// separator at its canonical position (parse-equal and convergent).
 		count, err := evaluateUngroupedTransaction(rawClaimString, claimType, claimObjectRef, version)
 		if err != nil {
 			return nil, err
@@ -360,8 +365,9 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 	return segmentCount, nil
 }
 
-// Evaluate an ungrouped (vEB+/F6) transmission. No group separators exist, so
-// each segment is routed by its segment ID instead: IDs in the claim group's
+// Evaluate a transmission without group separators (vEB+/F6 by design, or a
+// pre-vEB transmission whose sender omitted the separator). Each segment is
+// routed by its segment ID instead: IDs in the claim group's
 // catalog parse into the single claim group, and IDs in the transmission's
 // own catalog parse as shared segments wherever they appear — senders place
 // shared segments (e.g. a response's AM25/AM29) after the claim segments, and
