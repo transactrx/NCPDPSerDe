@@ -1,6 +1,7 @@
 package ncpdp
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -62,7 +63,15 @@ func (fs FieldSettings) parseFloatWithImpliedDecimals(value string) (*float64, e
 
 	i, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse value to float.  Value: %v  Error: %q", value, err)
+		// Callers log this error text, and the value is claim data (PHI), so
+		// the message must not carry it — neither directly nor inside the
+		// strconv error, which quotes its input.
+		reason := err
+		var numErr *strconv.NumError
+		if errors.As(err, &numErr) {
+			reason = numErr.Err
+		}
+		return nil, fmt.Errorf("unable to parse %d-character value as a number: %v", len(value), reason)
 	}
 
 	result := float64(i) / divisor

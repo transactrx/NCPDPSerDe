@@ -103,6 +103,38 @@ func TestRequestHeaderLayouts(t *testing.T) {
 	}
 }
 
+// Every header field carries its NCPDP field code so metadata consumers can
+// name header fields the way the standard does (101-A1, 102-A2, ...). The
+// accumulator fields use the FIR standard's codes (650-S1, 651-S2).
+func TestHeaderFieldCodes(t *testing.T) {
+	meta := buildOrFail(t)
+
+	for headerType, want := range map[string]map[string]string{
+		"ncpdp.RequestHeader": {
+			"Bin": "A1", "Version": "A2", "TransactionCode": "A3", "Pcn": "A4",
+			"RecordCount": "A9", "ServiceProviderIdQualifier": "B2",
+			"ServiceProviderId": "B1", "DateOfService": "D1",
+			"SoftwareVendorCertificationId": "AK",
+		},
+		"ncpdp.ResponseHeader": {
+			"Version": "A2", "TransactionCode": "A3", "RecordCount": "A9",
+			"Status": "F1", "ServiceProviderIdQualifier": "B2",
+			"ServiceProviderId": "B1", "DateOfService": "D1",
+		},
+	} {
+		typeMeta, ok := meta.Types[headerType]
+		if !ok {
+			t.Errorf("%v missing from metadata", headerType)
+			continue
+		}
+		for _, field := range typeMeta.Fields {
+			if field.Code != want[field.Name] {
+				t.Errorf("%v.%v code = %q, want %q", headerType, field.Name, field.Code, want[field.Name])
+			}
+		}
+	}
+}
+
 func TestLeafFieldAttributes(t *testing.T) {
 	meta := buildOrFail(t)
 
