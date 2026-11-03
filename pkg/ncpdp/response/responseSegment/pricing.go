@@ -65,20 +65,28 @@ type Pricing struct {
 type PatientPayComponent struct {
 	Qualifier *string  `field:"code=KQ,order=48,sinceVersion=F6"`
 	Amount    *float64 `field:"code=KN,decimalPlaces=2,overpunch=true,order=49,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type RegulatoryFee struct {
 	TypeCode        *string `field:"code=RL,order=51,sinceVersion=F6"`
 	ExemptIndicator *string `field:"code=RM,order=52,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type BenefitStageIndicator struct {
 	Indicator *string `field:"code=9X,order=54,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OtherAmountPaid struct {
 	Qualifier  *string  `field:"code=J3,order=13"`
 	AmountPaid *float64 `field:"code=J4,decimalPlaces=2,overpunch=true,order=14"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type BasisOfCalculation struct {
@@ -92,4 +100,6 @@ type BasisOfCalculation struct {
 type BenefitStage struct {
 	Qualifier *string  `field:"code=MV,order=35"`
 	Amount    *float64 `field:"code=MW,decimalPlaces=2,overpunch=true,order=36"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

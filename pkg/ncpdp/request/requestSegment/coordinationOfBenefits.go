@@ -44,32 +44,46 @@ type OtherPayer struct {
 
 	BenefitStageIndicatorCount *int `field:"code=9W,order=25,countfor=BenefitStageIndicators,sinceVersion=F6"`
 	BenefitStageIndicators     []BenefitStageIndicator
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OtherPayerRegulatoryFee struct {
 	TypeCode        *string `field:"code=RN,order=23,sinceVersion=F6"`
 	ExemptIndicator *string `field:"code=P8,order=24,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type BenefitStageIndicator struct {
 	Indicator *string `field:"code=9X,order=26,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OtherPayerAmountPaid struct {
 	Qualifier  *string  `field:"code=HC,order=9"`
 	AmountPaid *float64 `field:"code=DV,decimalPlaces=2,overpunch=true,order=10"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OtherPayerReject struct {
 	RejectCode *string `field:"code=6E,order=12"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OtherPayerPatientResponsibility struct {
 	Qualifier *string  `field:"code=NP,order=14"`
 	Amount    *float64 `field:"code=NQ,decimalPlaces=2,overpunch=true,order=15"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type BenefitStage struct {
 	Qualifier *string  `field:"code=MV,order=17"`
 	Amount    *float64 `field:"code=MW,decimalPlaces=2,overpunch=true,order=18"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

@@ -76,14 +76,21 @@ func buildHeader(structType reflect.Type, structVal reflect.Value) (string, erro
 	baseVal := reflectionutils.GetElementValue(structVal)
 	headerValue := baseVal.FieldByName(headerField.Name)
 
-	serMethod, err := serde.GetMethod(headerValue, attr.Serializer)
+	// Run the build method on a copy of the header: it writes the rebuilt
+	// RawValue back into the struct it is called on, and Serialize must not
+	// mutate its input — concurrent serializations of one shared object race
+	// on that write.
+	headerCopy := reflect.New(headerValue.Type()).Elem()
+	headerCopy.Set(headerValue)
+
+	serMethod, err := serde.GetMethod(headerCopy, attr.Serializer)
 	if err != nil {
 		return serde.Empty, err
 	}
 
 	serMethod.Call([]reflect.Value{})
 
-	rawField := headerValue.FieldByName(attr.RawField)
+	rawField := headerCopy.FieldByName(attr.RawField)
 	if !rawField.IsValid() {
 		return serde.Empty, fmt.Errorf("raw field not found in header definition")
 	}
@@ -189,6 +196,8 @@ func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode 
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
+	isDynamicSegment := false
+
 	switch baseVal.Interface().(type) {
 	case dynamic.DynamicStruct:
 		ds, _ := baseVal.Interface().(dynamic.DynamicStruct)
@@ -197,6 +206,7 @@ func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode 
 		}
 		baseType = reflectionutils.GetElementType(ds.DynamicType)
 		baseVal = reflectionutils.GetElementValue(reflect.ValueOf(ds.Value))
+		isDynamicSegment = true
 	}
 
 	builder := strings.Builder{}
@@ -230,9 +240,12 @@ func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode 
 		}
 	}
 
-	// Exclude empty segments
+	// Exclude empty segments: an untouched typed segment renders as nothing
+	// but its injected identifier. A dynamic segment is never excluded — it
+	// only exists because those bytes were actually received, however short,
+	// and dropping it would leave output the parser itself refuses.
 	rawSegment := builder.String()
-	if len(rawSegment) <= 6 {
+	if !isDynamicSegment && len(rawSegment) <= 6 {
 		return serde.Empty, nil
 	}
 
@@ -303,6 +316,16 @@ func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skip
 	fieldAttribute, err := serde.GetFieldAttribute(field.Tag.Get(serde.FieldTag))
 	if err != nil {
 		return nil, err
+	}
+
+	// A dynamically generated field encodes its code and order losslessly in
+	// its NAME (Field_<mangled code>_<order>); the struct tag carries the raw
+	// code, which garbage codes containing tag syntax (quotes, commas) can
+	// corrupt into a code-less, order-less attribute that silently drops the
+	// field. The name is authoritative for dynamic fields.
+	if code, order, ok := dynamic.ParseFieldName(field.Name); ok {
+		fieldAttribute.Code = code
+		fieldAttribute.Order = order
 	}
 
 	// Omit fields scoped to a newer version than the one being serialized. This

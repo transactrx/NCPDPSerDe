@@ -58,6 +58,8 @@ type HelpDeskSupportType struct {
 
 	BusinessUnitCount *int `field:"code=BB,order=21,countfor=BusinessUnits,sinceVersion=F6"`
 	BusinessUnits     []HelpDeskBusinessUnit
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type HelpDeskBusinessUnit struct {
@@ -65,21 +67,29 @@ type HelpDeskBusinessUnit struct {
 	ContactInformationQualifier *string `field:"code=BF,order=23,sinceVersion=F6"`
 	ContactInformation          *string `field:"code=BC,order=24,sinceVersion=F6"`
 	ContactInformationExtension *string `field:"code=BD,order=25,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type RejectCode struct {
 	Code                *string `field:"code=FB,order=5"`
 	OccurrenceIndicator *int    `field:"code=4F,order=6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type ApprovalMessageCode struct {
 	Code *string `field:"code=6F,order=8"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type AdditionalMessage struct {
 	Qualifier    *string `field:"code=UH,order=10"`
 	Message      *string `field:"code=FQ,order=11"`
 	Continuation *string `field:"code=UG,order=12"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type HelpDeskPhoneNumber struct {

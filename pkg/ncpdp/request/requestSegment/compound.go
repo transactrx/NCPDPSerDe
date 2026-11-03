@@ -25,6 +25,8 @@ type CompoundProduct struct {
 
 type CompoundIngredientModifierCode struct {
 	Code *string `field:"code=2H,order=11"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type CompoundIngredient struct {
@@ -35,4 +37,6 @@ type CompoundIngredient struct {
 
 	ModifierCodeCount *int `field:"code=2G,order=10,countfor=ModifierCodes"`
 	ModifierCodes     []CompoundIngredientModifierCode
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

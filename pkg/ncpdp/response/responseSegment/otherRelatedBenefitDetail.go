@@ -44,6 +44,8 @@ type OtherBenefit struct {
 	TypeId                  *string    `field:"code=N9,order=23,sinceVersion=F6"`
 	FacilityName            *string    `field:"code=N1,order=24,sinceVersion=F6"`
 	FacilityTelephoneNumber *string    `field:"code=N7,order=25,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
 
 type OtherBenefitDetailInformation struct {
@@ -53,4 +55,6 @@ type OtherBenefitDetailInformation struct {
 	ProviderNumber          *string    `field:"code=MR,order=30,sinceVersion=F6"`
 	FacilityName            *string    `field:"code=MN,order=31,sinceVersion=F6"`
 	FacilityTelephoneNumber *string    `field:"code=MP,order=32,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

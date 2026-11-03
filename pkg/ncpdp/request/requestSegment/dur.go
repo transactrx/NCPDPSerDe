@@ -25,4 +25,6 @@ type DurItem struct {
 	ResultOfServiceCode     *string `field:"code=E6,order=5"`
 	LevelOfEffort           *string `field:"code=8E,order=6"`
 	CoAgent                 DurCoAgent
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }

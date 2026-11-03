@@ -22,4 +22,6 @@ type Patient struct {
 type PatientId struct {
 	Qualifier *string `field:"code=CX,order=3,sinceVersion=F6"`
 	Id        *string `field:"code=CY,order=4,sinceVersion=F6"`
+
+	DynamicFields []dynamic.DynamicStruct `field:"code=dynamic"`
 }
