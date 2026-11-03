@@ -325,9 +325,12 @@ func addHeaderType(meta *Metadata, headerType reflect.Type) (string, error) {
 		}
 
 		typeMeta.Fields = append(typeMeta.Fields, Field{
-			Name:     field.Name,
-			Role:     "field",
-			GoType:   goTypeName(field.Type),
+			Name:   field.Name,
+			Role:   "field",
+			GoType: goTypeName(field.Type),
+			// The NCPDP field code (e.g. 101-A1) from the header struct's code
+			// tag; the fixed-width wire format itself never carries codes.
+			Code:     field.Tag.Get("code"),
 			Layout:   layout,
 			LayoutF6: layoutF6,
 		})
