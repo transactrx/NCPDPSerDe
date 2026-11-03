@@ -273,6 +273,39 @@ func checkSegmentFieldTags(t *testing.T, segType reflect.Type, where string) {
 	}
 }
 
+// A group-separator-less (vEB+/F6) transmission routes each segment to the
+// shared part or the claim group by its segment ID, so that routing is only
+// deterministic while no ID is claimed by both catalogs of one transaction
+// type. A violation would make placement depend on segment position again.
+func TestSharedAndClaimSegmentIdsAreDisjoint(t *testing.T) {
+	for key, tranType := range serde.TransactionTypes() {
+		groupField, _ := serde.GetGroupSlice(tranType)
+		if groupField == nil {
+			continue
+		}
+
+		sharedIds, err := serde.GetSegmentDefinitionById(tranType)
+		if err != nil {
+			t.Fatalf("%s: shared segment catalog: %v", key, err)
+		}
+		claimIds, err := serde.GetSegmentDefinitionById(elementStruct(groupField.Type))
+		if err != nil {
+			t.Fatalf("%s: claim segment catalog: %v", key, err)
+		}
+
+		for id := range claimIds {
+			// Both catalogs hold a code=dynamic preservation slice; that
+			// pseudo-id never matches a wire segment id (AMxx).
+			if structuralCodes[id] {
+				continue
+			}
+			if _, both := sharedIds[id]; both {
+				t.Errorf("%s: segment id %s is in both the shared and the claim catalog — ungrouped segment routing cannot attribute it", key, id)
+			}
+		}
+	}
+}
+
 // checkCountForTarget asserts that a countfor tag names a sibling slice on
 // the declaring struct (or is the reserved per-item index counter): the
 // serializer derives the count from that slice's length via FieldByName.
