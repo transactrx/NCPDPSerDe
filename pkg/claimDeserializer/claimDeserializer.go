@@ -361,24 +361,21 @@ func evaluateGrouping(rawClaimString string, structType reflect.Type, structVal 
 }
 
 // Evaluate an ungrouped (vEB+/F6) transmission. No group separators exist, so
-// the single transaction's segments are located by segment ID: the first
-// segment that belongs to the claim group struct starts the transaction, and
-// it plus everything after it parse as one claim group. Segments before it
-// parse as shared segments.
+// each segment is routed by its segment ID instead: IDs in the claim group's
+// catalog parse into the single claim group, and IDs in the transmission's
+// own catalog parse as shared segments wherever they appear — senders place
+// shared segments (e.g. a response's AM25/AM29) after the claim segments, and
+// binding attribution to position stranded that data in the claim's dynamic
+// preservation instead of the typed shared fields.
 func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type, structVal reflect.Value, version string) (int, error) {
 	// Transaction types without a claim section (e.g. E1 eligibility requests)
 	// have no group-tagged slice; the whole transmission parses as shared
 	// segments.
 	groupField, _ := serde.GetGroupSlice(structType)
 
-	transactionIndex, err := findTransactionIndex(rawClaimString, groupField)
+	sharedRaw, transactionRaw, err := routeUngroupedSegments(rawClaimString, structType, groupField)
 	if err != nil {
 		return 0, err
-	}
-
-	sharedRaw := rawClaimString
-	if transactionIndex != -1 {
-		sharedRaw = rawClaimString[:transactionIndex]
 	}
 
 	segmentCount, err := evaluateSegments(sharedRaw, structType, structVal, version)
@@ -386,11 +383,9 @@ func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type
 		return segmentCount, err
 	}
 
-	if transactionIndex == -1 {
+	if transactionRaw == serde.Empty {
 		return segmentCount, nil
 	}
-
-	transactionRaw := rawClaimString[transactionIndex:]
 
 	groupElementType := groupField.Type.Elem()
 	groupItem := reflect.New(groupElementType).Elem()
@@ -412,36 +407,52 @@ func evaluateUngroupedTransaction(rawClaimString string, structType reflect.Type
 	return segmentCount, nil
 }
 
-// findTransactionIndex locates the start of the single (vEB+) claim group: the
-// first segment whose ID belongs to the group struct. Returns -1 when the
-// struct has no group slice or no segment matches.
-func findTransactionIndex(rawClaimString string, groupField *reflect.StructField) (int, error) {
-	if groupField == nil {
-		return -1, nil
-	}
-
-	groupSegmentMap, err := serde.GetSegmentDefinitionById(reflectionutils.GetElementType(groupField.Type.Elem()))
+// routeUngroupedSegments splits a group-separator-less transmission into its
+// shared raw and claim raw by segment ID. A segment whose ID belongs to the
+// claim group's catalog starts (or continues) the claim; one whose ID belongs
+// to the transmission's catalog is shared regardless of position. A segment
+// with an unknown or missing ID has no catalog home, so it keeps positional
+// attribution: it stays with the side being parsed when it arrives. The two
+// catalogs' IDs are disjoint for every registered transaction type (pinned by
+// a catalog invariant test), so the routing is deterministic.
+func routeUngroupedSegments(rawClaimString string, structType reflect.Type, groupField *reflect.StructField) (string, string, error) {
+	sharedMap, err := serde.GetSegmentDefinitionById(reflectionutils.GetElementType(structType))
 	if err != nil {
-		return -1, err
+		return serde.Empty, serde.Empty, err
 	}
 
-	segIndex := stringutils.IndexOfAny(rawClaimString, 0, []byte{ncpdp.SEGMENT})
-	for segIndex != -1 {
-		nextIndex := stringutils.IndexOfAny(rawClaimString, segIndex+1, []byte{ncpdp.SEGMENT})
-
-		endIndex := len(rawClaimString)
-		if nextIndex != -1 {
-			endIndex = nextIndex
+	groupMap := map[string]serde.SegmentDefinition{}
+	if groupField != nil {
+		groupMap, err = serde.GetSegmentDefinitionById(reflectionutils.GetElementType(groupField.Type.Elem()))
+		if err != nil {
+			return serde.Empty, serde.Empty, err
 		}
-
-		if _, ok := groupSegmentMap[segmentIdOf(rawClaimString[segIndex+1:endIndex])]; ok {
-			return segIndex, nil
-		}
-
-		segIndex = nextIndex
 	}
 
-	return -1, nil
+	shared := strings.Builder{}
+	claim := strings.Builder{}
+	inClaim := false
+
+	for _, rawSeg := range stringutils.SplitBySeparator(rawClaimString, ncpdp.SEGMENT) {
+		// The same lookup key evaluateSegment uses for typed segments.
+		id := segmentIdOf(rawSeg)
+
+		_, isClaimSegment := groupMap[id]
+		_, isSharedSegment := sharedMap[id]
+
+		side := &claim
+		switch {
+		case isClaimSegment:
+			inClaim = true
+		case isSharedSegment || !inClaim:
+			side = &shared
+		}
+
+		side.WriteString(string(ncpdp.SEGMENT))
+		side.WriteString(rawSeg)
+	}
+
+	return shared.String(), claim.String(), nil
 }
 
 // segmentIdOf returns the segment ID field (e.g. "AM07") of a raw segment.
