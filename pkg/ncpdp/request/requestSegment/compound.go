@@ -31,7 +31,8 @@ type CompoundIngredientModifierCode struct {
 
 type CompoundIngredient struct {
 	Product                  CompoundProduct
-	Quantity                 *float64 `field:"code=ED,decimalPlaces=3,order=7"`
+	// 448-ED widened from 9(7)v999 to 9(7)v9999999 in F6: 7 implied decimals.
+	Quantity                 *float64 `field:"code=ED,decimalPlaces=3,decimalPlacesSince=F6:7,order=7"`
 	DrugCost                 *float64 `field:"code=EE,decimalPlaces=2,overpunch=true,order=8"`
 	BasisOfCostDetermination *string  `field:"code=UE,order=9"`
 

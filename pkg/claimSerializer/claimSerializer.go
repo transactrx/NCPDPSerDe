@@ -192,7 +192,7 @@ func buildSegments(structType reflect.Type, structVal reflect.Value, version str
 // Build individual raw segment. segmentCode is the code from the struct's
 // segment tag (e.g. AM04); it is used to auto-populate the segment identifier
 // when the caller did not supply SegmentId.
-func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode string, version string) (string, error) {
+func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode, version string) (string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
@@ -343,7 +343,7 @@ func buildFieldMapEntries(field reflect.StructField, baseVal reflect.Value, skip
 		// corrected, and an omitted required count (UH/FQ sent with no UF) is
 		// supplied, so rebuilt messages are internally consistent.
 		if count, ok := derivedCount(baseVal, &fieldAttribute, itemIndex); ok {
-			return buildCountField(fieldAttribute, count, skipCodes)
+			return buildCountField(fieldAttribute, count, skipCodes, version)
 		}
 		// No derivable count (empty slice, or a per-item counter outside a
 		// slice): fall through and serialize any supplied value as usual.
@@ -369,12 +369,12 @@ func fieldOmittedForVersion(attr *serde.FieldAttribute, version string) bool {
 
 // buildCountField renders a derived counter value as a raw field map entry,
 // honoring skipCodes like any other field.
-func buildCountField(fieldAttribute serde.FieldAttribute, count int, skipCodes map[string]bool) (map[int]string, error) {
+func buildCountField(fieldAttribute serde.FieldAttribute, count int, skipCodes map[string]bool, version string) (map[int]string, error) {
 	if skipCodes[fieldAttribute.Code] {
 		return nil, nil
 	}
 
-	rawField, err := buildField(fieldAttribute, reflect.ValueOf(count))
+	rawField, err := buildField(fieldAttribute, reflect.ValueOf(count), version)
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +499,7 @@ func buildStructField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *s
 		return buildSliceField(fieldVal, version)
 
 	default:
-		return buildScalarField(fieldVal, fieldAttribute, skipCodes)
+		return buildScalarField(fieldVal, fieldAttribute, skipCodes, version)
 	}
 }
 
@@ -514,7 +514,7 @@ func buildPointerField(ft reflect.Type, fieldVal reflect.Value, fieldAttribute *
 		return rawFieldMap, nil
 	}
 
-	rawField, err := buildField(*fieldAttribute, fieldVal.Elem())
+	rawField, err := buildField(*fieldAttribute, fieldVal.Elem(), version)
 	if err != nil {
 		return rawFieldMap, err
 	}
@@ -573,14 +573,14 @@ func writeSortedFieldMap(builder *strings.Builder, fm map[int]string) int {
 	return fmKeys[0]
 }
 
-func buildScalarField(fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool) (map[int]string, error) {
+func buildScalarField(fieldVal reflect.Value, fieldAttribute *serde.FieldAttribute, skipCodes map[string]bool, version string) (map[int]string, error) {
 	rawFieldMap := make(map[int]string)
 
 	if fieldAttribute == nil || fieldAttribute.Order <= 0 || skipCodes[fieldAttribute.Code] {
 		return rawFieldMap, nil
 	}
 
-	rawField, err := buildField(*fieldAttribute, fieldVal)
+	rawField, err := buildField(*fieldAttribute, fieldVal, version)
 	if err != nil {
 		return rawFieldMap, err
 	}
@@ -590,8 +590,9 @@ func buildScalarField(fieldVal reflect.Value, fieldAttribute *serde.FieldAttribu
 	return rawFieldMap, nil
 }
 
-// Build raw field.
-func buildField(fieldAttr serde.FieldAttribute, structVal reflect.Value) (string, error) {
+// Build raw field. version resolves implied decimals that differ by NCPDP
+// version (448-ED is 3 in D0, 7 in F6).
+func buildField(fieldAttr serde.FieldAttribute, structVal reflect.Value, version string) (string, error) {
 	baseVal := reflectionutils.GetElementValue(structVal)
 
 	builder := strings.Builder{}
@@ -610,7 +611,7 @@ func buildField(fieldAttr serde.FieldAttribute, structVal reflect.Value) (string
 	case float32, float64:
 		builder.WriteByte(ncpdp.FIELD)
 		builder.WriteString(fieldAttr.Code)
-		fs := serde.NewFieldSettings(fieldAttr)
+		fs := serde.NewVersionedFieldSettings(fieldAttr, version)
 		rawVal := ""
 		if fs.Overpunch {
 			rawVal = fs.Sign(baseVal.Interface())
