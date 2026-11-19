@@ -67,6 +67,18 @@ type Field struct {
 	// only and must NOT suppress serialization: dual-mapped repeating groups
 	// carry the D0 scalar's data.
 	SinceVersion string `json:"sinceVersion,omitempty"`
+
+	// DecimalPlacesSinceVersion/DecimalPlacesSince override DecimalPlaces for
+	// transmissions at or after the named version. F6 widened 448-ED Compound
+	// Ingredient Quantity from 3 to 7 implied decimals; parsers and
+	// serializers must use the count matching the transmission's version.
+	DecimalPlacesSinceVersion string `json:"decimalPlacesSinceVersion,omitempty"`
+	DecimalPlacesSince        int    `json:"decimalPlacesSince,omitempty"`
+
+	// UnsignedSinceVersion turns Overpunch off for transmissions at or after
+	// the named version. F6 made the percentage tax rates 483-HE and 560-AY
+	// unsigned, so F6 serialization must emit plain digits for them.
+	UnsignedSinceVersion string `json:"unsignedSinceVersion,omitempty"`
 }
 
 // Type describes one struct participating in the claim model.
@@ -290,9 +302,12 @@ func buildLeafFieldMeta(meta *Metadata, field reflect.StructField, tag string) (
 		Overpunch:     attr.Overpunch,
 		// serde.GetFieldAttribute converts the format to a Go time layout;
 		// export the readable tag value (e.g. YYYYMMdd) instead.
-		Format:       rawTagValue(tag, "format"),
-		CountFor:     attr.CountFor,
-		SinceVersion: attr.SinceVersion,
+		Format:                    rawTagValue(tag, "format"),
+		CountFor:                  attr.CountFor,
+		SinceVersion:              attr.SinceVersion,
+		DecimalPlacesSinceVersion: attr.DecimalPlacesSinceVersion,
+		DecimalPlacesSince:        attr.DecimalPlacesSince,
+		UnsignedSinceVersion:      attr.UnsignedSinceVersion,
 	}, nil
 }
 

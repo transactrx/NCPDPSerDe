@@ -16,7 +16,8 @@ type Pricing struct {
 	OtherAmountClaimSubmitted         []OtherAmountClaimSubmitted
 	FlatSalesTaxAmountSubmitted       *float64                `field:"code=HA,decimalPlaces=2,overpunch=true,order=10"`
 	PercentageSalesTaxAmountSubmitted *float64                `field:"code=GE,decimalPlaces=2,overpunch=true,order=11"`
-	PercentageSalesTaxRateSubmitted   *float64                `field:"code=HE,decimalPlaces=4,overpunch=true,order=12"`
+	// 483-HE became unsigned in F6 (s9(3)v9999 -> 9(3)v9999).
+	PercentageSalesTaxRateSubmitted   *float64                `field:"code=HE,decimalPlaces=4,overpunch=true,unsignedSince=F6,order=12"`
 	PercentageSalesTaxBasisSubmitted  *string                 `field:"code=JE,order=13"`
 	UsualAndCustmaryCharge            *float64                `field:"code=DQ,decimalPlaces=2,overpunch=true,order=14"`
 	GrossAmountDue                    *float64                `field:"code=DU,decimalPlaces=2,overpunch=true,order=15"`

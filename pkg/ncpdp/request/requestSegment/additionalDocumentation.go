@@ -33,8 +33,10 @@ type AdditionalDocumentationLengthOfNeed struct {
 }
 
 type AdditionalDocumentationQuestion struct {
-	Number               *string    `field:"code=4B,order=11"`
-	PercentResponse      *float64   `field:"code=4D,decimalPlaces=2,overpunch=true,order=12"`
+	Number *string `field:"code=4B,order=11"`
+	// 379-4D is unsigned 9(3)v99 in the F6 dictionary; D0 keeps the
+	// overpunch behavior this library has always emitted.
+	PercentResponse      *float64   `field:"code=4D,decimalPlaces=2,overpunch=true,unsignedSince=F6,order=12"`
 	ResponseDate         *time.Time `field:"code=4G,format=YYYYMMdd,order=13"`
 	DollarAmountResponse *float64   `field:"code=4H,decimalPlaces=2,overpunch=true,order=14"`
 	NumericResponse      *int       `field:"code=4J,order=15"`

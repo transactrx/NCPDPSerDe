@@ -43,6 +43,48 @@ type FieldAttribute struct {
 	// from D0 scalars — never leak into a D0 message. Empty means the field
 	// applies to every version.
 	SinceVersion string
+
+	// DecimalPlacesSinceVersion/DecimalPlacesSince override DecimalPlaces for
+	// transmissions at or after the named version (tag syntax:
+	// decimalPlacesSince=F6:7). F6 widened 448-ED Compound Ingredient Quantity
+	// from 9(7)v999 to 9(7)v9999999 — the only field whose implied decimal
+	// count changed between D0 and F6 — so the same struct field must parse
+	// and serialize with version-appropriate precision. Resolve via
+	// DecimalPlacesFor; an empty version name means no override.
+	DecimalPlacesSinceVersion string
+	DecimalPlacesSince        int
+
+	// UnsignedSinceVersion turns Overpunch off for transmissions at or after
+	// the named version (tag syntax: unsignedSince=F6). F6 made the percentage
+	// tax rates 483-HE and 560-AY unsigned (s9(3)v9999 became 9(3)v9999), so
+	// serializing them for F6 must emit plain digits, never an overpunch
+	// character. Parsing is unaffected: overpunch removal already passes plain
+	// digits through. Resolve via OverpunchFor; empty means no override.
+	UnsignedSinceVersion string
+}
+
+// DecimalPlacesFor resolves the implied decimal count for the given
+// transmission version, honoring the decimalPlacesSince override. Version
+// ordering comes from ncpdp.VersionAtLeast, so an override scoped to F6
+// applies to F6 and every later version, while an unknown or blank version
+// ranks oldest and keeps the base DecimalPlaces.
+func (attr FieldAttribute) DecimalPlacesFor(version string) int {
+	if attr.DecimalPlacesSinceVersion != Empty && ncpdp.VersionAtLeast(version, attr.DecimalPlacesSinceVersion) {
+		return attr.DecimalPlacesSince
+	}
+
+	return attr.DecimalPlaces
+}
+
+// OverpunchFor resolves whether serialization applies overpunch signing for
+// the given transmission version, honoring the unsignedSince override. An
+// unknown or blank version ranks oldest and keeps the base Overpunch.
+func (attr FieldAttribute) OverpunchFor(version string) bool {
+	if attr.UnsignedSinceVersion != Empty && ncpdp.VersionAtLeast(version, attr.UnsignedSinceVersion) {
+		return false
+	}
+
+	return attr.Overpunch
 }
 
 type SegmentAttribute struct {
@@ -82,6 +124,8 @@ const (
 	CodeTag         = "code"
 	formatTag       = "format"
 	decimalTag      = "decimalPlaces"
+	decimalSinceTag = "decimalPlacesSince"
+	unsignedTag     = "unsignedSince"
 	overpunchTag    = "overpunch"
 	versionTag      = "version"
 	sinceVersionTag = "sinceVersion"
@@ -263,6 +307,13 @@ func GetFieldAttribute(tag string) (FieldAttribute, error) {
 			attribute.Format = inferFormat(value)
 		case decimalTag:
 			attribute.DecimalPlaces, _ = strconv.Atoi(value)
+		case decimalSinceTag:
+			if version, places, ok := strings.Cut(value, ":"); ok {
+				attribute.DecimalPlacesSinceVersion = version
+				attribute.DecimalPlacesSince, _ = strconv.Atoi(places)
+			}
+		case unsignedTag:
+			attribute.UnsignedSinceVersion = value
 		case OrderTag:
 			attribute.Order, _ = strconv.Atoi(value)
 		case overpunchTag:
@@ -396,12 +447,21 @@ func GetMethod(structVal reflect.Value, methodName string) (reflect.Value, error
 	return reflect.Value{}, fmt.Errorf("%v method not found in header definition", methodName)
 }
 
-// Create field settings from field attribute data.
+// Create field settings from field attribute data, using the base (oldest
+// version) decimal places. Prefer NewVersionedFieldSettings when the
+// transmission version is known.
 func NewFieldSettings(attr FieldAttribute) ncpdp.FieldSettings {
+	return NewVersionedFieldSettings(attr, Empty)
+}
+
+// Create field settings resolved for the given transmission version:
+// decimalPlacesSince and unsignedSince overrides take effect at or after
+// their named version.
+func NewVersionedFieldSettings(attr FieldAttribute, version string) ncpdp.FieldSettings {
 	return ncpdp.FieldSettings{
-		DecimalPlaces: attr.DecimalPlaces,
+		DecimalPlaces: attr.DecimalPlacesFor(version),
 		Format:        attr.Format,
-		Overpunch:     attr.Overpunch,
+		Overpunch:     attr.OverpunchFor(version),
 	}
 }
 

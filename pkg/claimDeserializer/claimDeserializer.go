@@ -867,7 +867,7 @@ func setScalarFieldByCodeTag(f reflect.Value, ft reflect.StructField, target fie
 		// and would silently drop the field.
 		if ft.Name == serde.DynamicFieldName(target.code, target.order) {
 			attr, _ := serde.GetFieldAttribute(ft.Tag.Get(serde.FieldTag))
-			if setFieldValue(f, ft, target.value, attr) {
+			if setFieldValue(f, ft, target.value, attr, target.version) {
 				return 1, false, nil
 			}
 		}
@@ -909,7 +909,7 @@ func setScalarFieldByCodeTag(f reflect.Value, ft reflect.StructField, target fie
 	// blank-filled numeric/date) leaves the field unset and
 	// counts as not consumed, so the caller preserves the raw
 	// value as a dynamic field instead of inventing a zero.
-	if setFieldValue(f, ft, target.value, attr) {
+	if setFieldValue(f, ft, target.value, attr, target.version) {
 		return 1, false, nil
 	}
 
@@ -1077,7 +1077,7 @@ func typeOwnsCode(structType reflect.Type, codeTag string) bool {
 // parsed and stored; false means the typed field cannot represent the value
 // (e.g. an empty or blank-filled numeric/date), so the caller must leave the
 // field unset and preserve the raw value instead of keeping a zero value.
-func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute) bool {
+func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute, version string) bool {
 	if !f.CanSet() {
 		return false
 	}
@@ -1098,7 +1098,9 @@ func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute) boo
 		f.Set(reflect.ValueOf(uint(intVal)))
 
 	case float32, float64:
-		fs := serde.NewFieldSettings(attr)
+		// Implied decimals can differ by version (448-ED is 3 in D0, 7 in F6),
+		// so the divisor must come from the transmission being parsed.
+		fs := serde.NewVersionedFieldSettings(attr, version)
 		flt, err := fs.Unsign(val.String())
 		if err != nil || flt == nil {
 			return false
@@ -1132,12 +1134,12 @@ func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute) boo
 // Set field value. Reports whether a value was stored (see setField); a
 // pointer field stays nil when the value cannot be parsed, never pointing at
 // a zero value the sender did not transmit.
-func setFieldValue(f reflect.Value, ft reflect.StructField, val reflect.Value, attr serde.FieldAttribute) bool {
+func setFieldValue(f reflect.Value, ft reflect.StructField, val reflect.Value, attr serde.FieldAttribute, version string) bool {
 	switch ft.Type.Kind() {
 	case reflect.Pointer:
 		fv := reflect.New(ft.Type.Elem())
 
-		if !setField(fv.Elem(), val, attr) {
+		if !setField(fv.Elem(), val, attr, version) {
 			return false
 		}
 		if !f.CanSet() {
@@ -1147,7 +1149,7 @@ func setFieldValue(f reflect.Value, ft reflect.StructField, val reflect.Value, a
 		return true
 
 	default:
-		return setField(f, val, attr)
+		return setField(f, val, attr, version)
 	}
 }
 
