@@ -66,6 +66,24 @@ func FuzzRoundTrip(f *testing.F) {
 	f.Add("880151D0B2TESTTEST1 1011234567893     20231219          " +
 		gs + ss + fs + "AM07" + fs + "EM1" + fs + "D2100001" + fs + "@A123" + fs + "\x04Z9" + fs + "C800" + fs + "C800")
 
+	// F6 traffic (no group separator) exercising the version-dependent field
+	// attributes: 448-ED's 7 implied decimals, the unsigned-in-F6 tax rates
+	// (483-HE, 560-AY) and percent response (379-4D), including a blank ED
+	// that must preserve rather than parse and an overpunched AY from a
+	// nonconforming sender.
+	f.Add("F6B100880151TEST      1011234567893     20260611SVCID     " +
+		ss + fs + "AM04" + fs + "C2POLICY123" + fs + "C61" +
+		ss + fs + "AM07" + fs + "EM1" + fs + "D26000001" + fs + "E103" + fs + "D700172240780" +
+		ss + fs + "AM11" + fs + "D9105E" + fs + "HE00700" +
+		ss + fs + "AM14" + fs + "2Q01" + fs + "2Z1" + fs + "4B001" + fs + "4D05000" +
+		ss + fs + "AM10" + fs + "EF03" + fs + "EG2" + fs + "EC2" +
+		fs + "RE03" + fs + "TE51927177800" + fs + "ED15000000" + fs + "EE0000500{" + fs + "UE01" +
+		fs + "RE03" + fs + "TE38779016308" + fs + "ED" + fs + "EE36H" + fs + "UE01")
+	f.Add("F6B11A011234567893     20260611" +
+		ss + fs + "AM25" + fs + "C1TESTGROUP" +
+		ss + fs + "AM21" + fs + "ANP" +
+		ss + fs + "AM23" + fs + "F5107B" + fs + "AY0070{" + fs + "KP1" + fs + "KQ01" + fs + "KN105E")
+
 	f.Fuzz(func(t *testing.T, raw string) {
 		obj, err := claimdeserializer.Deserialize(raw)
 		if err != nil {

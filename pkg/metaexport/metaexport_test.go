@@ -153,6 +153,19 @@ func TestLeafFieldAttributes(t *testing.T) {
 		t.Errorf("IngredientCostSubmitted exported as %+v", ingredientCost)
 	}
 
+	// Version-dependent overrides: 448-ED widened to 7 implied decimals in F6,
+	// and 483-HE lost its sign (overpunch) in F6.
+	compoundQty := findField(t, meta, "requestsegment.CompoundIngredient", "Quantity")
+	if compoundQty.Code != "ED" || compoundQty.DecimalPlaces != 3 ||
+		compoundQty.DecimalPlacesSinceVersion != "F6" || compoundQty.DecimalPlacesSince != 7 {
+		t.Errorf("CompoundIngredient.Quantity exported as %+v", compoundQty)
+	}
+
+	taxRate := findField(t, meta, "requestsegment.Pricing", "PercentageSalesTaxRateSubmitted")
+	if taxRate.Code != "HE" || !taxRate.Overpunch || taxRate.UnsignedSinceVersion != "F6" {
+		t.Errorf("PercentageSalesTaxRateSubmitted exported as %+v", taxRate)
+	}
+
 	segmentId := findField(t, meta, "ncpdp.SegmentId", "Id")
 	if segmentId.Code != "AM" || segmentId.Order != 1 {
 		t.Errorf("SegmentId.Id exported as %+v", segmentId)

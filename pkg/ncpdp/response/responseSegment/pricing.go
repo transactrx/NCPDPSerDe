@@ -13,7 +13,8 @@ type Pricing struct {
 	TaxExemptIndicator                                           *string         `field:"code=AV,order=5"`
 	FlatSalesTaxAmountPaid                                       *float64        `field:"code=AW,decimalPlaces=2,overpunch=true,order=6"`
 	PercentageSalesTaxAmountPaid                                 *float64        `field:"code=AX,decimalPlaces=2,overpunch=true,order=7"`
-	PercentageSalesTaxRatePaid                                   *float64        `field:"code=AY,decimalPlaces=4,overpunch=true,order=8"`
+	// 560-AY became unsigned in F6 (s9(3)v9999 -> 9(3)v9999).
+	PercentageSalesTaxRatePaid                                   *float64        `field:"code=AY,decimalPlaces=4,overpunch=true,unsignedSince=F6,order=8"`
 	PercentageSalesTaxBasisPaid                                  *string         `field:"code=AZ,order=9"`
 	IncentiveAmountPaid                                          *float64        `field:"code=FL,decimalPlaces=2,overpunch=true,order=10"`
 	ProfessionalServiceFeePaid                                   *float64        `field:"code=J1,decimalPlaces=2,overpunch=true,order=11"`

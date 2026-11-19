@@ -73,6 +73,77 @@ func Test_GetFieldAttribute_ParsesAllKeys(t *testing.T) {
 	}
 }
 
+func Test_GetFieldAttribute_VersionedOverrides(t *testing.T) {
+	// 448-ED: 3 implied decimals in D0, 7 since F6.
+	attr, err := GetFieldAttribute("code=ED,decimalPlaces=3,decimalPlacesSince=F6:7,order=7")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attr.DecimalPlaces != 3 || attr.DecimalPlacesSinceVersion != "F6" || attr.DecimalPlacesSince != 7 {
+		t.Errorf("decimalPlacesSince parse mismatch. Got: %+v", attr)
+	}
+	for version, want := range map[string]int{"": 3, "D0": 3, "F6": 7} {
+		if got := attr.DecimalPlacesFor(version); got != want {
+			t.Errorf("DecimalPlacesFor(%q) mismatch. Wanted: %v   Got: %v", version, want, got)
+		}
+	}
+
+	// 483-HE: signed (overpunch) in D0, unsigned since F6.
+	attr2, err := GetFieldAttribute("code=HE,decimalPlaces=4,overpunch=true,unsignedSince=F6,order=12")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attr2.UnsignedSinceVersion != "F6" {
+		t.Errorf("unsignedSince parse mismatch. Got: %+v", attr2)
+	}
+	for version, want := range map[string]bool{"": true, "D0": true, "F6": false} {
+		if got := attr2.OverpunchFor(version); got != want {
+			t.Errorf("OverpunchFor(%q) mismatch. Wanted: %v   Got: %v", version, want, got)
+		}
+	}
+
+	// A malformed decimalPlacesSince value (no colon) records no override.
+	attr3, err := GetFieldAttribute("code=ZZ,decimalPlaces=2,decimalPlacesSince=F6,order=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attr3.DecimalPlacesSinceVersion != "" || attr3.DecimalPlacesFor("F6") != 2 {
+		t.Errorf("malformed decimalPlacesSince should leave no override. Got: %+v", attr3)
+	}
+
+	// No override tags: resolvers return the base values for every version.
+	attr4, err := GetFieldAttribute("code=D9,decimalPlaces=2,overpunch=true,order=2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attr4.DecimalPlacesFor("F6") != 2 || !attr4.OverpunchFor("F6") {
+		t.Errorf("base attributes must apply to every version. Got: %+v", attr4)
+	}
+}
+
+func Test_NewVersionedFieldSettings(t *testing.T) {
+	attr, err := GetFieldAttribute("code=ED,decimalPlaces=3,decimalPlacesSince=F6:7,unsignedSince=F6,overpunch=true,order=7")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d0 := NewVersionedFieldSettings(attr, "D0")
+	if d0.DecimalPlaces != 3 || !d0.Overpunch {
+		t.Errorf("D0 settings mismatch. Got: %+v", d0)
+	}
+
+	f6 := NewVersionedFieldSettings(attr, "F6")
+	if f6.DecimalPlaces != 7 || f6.Overpunch {
+		t.Errorf("F6 settings mismatch. Got: %+v", f6)
+	}
+
+	// NewFieldSettings keeps its historical (oldest-version) behavior.
+	base := NewFieldSettings(attr)
+	if base.DecimalPlaces != 3 || !base.Overpunch {
+		t.Errorf("base settings mismatch. Got: %+v", base)
+	}
+}
+
 func Test_GetFieldAttribute_Dynamic(t *testing.T) {
 	attr, err := GetFieldAttribute("code=dynamic")
 	if err != nil {
