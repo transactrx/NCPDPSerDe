@@ -565,7 +565,7 @@ func findDynamicSliceValue(structType reflect.Type, structVal reflect.Value, tag
 }
 
 // Add element to dynamic segment list
-func appendDynamicSlice(structType reflect.Type, structVal reflect.Value, dynamicElementValue reflect.Value, tagType string) error {
+func appendDynamicSlice(structType reflect.Type, structVal, dynamicElementValue reflect.Value, tagType string) error {
 	dynamicObj, found := findDynamicSliceValue(structType, structVal, tagType)
 	if !found {
 		return fmt.Errorf("dynamic code tag not found in object definition: code=dynamic")

@@ -192,7 +192,7 @@ func buildSegments(structType reflect.Type, structVal reflect.Value, version str
 // Build individual raw segment. segmentCode is the code from the struct's
 // segment tag (e.g. AM04); it is used to auto-populate the segment identifier
 // when the caller did not supply SegmentId.
-func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode string, version string) (string, error) {
+func buildSegment(structType reflect.Type, structVal reflect.Value, segmentCode, version string) (string, error) {
 	baseType := reflectionutils.GetElementType(structType)
 	baseVal := reflectionutils.GetElementValue(structVal)
 
