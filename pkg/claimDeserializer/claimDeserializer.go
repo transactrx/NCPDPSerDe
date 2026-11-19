@@ -1077,7 +1077,7 @@ func typeOwnsCode(structType reflect.Type, codeTag string) bool {
 // parsed and stored; false means the typed field cannot represent the value
 // (e.g. an empty or blank-filled numeric/date), so the caller must leave the
 // field unset and preserve the raw value instead of keeping a zero value.
-func setField(f reflect.Value, val reflect.Value, attr serde.FieldAttribute, version string) bool {
+func setField(f, val reflect.Value, attr serde.FieldAttribute, version string) bool {
 	if !f.CanSet() {
 		return false
 	}
